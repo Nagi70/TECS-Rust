@@ -2,7 +2,7 @@ use crate::{s_hello::*, t_bob::*, t_carol::*};
 
 pub struct TAlice<'a>
 {
-	pub c_person: &'a dyn SHello,
+	pub c_person: &'a (dyn SHello + Sync + Send),
 }
 
 pub struct EAliceForTAlice<'a>{
@@ -30,5 +30,3 @@ impl TAlice<'_> {
 		&self.c_person
 	}
 }
-unsafe impl Sync for TAlice<'_> {}
-unsafe impl Send for TAlice<'_> {}

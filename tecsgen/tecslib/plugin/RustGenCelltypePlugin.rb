@@ -554,7 +554,7 @@ class RustGenCelltypePlugin < CelltypePlugin
             if check_gen_dyn_for_port(callport) == nil then
                 file.print "\tpub #{snake_case(callport.get_name.to_s)}: &'a #{alphabet},\n"
             else
-                file.print "\tpub #{snake_case(callport.get_name.to_s)}: &'a #{check_gen_dyn_for_port(callport)},\n"
+                file.print "\tpub #{snake_case(callport.get_name.to_s)}: &'a (#{check_gen_dyn_for_port(callport)} + Sync + Send),\n"
             end
         end
     end
@@ -1285,11 +1285,11 @@ class RustGenCelltypePlugin < CelltypePlugin
         end
 
         # dyn が必要かどうかを判断する
-        if check_gen_dyn_for_celltype @celltype then
-            print "#{@celltype.get_global_name.to_s}: gen_impl_sync_send_trait\n"
-            # Sync と Send トレイトを実装する
-            gen_impl_sync_send_trait file, @celltype
-        end
+        # if check_gen_dyn_for_celltype @celltype then
+        #     print "#{@celltype.get_global_name.to_s}: gen_impl_sync_send_trait\n"
+        #     # Sync と Send トレイトを実装する
+        #     gen_impl_sync_send_trait file, @celltype
+        # end
         file.close
 
         @celltype.get_port_list.each{ |port|
