@@ -13,11 +13,13 @@ pub struct ETaskbodyForTTaskbody<'a>{
 	pub cell: &'a TTaskbody<'a, ESensorForTSensor<'a>, EMotorForTMotor<'a>>,
 }
 
+#[link_section = ".rodata"]
 pub static TASKBODY: TTaskbody<ESensorForTSensor, EMotorForTMotor> = TTaskbody {
 	c_sensor: &ESENSORFORSENSOR,
 	c_motor: &EMOTORFORMOTOR,
 };
 
+#[link_section = ".rodata"]
 pub static ETASKBODYFORTASKBODY: ETaskbodyForTTaskbody = ETaskbodyForTTaskbody {
 	cell: &TASKBODY,
 };

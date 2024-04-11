@@ -28,23 +28,28 @@ pub struct EiWakeUpNotificationHandlerForTTaskRs<'a>{
 	pub cell: &'a TTaskRs<'a, ETaskbodyForTTaskbody<'a>>,
 }
 
+#[link_section = ".rodata"]
 pub static TASK: TTaskRs<ETaskbodyForTTaskbody> = TTaskRs {
 	c_task_body: &ETASKBODYFORTASKBODY,
 	task_ref: unsafe{TaskRef::from_raw_nonnull(NonZeroI32::new(TASK1).unwrap())},
 };
 
+#[link_section = ".rodata"]
 pub static ETASKFORTASK: ETaskForTTaskRs = ETaskForTTaskRs {
 	cell: &TASK,
 };
 
+#[link_section = ".rodata"]
 pub static EITASKFORTASK: EiTaskForTTaskRs = EiTaskForTTaskRs {
 	cell: &TASK,
 };
 
+#[link_section = ".rodata"]
 pub static EIACTIVATENOTIFICATIONHANDLERFORTASK: EiActivateNotificationHandlerForTTaskRs = EiActivateNotificationHandlerForTTaskRs {
 	cell: &TASK,
 };
 
+#[link_section = ".rodata"]
 pub static EIWAKEUPNOTIFICATIONHANDLERFORTASK: EiWakeUpNotificationHandlerForTTaskRs = EiWakeUpNotificationHandlerForTTaskRs {
 	cell: &TASK,
 };

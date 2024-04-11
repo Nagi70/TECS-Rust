@@ -18,6 +18,7 @@ pub struct EMotorForTMotor<'a>{
 	pub cell: &'a TMotor<'a, EPowerdown1ForTPowerdown<'a>>,
 }
 
+#[link_section = ".rodata"]
 pub static MOTOR: TMotor<EPowerdown1ForTPowerdown> = TMotor {
 	c_powerdown: &EPOWERDOWN1FORPOWERDOWN,
 	port: pbio_port_id_t::PBIO_PORT_ID_A,
@@ -28,6 +29,7 @@ pub static MOTORVAR: Mutex<TMotorVar> = Mutex::new(TMotorVar {
 	motor: None,
 });
 
+#[link_section = ".rodata"]
 pub static EMOTORFORMOTOR: EMotorForTMotor = EMotorForTMotor {
 	cell: &MOTOR,
 };

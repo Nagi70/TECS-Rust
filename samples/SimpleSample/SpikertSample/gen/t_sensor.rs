@@ -18,6 +18,7 @@ pub struct ESensorForTSensor<'a>{
 	pub cell: &'a TSensor<'a, EPowerdown2ForTPowerdown<'a>>,
 }
 
+#[link_section = ".rodata"]
 pub static SENSOR: TSensor<EPowerdown2ForTPowerdown> = TSensor {
 	c_powerdown: &EPOWERDOWN2FORPOWERDOWN,
 	port: pbio_port_id_t::PBIO_PORT_ID_B,
@@ -28,6 +29,7 @@ pub static SENSORVAR: Mutex<TSensorVar> = Mutex::new(TSensorVar {
 	ult: None,
 });
 
+#[link_section = ".rodata"]
 pub static ESENSORFORSENSOR: ESensorForTSensor = ESensorForTSensor {
 	cell: &SENSOR,
 };

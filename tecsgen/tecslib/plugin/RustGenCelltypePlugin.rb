@@ -613,6 +613,7 @@ class RustGenCelltypePlugin < CelltypePlugin
 
     # セルの構造体の初期化の先頭部を生成
     def gen_rust_cell_structure_header_initialize file, cell
+        file.print "#[link_section = \".rodata\"]\n"
         file.print "pub static #{cell.get_global_name.to_s.upcase}: #{get_rust_celltype_name(cell.get_celltype)}"
     end
 
@@ -754,6 +755,7 @@ class RustGenCelltypePlugin < CelltypePlugin
             if port.get_port_type == :ENTRY then
                 # 受け口構造体の初期化を生成
                 # 一つの受け口構造体がもつセルは１つ
+                file.print "#[link_section = \".rodata\"]\n"
                 file.print "pub static #{port.get_name.to_s.upcase}FOR#{cell.get_global_name.to_s.upcase}: #{camel_case(snake_case(port.get_name.to_s))}For#{get_rust_celltype_name(celltype)} = #{camel_case(snake_case(port.get_name.to_s))}For#{get_rust_celltype_name(celltype)} {\n"
                 file.print "\tcell: &#{cell.get_global_name.to_s.upcase},\n"
                 file.print "};\n\n"
