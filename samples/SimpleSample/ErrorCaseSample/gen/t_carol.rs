@@ -11,10 +11,12 @@ pub struct ECarolForTCarol<'a>{
 	pub cell: &'a TCarol<'a, EAliceForTAlice<'a>>,
 }
 
+#[link_section = ".rodata"]
 pub static CAROL: TCarol<EAliceForTAlice> = TCarol {
 	c_person: &EALICEFORALICE2,
 };
 
+#[link_section = ".rodata"]
 pub static ECAROLFORCAROL: ECarolForTCarol = ECarolForTCarol {
 	cell: &CAROL,
 };

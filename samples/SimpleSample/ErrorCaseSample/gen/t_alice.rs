@@ -9,18 +9,22 @@ pub struct EAliceForTAlice<'a>{
 	pub cell: &'a TAlice<'a>,
 }
 
+#[link_section = ".rodata"]
 pub static ALICE1: TAlice = TAlice {
 	c_person: &EBOBFORBOB,
 };
 
+#[link_section = ".rodata"]
 pub static EALICEFORALICE1: EAliceForTAlice = EAliceForTAlice {
 	cell: &ALICE1,
 };
 
+#[link_section = ".rodata"]
 pub static ALICE2: TAlice = TAlice {
 	c_person: &ECAROLFORCAROL,
 };
 
+#[link_section = ".rodata"]
 pub static EALICEFORALICE2: EAliceForTAlice = EAliceForTAlice {
 	cell: &ALICE2,
 };

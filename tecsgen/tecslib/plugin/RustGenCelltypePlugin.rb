@@ -764,7 +764,7 @@ class RustGenCelltypePlugin < CelltypePlugin
     end
 
     # セルタイプに受け口がある場合，受け口関数を生成する
-    def gen_rust_entryport_function file, celltype
+    def gen_rust_entryport_function file, celltype, callport_list
         # セルタイプに受け口がある場合，impl を生成する
         celltype.get_port_list.each{ |port|
             if port.get_port_type == :ENTRY then
@@ -808,7 +808,40 @@ class RustGenCelltypePlugin < CelltypePlugin
                     if check_only_entryport_celltype(celltype) then
                     else
                         # get_cell_ref 関数の呼び出しを生成
-                        file.print "\t\tlet cell_ref = self.cell.get_cell_ref();\n"
+                        file.print "\t\tlet "
+
+                        # get_cell_ref 関数の返り値を格納するタプルを生成
+                        tuple_name_list = []
+                        callport_list.each{ |callport|
+                            tuple_name_list.push "#{snake_case(callport.get_name.to_s)}"
+                        }
+                        celltype.get_attribute_list.each{ |attr|
+                            if attr.is_omit? then
+                                next
+                            end
+                            tuple_name_list.push "#{attr.get_name.to_s}"
+                        }
+                        if celltype.get_var_list.length != 0 then
+                            tuple_name_list.push "var"
+                        end
+
+                        if tuple_name_list.length != 1 then
+                            file.print "("
+                        end
+
+                        tuple_name_list.each_with_index do |tuple_name, index|
+                            if index == tuple_name_list.length - 1 then
+                                file.print "#{tuple_name}"
+                                break
+                            end
+                            file.print "#{tuple_name}, "
+                        end
+
+                        if tuple_name_list.length != 1 then
+                            file.print ")"
+                        end
+
+                        file.print " = self.cell.get_cell_ref();\n"
                     end
                     file.print "\n"
                     file.print"\t}\n"
@@ -1306,7 +1339,7 @@ class RustGenCelltypePlugin < CelltypePlugin
                 
                 print "#{@celltype.get_global_name.to_s}: gen_rust_entryport_function\n"
                 # セルタイプに受け口がある場合，impl を生成する
-                gen_rust_entryport_function file, @celltype
+                gen_rust_entryport_function file, @celltype, callport_list
                 break
             end
         }
