@@ -13,7 +13,7 @@
 TARGET_BASE = spikert
 BASE_DIR = .
 GEN_DIR = $(BASE_DIR)/gen
-INCLUDES = -I $(BASE_DIR)/. -I $(BASE_DIR)/./tecs_kernel -I $(TECSPATH) -I $(TECSPATH)/TLSFMalloc -I $(TECSPATH)/posix -I $(TECSPATH)/mruby -I $(TECSPATH)/TECSInfo -I $(TECSPATH)/rpc -I $(GEN_DIR)
+INCLUDES = -I $(BASE_DIR)/. -I $(BASE_DIR)/src -I $(BASE_DIR)/gen -I $(BASE_DIR)/./tecs_kernel -I $(TECSPATH) -I $(TECSPATH)/TLSFMalloc -I $(TECSPATH)/posix -I $(TECSPATH)/mruby -I $(TECSPATH)/TECSInfo -I $(TECSPATH)/rpc -I $(GEN_DIR)
 DEFINES =
 
 # end of fixed variable (unchangeable by config or plugin)
@@ -53,8 +53,8 @@ PRE_TECSGEN_TARGET =
 POST_TECSGEN_TARGET =
 
 # vpath for C sources and headers
-vpath %.c $(SRC_DIR) $(GEN_DIR)  ./tecs_kernel $(TECSPATH) $(TECSPATH)/TLSFMalloc $(TECSPATH)/posix $(TECSPATH)/mruby $(TECSPATH)/TECSInfo $(TECSPATH)/rpc
-vpath %.h $(SRC_DIR) $(GEN_DIR)  ./tecs_kernel $(TECSPATH) $(TECSPATH)/TLSFMalloc $(TECSPATH)/posix $(TECSPATH)/mruby $(TECSPATH)/TECSInfo $(TECSPATH)/rpc
+vpath %.c $(SRC_DIR) $(GEN_DIR)  src gen ./tecs_kernel $(TECSPATH) $(TECSPATH)/TLSFMalloc $(TECSPATH)/posix $(TECSPATH)/mruby $(TECSPATH)/TECSInfo $(TECSPATH)/rpc
+vpath %.h $(SRC_DIR) $(GEN_DIR)  src gen ./tecs_kernel $(TECSPATH) $(TECSPATH)/TLSFMalloc $(TECSPATH)/posix $(TECSPATH)/mruby $(TECSPATH)/TECSInfo $(TECSPATH)/rpc
 
 # Other objects (out of tecsgen)
 OTHER_OBJS =                      # Add objects out of tecs care.
@@ -80,7 +80,7 @@ clean :
 tecs : $(PRE_TECSGEN_TARGET) $(TIMESTAMP) $(POST_TECSGEN_TARGET)
 
 $(TIMESTAMP) : $(TECS_IMPORTS)
-	$(TECSGEN)  spikert.cdl -I ./tecs_kernel
+	$(TECSGEN)  -I src -I gen -I ./tecs_kernel spikert.cdl
 
 #####  TECSFlow targets  #####
 tecsflow : $(GEN_DIR)/tecsgen.rbdmp tcflow

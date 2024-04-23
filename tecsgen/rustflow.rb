@@ -41,8 +41,8 @@
 require 'optparse'
 require_relative "flowlib/classes.rb"
 
-$exe_name="tcflow"
-$version="V1.0.0.1"
+$exe_name="rustflow"
+$version="V1.0.0.0"
 $cpp_cmd=nil
 $b_version=false
 $b_summarize = false
@@ -50,6 +50,49 @@ $b_list = false
 $gen_dir = "gen"
 $read_dump = false
 $b_print_all_token = false
+
+def parse_rust_functions(rust_file)
+
+  brace_count = 0
+  # signature_impl_flag = 0
+
+  signature_impl_pattern = /impl\s+S\w*\s+for\s+E\w*ForT\w*/
+  fn_pattern = /fn\s+\w+\s*\(.*?\)\s*/
+  callport_function_pattern = /c_\w+\.\w+/
+
+  rust_file_lines = File.readlines(rust_file, chomp: true)
+
+  # print "1: #{rust_file_lines[0]}\n"
+
+  rust_file_lines.each do |line|
+
+    open_braces = line.scan(/{/)
+    close_braces = line.scan(/}/)
+    brace_count += open_braces.length - close_braces.length
+
+    if line =~ signature_impl_pattern && brace_count == 1
+      signature_impl = line.scan(signature_impl_pattern)
+      print "#{signature_impl}\n"
+    end
+
+    if line =~ fn_pattern && brace_count == 2
+      function_name = line.scan(/fn\s+\w+\s*\(.*?\)\s*/)
+      print "\t[#{function_name}]\n"
+    end
+
+    if brace_count >= 2
+      c_calls = line.scan(callport_function_pattern)
+      c_calls.each do |call|
+        print "\t\t#{call}\n"
+      end
+    end
+
+
+  end
+
+
+end
+
 ###$debug = true
 begin
 
@@ -86,8 +129,6 @@ begin
     }
   end
 
-#  $file = open("#{$gen_dir}/FlowC.txt", "w") ##
-
   if $read_dump then
     TCFlow::Function.load_funclist "#{$gen_dir}/tcflow.rbdmp"
   else
@@ -95,8 +136,7 @@ begin
     STDERR.puts "#{$exe_name} : #{$version}"
     ARGV.each{ |file|
 
-      # file はファイルへのパスを表す文字列
-      print "file = #{file}\n"
+      print "Reading: #{file}\n"
 
       if /\@(.*)/ =~ file
         file_list = []
@@ -120,29 +160,35 @@ begin
 
       file_list.each{ |f|
 
-        # f もファイルへのパスを表す文字列
-        print "f = #{f}\n"
+        # print "f = #{f}\n"
 
-        # C 言語のパーサインスタンスを生成
-        c_parser = TCFLOW_Cparser.new
+        parse_rust_functions(f)
 
-        # パース
-        c_parser.parse( [ f ], $cpp_cmd )
 
-        # 終期化
-        c_parser.finalize
+        # # Regular expression to find function definitions starting with "fn"
+        # fn_blocks_regex = /fn\s+\w+\s*\(.*?\)\s*\{.*?\}/m
+        
+        # # Regular expression to find "c_*.function_name" patterns
+        # c_call_regex = /c_\w+\.\w+/
+
+        # # Collect all the fn blocks
+        # fn_blocks = rust_file.scan(fn_blocks_regex)
+
+        # # Process each fn block
+        # fn_blocks.each do |fn_block|
+        #   fn_name = fn_block.scan(/fn\s+\w+\s*\(.*?\)\s*/)
+        #   print "#{fn_name}\n"
+        #   # Collect all the calls to "c_*" objects
+        #   c_calls = fn_block.scan(c_call_regex)
+        #   # Print each call found in the current fn block
+        #   c_calls.each do |call|
+        #     print "#{call}\n"
+        #   end
+        # end
       }
     }
-    TCFlow::Function.dump_funclist "#{$gen_dir}/tcflow.rbdmp"
-# if $b_summarize
-#   TCFlow::Function.print_summarize
-# else
-#    TCFlow::Function.print_all_functions
-# end
 
-# if $b_list
-#    Function.list_all_functions
-# end
+    TCFlow::Function.dump_funclist "#{$gen_dir}/rustflow.rbdmp"
   end
 
 rescue Exception => evar
@@ -153,3 +199,5 @@ rescue Exception => evar
 # ensure
   # $file.close
 end
+
+
