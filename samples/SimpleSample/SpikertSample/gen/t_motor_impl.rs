@@ -9,7 +9,7 @@ impl SMotor for EMotorForTMotor<'_>{
 
 	}
 	#[inline]
-	fn setup(&self, positive_direction: &pup_direction_t, reset_count: &bool) {
+	fn setup(&self, positive_direction: &pbio_direction_t, reset_count: &bool) {
 		let (c_powerdown, port, var) = self.cell.get_cell_ref();
 
 	}

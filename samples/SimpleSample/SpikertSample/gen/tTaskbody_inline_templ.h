@@ -20,7 +20,7 @@
  *   void           cSensor_light_off( );
  * call port: cMotor signature: sMotor context:task
  *   void           cMotor_set_motor_ref( );
- *   void           cMotor_setup( pup_direction_t positive_direction, bool reset_count );
+ *   void           cMotor_setup( pbio_direction_t positive_direction, bool reset_count );
  *   void           cMotor_set_speed( int32_t speed );
  *   void           cMotor_stop( );
  *

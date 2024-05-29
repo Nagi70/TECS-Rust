@@ -49,7 +49,7 @@ eMotor_set_motor_ref(CELLIDX idx)
  * oneway:       false
  * #[</ENTRY_FUNC>]# */
 Inline void
-eMotor_setup(CELLIDX idx, pup_direction_t positive_direction, bool reset_count)
+eMotor_setup(CELLIDX idx, pbio_direction_t positive_direction, bool reset_count)
 {
 	CELLCB	*p_cellcb = GET_CELLCB(idx);
 

@@ -51,10 +51,23 @@ $gen_dir = "gen"
 $read_dump = false
 $b_print_all_token = false
 
+# 文字列を snake_case に変換する
+def snake_case(input_string)
+  input_string.gsub(/(.)([A-Z])/, '\\1_\\2').downcase
+end
+
+# 文字列を camelCase に変換する
+def camel_case(input_string)
+  input_string.split('_').map(&:capitalize).join
+end
+
+def get_rust_celltype_name celltype
+  return camel_case(snake_case(celltype.get_global_name.to_s))
+end
+
 def parse_rust_functions(rust_file)
 
   brace_count = 0
-  # signature_impl_flag = 0
 
   signature_impl_pattern = /impl\s+S\w*\s+for\s+E\w*ForT\w*/
   fn_pattern = /fn\s+\w+\s*\(.*?\)\s*/
@@ -62,7 +75,10 @@ def parse_rust_functions(rust_file)
 
   rust_file_lines = File.readlines(rust_file, chomp: true)
 
-  # print "1: #{rust_file_lines[0]}\n"
+  @current_signature_impl = nil
+  @current_function_name = nil
+  @current_entry_function = nil
+  @currennt_entry_structure = nil
 
   rust_file_lines.each do |line|
 
@@ -70,27 +86,57 @@ def parse_rust_functions(rust_file)
     close_braces = line.scan(/}/)
     brace_count += open_braces.length - close_braces.length
 
+
+    # impl Sxxx for EyyyForTzzz の検知
+    # TECSジェネレータが生成した impl 内の実装だけを確認するため
     if line =~ signature_impl_pattern && brace_count == 1
-      signature_impl = line.scan(signature_impl_pattern)
-      print "#{signature_impl}\n"
+      @curennt_signature_impl = line.scan(signature_impl_pattern)
+      print "#{@curennt_signature_impl}\n"
+      @currennt_entry_structure = @curennt_signature_impl[0].scan(/E\w*ForT\w*/)
+      # print "currennt_entry_structure: #{@currennt_entry_structure}\n"
     end
 
+    # fn xxx() の検知
+    # impl 内の関数実装だけを確認するため
     if line =~ fn_pattern && brace_count == 2
-      function_name = line.scan(/fn\s+\w+\s*\(.*?\)\s*/)
-      print "\t[#{function_name}]\n"
+      @current_function_name = line.scan(/fn\s+\w+\s*\(.*?\)\s*/)
+      print "\t[#{@current_function_name}]\n"
+      temp = @current_function_name[0]
+      current_func_name_without_arguments = temp[/fn (\w+)/, 1]
+      entry_func_name = "#{@currennt_entry_structure[0]}.#{current_func_name_without_arguments}"
+      # print "\t\t#{entry_func_name}\n"
+      @current_entry_function = nil
+      @current_entry_function = TCFlow::Function.new(["#{rust_file}", rust_file_lines.index(line)+1])
+      @current_entry_function.set_name(entry_func_name)
+      # print "debug: #{@current_entry_function}\n"
+      # entry_func = nil
     end
 
+    # print "debug: #{@current_entry_function}\n"
+
+    # 受け口関数内で，呼び口関数が呼ばれているかを検知
     if brace_count >= 2
       c_calls = line.scan(callport_function_pattern)
       c_calls.each do |call|
+        before_dot = call.split('.').first
+        after_dot = call.split('.').last
+        cname = before_dot.split('_').last
+        call = "c" + camel_case(cname) + "." + after_dot
+        call.prepend("->")
+        call << "__T"
         print "\t\t#{call}\n"
+        # call_func_name = TCFlow::Function.new(rust_file_lines.index(line))
+        # call_func_name.set_name(call)
+        # call_func_name = nil
+        # print "debug: #{entry_func}\n"
+        if @current_entry_function != nil
+          # print "debug: call ref_func\n"
+          # @current_entry_function.call_func.push(call.to_sym)
+          @current_entry_function.ref_func(call.to_sym)
+        end
       end
     end
-
-
   end
-
-
 end
 
 ###$debug = true
@@ -160,31 +206,8 @@ begin
 
       file_list.each{ |f|
 
-        # print "f = #{f}\n"
-
         parse_rust_functions(f)
-
-
-        # # Regular expression to find function definitions starting with "fn"
-        # fn_blocks_regex = /fn\s+\w+\s*\(.*?\)\s*\{.*?\}/m
-        
-        # # Regular expression to find "c_*.function_name" patterns
-        # c_call_regex = /c_\w+\.\w+/
-
-        # # Collect all the fn blocks
-        # fn_blocks = rust_file.scan(fn_blocks_regex)
-
-        # # Process each fn block
-        # fn_blocks.each do |fn_block|
-        #   fn_name = fn_block.scan(/fn\s+\w+\s*\(.*?\)\s*/)
-        #   print "#{fn_name}\n"
-        #   # Collect all the calls to "c_*" objects
-        #   c_calls = fn_block.scan(c_call_regex)
-        #   # Print each call found in the current fn block
-        #   c_calls.each do |call|
-        #     print "#{call}\n"
-        #   end
-        # end
+      
       }
     }
 

@@ -53,7 +53,7 @@ typedef struct tag_tMotor_CB *tMotor_IDX;
 /* prototype declaration of entry port function #_EPP_# */
 /* sMotor */
 Inline void         tMotor_eMotor_set_motor_ref(tMotor_IDX idx);
-Inline void         tMotor_eMotor_setup(tMotor_IDX idx, pup_direction_t positive_direction, bool reset_count);
+Inline void         tMotor_eMotor_setup(tMotor_IDX idx, pbio_direction_t positive_direction, bool reset_count);
 Inline void         tMotor_eMotor_set_speed(tMotor_IDX idx, int32_t speed);
 Inline void         tMotor_eMotor_stop(tMotor_IDX idx);
 #ifdef __cplusplus

@@ -137,7 +137,7 @@ begin
 # if $b_summarize
 #   TCFlow::Function.print_summarize
 # else
-#    TCFlow::Function.print_all_functions
+  #  TCFlow::Function.print_all_functions
 # end
 
 # if $b_list

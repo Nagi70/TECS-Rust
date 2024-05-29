@@ -1,6 +1,6 @@
 import(<kernel_rs.cdl>);
 
-typedef int_t   pup_direction_t;
+typedef int_t   pbio_direction_t;
 typedef int_t   pbio_port_id_t;
 typedef int_t   pbio_error_t;
 typedef int_t   Option_Ref_a_mut__pup_motor_t__;
@@ -9,7 +9,7 @@ typedef int_t   bool;
 
 signature sMotor {
     void set_motor_ref( void );
-    void setup( [in] pup_direction_t positive_direction, [in] bool reset_count );
+    void setup( [in] pbio_direction_t positive_direction, [in] bool reset_count );
     void set_speed( [in] int32_t speed );
     void stop( void );
 };

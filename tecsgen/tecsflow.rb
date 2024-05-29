@@ -44,6 +44,8 @@ $TECSFLOW = true
 $title = "tecsflow"
 $tool_version = "1.G.0"
 
+@@rustflow = false
+
 require "#{$tecsflow_base_path}/flowlib/classes.rb"
 require "#{$tecsflow_base_path}/tecslib/version.rb"
 require "#{$tecsflow_base_path}/tecsgen.rb"
@@ -63,12 +65,29 @@ def analyze_option
     parser.on( '--version', 'print version') {
       $print_version = true
     }
+    parser.on( '--rust', 'rust') {
+      @@rustflow = true
+    }
     parser.version = "#{$version}"
     parser.release = nil
     parser.parse!
   }
 
 end # analyze_option
+
+  # 文字列を snake_case に変換する
+  def snake_case(input_string)
+    input_string.gsub(/(.)([A-Z])/, '\\1_\\2').downcase
+  end
+  
+  # 文字列を camelCase に変換する
+  def camel_case(input_string)
+    input_string.split('_').map(&:capitalize).join
+  end
+  
+  def get_rust_celltype_name celltype
+    return camel_case(snake_case(celltype.get_global_name.to_s))
+  end
 
 addtional_option_parser = nil
 no_tecsgen_option = true
@@ -79,6 +98,9 @@ tecsgen = TECSGEN.new
 
 $tecsgen_dump_file_name = "#{$gen}/tecsgen.rbdmp"
 $tcflow_dump_file_name = "#{$gen}/tcflow.rbdmp"
+if @@rustflow then
+  $tcflow_dump_file_name = "#{$gen}/rustflow.rbdmp"
+end
 $root_namespace = nil
 $tcflow_funclist = nil
 
@@ -114,6 +136,10 @@ class Namespace
 		  				port = j.get_definition
 			  			port.get_signature.get_function_head_array.each{ |f|
 			  			  func_name = "->#{port.get_name}.#{f.get_name}__T".to_sym
+                # print "func_name: #{func_name}\n"
+                # if @@rustflow then
+                #   func_name = "#{snake_case(port.get_name.to_s)}.#{f.get_name}".to_sym
+                # end
 			  			  call_funcs[ func_name ] = false
 		  				}
 		  			end
@@ -124,6 +150,10 @@ class Namespace
   					if ep.get_port_type == :ENTRY then
   						ep.get_signature.get_function_head_array.each{ |f|
   							ep_func = "#{celltype.get_global_name}_#{ep.get_name}_#{f.get_name}".to_sym
+                if @@rustflow then
+                  ep_func = "#{camel_case(snake_case(ep.get_name.to_s))}For#{get_rust_celltype_name(celltype)}.#{f.get_name}".to_sym
+                  # print "print_all_cells: rustflow is true\n"
+                end
 	  						if $tcflow_funclist[ ep_func ] then
 	  							$tcflow_funclist[ ep_func ].get_call_funcs.each{ |cf, cff|
                     if call_funcs[cf] == false then
@@ -249,6 +279,10 @@ class Cell
     @@printed_func_nsp_list[ func_nsp ] = true
     if ! @celltype.kind_of? CompositeCelltype
       ep_func = "#{@celltype.get_global_name}_#{entry_port_name}_#{func_name}".to_sym
+      if @@rustflow then
+        ep_func = "#{camel_case(snake_case(entry_port_name.to_s))}For#{get_rust_celltype_name(@celltype)}.#{func_name}".to_sym
+        # print "print_entry_func_flow: rustflow is true\n"
+      end
       if $tcflow_funclist[ ep_func ] then
         function = $tcflow_funclist[ ep_func ]
         print_locale function.get_locale
@@ -279,7 +313,11 @@ class Cell
   end
 
   def print_call_func_flow no_caller_cell, call_func_name, indent_level, parent_cell = []
+    # print "call_func_name: #{call_func_name}\n"
     m = TECSFlow.analyze_call_port_func_name call_func_name
+    # print "m: "
+    # print m
+    # print "\n"
     if m then
       call_port = m[0]
       function = m[1]
@@ -330,20 +368,28 @@ class Cell
   end
 
   def print_call_func_flow_sub indent_level, no_caller_cell, call_port, call_subsc, function, join, parent_cell
+    # print "j = join : #{join}\n"
     j = join
     if j != nil then
       if ! $unopt then
         callee_cell = j.get_rhs_cell
+        # print "callee_cell = ", callee_cell, "\n"
         callee_port = j.get_rhs_port.get_name
+        # print "callee_port = ", callee_port, "\n"
         callee_subsc = j.get_rhs_subscript
+        # print "callee_subsc = ", callee_subsc, "\n"
       else
         callee_cell = j.get_rhs_cell1
+        # print "callee_cell = ", callee_cell, "\n"
         callee_port = j.get_rhs_port1
+        # print "callee_port = ", callee_port, "\n"
         callee_subsc = j.get_rhs_subscript1
+        # print "callee_subsc = ", callee_subsc, "\n"
       end
       print_flow indent_level, no_caller_cell, call_port, call_subsc, callee_cell, callee_port, callee_subsc, function
       callee_cell.print_entry_func_flow callee_port, function, indent_level + 1, parent_cell
     else
+      # print "parent_cell = ", parent_cell, "\n"
       if parent_cell.length > 0 then
         # print "len = ", parent_cell.length, "\n"
         composite = parent_cell.last.get_celltype
@@ -362,6 +408,7 @@ class Cell
           end
           print "#{call_port} == "
           j = parent_cell.last.get_join_list.get_item compjoin.get_name
+          # print "j = ", j, "\n"
           if j != nil then
             if ! $unopt then
               callee_cell = j.get_rhs_cell
@@ -380,6 +427,7 @@ class Cell
             callee_cell.print_entry_func_flow callee_port, function, indent_level + 1, pc
             # break
           else
+            # print "recursive case\n"
             # recursive case, parent's port is joined to grand parent's exporting port.
             cf_name = "->#{compjoin.get_name}.#{function}__T".to_sym
             pc = parent_cell.dup
@@ -417,10 +465,13 @@ class Cell
     if ! no_cell_name then
       nsp = get_namespace_path.to_s.sub( /^::/, "")
       # pp nsp.class.name
-      if nsp != "" then
-        print nsp, "."
+      if @@rustflow then
       else
-        print @name, "."
+        if nsp != "" then
+          print nsp, "."
+        else
+          print @name, "."
+        end
       end
     end
 
@@ -434,10 +485,20 @@ class Cell
   def print_flow indent_level, no_caller_cell, call_port_name, call_subsc, callee_cell, entry_port_name, callee_subsc, func_name
     indent_level = print_indent indent_level
     no_cell_name = no_caller_cell
-    print_name no_cell_name, call_port_name, call_subsc, func_name
+    if @@rustflow then
+      rust_call_port_name = "#{snake_case(call_port_name.to_s)}".to_sym
+      print_name no_cell_name, rust_call_port_name, call_subsc, func_name
+    else
+      print_name no_cell_name, call_port_name, call_subsc, func_name
+    end
     print " => "
     no_cell_name = false
-    callee_cell.print_name no_cell_name, entry_port_name, callee_subsc, func_name
+    if @@rustflow then
+      rust_entry_port_structure = "#{camel_case(snake_case(entry_port_name.to_s))}For#{get_rust_celltype_name(callee_cell.get_celltype)}".to_sym
+      callee_cell.print_name no_cell_name, rust_entry_port_structure, callee_subsc, func_name
+    else
+      callee_cell.print_name no_cell_name, entry_port_name, callee_subsc, func_name
+    end
   end
 end
 
@@ -466,6 +527,8 @@ module TECSFlow
       # doing = "Marshal.load"
       # $tcflow_funclist = Marshal.load( mar_in )
       $tcflow_funclist = TCFlow::Function.load_funclist $tcflow_dump_file_name
+      # funclist の出力
+      # print "$tcflow_funclist = ", $tcflow_funclist, "\n"
     rescue
       print "fatal: fail to load '#{$tcflow_dump_file_name}' in #{doing}\n"
       exit 1

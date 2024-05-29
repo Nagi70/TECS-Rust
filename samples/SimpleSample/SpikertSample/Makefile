@@ -79,6 +79,10 @@ rustflow_exec : $(GEN_DIR)/rustflow.rbdmp
 $(GEN_DIR)/rustflow.rbdmp : 
 	rustflow.rb -g $(GEN_DIR) $(RUST_SRCS)
 
+temp :
+	rustflow.rb -g $(GEN_DIR) $(RUST_SRCS)
+	tecsflow -g $(GEN_DIR) --rust
+
 #####  end TECSFlow targets  #####
 
 $(_TECS_OBJ_DIR)%.o : %.c
