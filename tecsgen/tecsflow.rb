@@ -45,6 +45,7 @@ $title = "tecsflow"
 $tool_version = "1.G.0"
 
 @@rustflow = false
+@@rustflow_option = nil
 
 require "#{$tecsflow_base_path}/flowlib/classes.rb"
 require "#{$tecsflow_base_path}/tecslib/version.rb"
@@ -65,8 +66,17 @@ def analyze_option
     parser.on( '--version', 'print version') {
       $print_version = true
     }
-    parser.on( '--rust', 'rust') {
-      @@rustflow = true
+    parser.on('-r', '--rust=option',     'select only or both') { |option|
+      if option == "only" then
+        @@rustflow = true
+        @@rustflow_option = "only"
+      elsif option == "both" then
+        @@rustflow = true
+        @@rustflow_option = "both"
+      else
+        print "invalid option for --rust\n"
+        exit 1
+      end 
     }
     parser.version = "#{$version}"
     parser.release = nil
@@ -119,11 +129,17 @@ class Namespace
     @@root_namespace = root
   end
 
+  # def get_cell_list
+  #   return @cell_list
+  # end
+
   #=== print_all_cells
   # print all call flow beginning with active cell's call port function
   def print_all_cells
     # for each active cell
+    # print @cell_list
   	@cell_list.each{|cell|
+      # print "cell: #{cell.get_name}\n"
  			celltype = cell.get_celltype
  			call_funcs = {}
   		if celltype.is_active? then
@@ -461,17 +477,36 @@ class Cell
     end
   end
 
+  # c_task_body.main などの呼び口関数や受け口関数を print する関数
   def print_name no_cell_name, port_name, subsc, func_name
     if ! no_cell_name then
       nsp = get_namespace_path.to_s.sub( /^::/, "")
       # pp nsp.class.name
-      if @@rustflow then
+      # rustflow の場合は、セル名.受け口名.関数名 ではなく、受け口構造体名.関数名 なるように if文追加
+      if nsp != "" then
+        print nsp, "."
       else
-        if nsp != "" then
-          print nsp, "."
-        else
-          print @name, "."
-        end
+        print @name, "."
+      end
+    end
+
+    print port_name
+    if subsc then
+      print '[', subsc, ']'
+    end
+    print ".", func_name
+  end
+
+      # c_task_body.main などの呼び口関数や受け口関数を print する関数
+  def print_rust_name no_cell_name, port_name, subsc, func_name
+    if ! no_cell_name then
+      nsp = get_namespace_path.to_s.sub( /^::/, "")
+      # pp nsp.class.name
+      # rustflow の場合は、セル名.受け口名.関数名 ではなく、受け口構造体名.関数名 なるように if文追加
+      if nsp != "" then
+        print nsp.upcase, ":"
+      else
+        print @name.upcase, ":"
       end
     end
 
@@ -487,7 +522,7 @@ class Cell
     no_cell_name = no_caller_cell
     if @@rustflow then
       rust_call_port_name = "#{snake_case(call_port_name.to_s)}".to_sym
-      print_name no_cell_name, rust_call_port_name, call_subsc, func_name
+      print_rust_name no_cell_name, rust_call_port_name, call_subsc, func_name
     else
       print_name no_cell_name, call_port_name, call_subsc, func_name
     end
@@ -495,8 +530,18 @@ class Cell
     no_cell_name = false
     if @@rustflow then
       rust_entry_port_structure = "#{camel_case(snake_case(entry_port_name.to_s))}For#{get_rust_celltype_name(callee_cell.get_celltype)}".to_sym
-      callee_cell.print_name no_cell_name, rust_entry_port_structure, callee_subsc, func_name
+      callee_cell.print_rust_name no_cell_name, rust_entry_port_structure, callee_subsc, func_name
     else
+      callee_cell.print_name no_cell_name, entry_port_name, callee_subsc, func_name
+    end
+
+    if @@rustflow_option == "both" then
+      print "\n"
+      indent_level = print_indent indent_level
+      no_cell_name = no_caller_cell
+      print_name no_cell_name, call_port_name, call_subsc, func_name
+      print " => "
+      no_cell_name = false
       callee_cell.print_name no_cell_name, entry_port_name, callee_subsc, func_name
     end
   end
@@ -504,8 +549,11 @@ end
 
 module TECSFlow
   include Locale_printer
+  require 'json'
   def self.main
     doing = "nothing"
+    log_file = File.open( "#{$gen}/tecsflow.log", "w" )
+    $stdout = log_file
     begin
       print "reading '#{$tecsgen_dump_file_name}'\n"
       doing = "file reading"
@@ -536,6 +584,14 @@ module TECSFlow
     Namespace.set_root $root_namespace
     $root_namespace.print_all_cells
     print_unref_function
+
+    $stdout = STDOUT
+    log_file.close
+    print_file = File.read( "#{$gen}/tecsflow.log" )
+    print print_file
+
+    generate_json_file
+    
   end
 
   def self.analyze_call_port_func_name fname
@@ -571,6 +627,22 @@ module TECSFlow
       #   print fname, "\n"
       end
     }
+  end
+
+  def self.generate_json_file 
+    log_file = File.read( "#{$gen}/tecsflow.log" )
+
+    data = []
+    call_flow_data = []
+
+    cell_list = $root_namespace.get_cell_list
+    cell_list.each{ |cell|
+      print "cell: #{cell.get_name}\n"
+      print "celltype: #{cell.get_celltype.get_name}\n"
+    }
+
+    json_file = File.open( "#{$gen}/tecsflow.json", "w" )
+    json_file.close
   end
 
 end

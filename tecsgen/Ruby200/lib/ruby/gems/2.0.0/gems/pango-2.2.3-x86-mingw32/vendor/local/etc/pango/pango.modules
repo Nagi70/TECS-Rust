@@ -1,0 +1,19 @@
+# Pango Modules file
+# Automatically generated file, do not edit
+#
+# ModulesPath = /home/kou/work/ruby/ruby-gnome2.win32/pango/vendor/local/lib/pango/1.8.0/modules
+#
+/home/kou/work/ruby/ruby-gnome2.win32/pango/vendor/local/lib/pango/1.8.0/modules/pango-basic-fc.dll BasicScriptEngineFc PangoEngineShape PangoRenderFc common:
+/home/kou/work/ruby/ruby-gnome2.win32/pango/vendor/local/lib/pango/1.8.0/modules/pango-basic-win32.dll BasicScriptEngineWin32 PangoEngineShape PangoRenderWin32 common:
+/home/kou/work/ruby/ruby-gnome2.win32/pango/vendor/local/lib/pango/1.8.0/modules/pango-arabic-lang.dll ArabicScriptEngineLang PangoEngineLang PangoRenderNone arabic:*
+/home/kou/work/ruby/ruby-gnome2.win32/pango/vendor/local/lib/pango/1.8.0/modules/pango-indic-lang.dll devaIndicScriptEngineLang PangoEngineLang PangoRenderNone devanagari:*
+/home/kou/work/ruby/ruby-gnome2.win32/pango/vendor/local/lib/pango/1.8.0/modules/pango-indic-lang.dll bengIndicScriptEngineLang PangoEngineLang PangoRenderNone bengali:*
+/home/kou/work/ruby/ruby-gnome2.win32/pango/vendor/local/lib/pango/1.8.0/modules/pango-indic-lang.dll guruIndicScriptEngineLang PangoEngineLang PangoRenderNone gurmukhi:*
+/home/kou/work/ruby/ruby-gnome2.win32/pango/vendor/local/lib/pango/1.8.0/modules/pango-indic-lang.dll gujrIndicScriptEngineLang PangoEngineLang PangoRenderNone gujarati:*
+/home/kou/work/ruby/ruby-gnome2.win32/pango/vendor/local/lib/pango/1.8.0/modules/pango-indic-lang.dll oryaIndicScriptEngineLang PangoEngineLang PangoRenderNone oriya:*
+/home/kou/work/ruby/ruby-gnome2.win32/pango/vendor/local/lib/pango/1.8.0/modules/pango-indic-lang.dll tamlIndicScriptEngineLang PangoEngineLang PangoRenderNone tamil:*
+/home/kou/work/ruby/ruby-gnome2.win32/pango/vendor/local/lib/pango/1.8.0/modules/pango-indic-lang.dll teluIndicScriptEngineLang PangoEngineLang PangoRenderNone telugu:*
+/home/kou/work/ruby/ruby-gnome2.win32/pango/vendor/local/lib/pango/1.8.0/modules/pango-indic-lang.dll kndaIndicScriptEngineLang PangoEngineLang PangoRenderNone kannada:*
+/home/kou/work/ruby/ruby-gnome2.win32/pango/vendor/local/lib/pango/1.8.0/modules/pango-indic-lang.dll mlymIndicScriptEngineLang PangoEngineLang PangoRenderNone malayalam:*
+/home/kou/work/ruby/ruby-gnome2.win32/pango/vendor/local/lib/pango/1.8.0/modules/pango-indic-lang.dll sinhIndicScriptEngineLang PangoEngineLang PangoRenderNone sinhala:*
+

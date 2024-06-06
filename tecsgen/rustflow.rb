@@ -91,7 +91,7 @@ def parse_rust_functions(rust_file)
     # TECSジェネレータが生成した impl 内の実装だけを確認するため
     if line =~ signature_impl_pattern && brace_count == 1
       @curennt_signature_impl = line.scan(signature_impl_pattern)
-      print "#{@curennt_signature_impl}\n"
+      # print "#{@curennt_signature_impl}\n"
       @currennt_entry_structure = @curennt_signature_impl[0].scan(/E\w*ForT\w*/)
       # print "currennt_entry_structure: #{@currennt_entry_structure}\n"
     end
@@ -100,10 +100,15 @@ def parse_rust_functions(rust_file)
     # impl 内の関数実装だけを確認するため
     if line =~ fn_pattern && brace_count == 2
       @current_function_name = line.scan(/fn\s+\w+\s*\(.*?\)\s*/)
-      print "\t[#{@current_function_name}]\n"
+      # print "\t[#{@current_function_name}]\n"
       temp = @current_function_name[0]
       current_func_name_without_arguments = temp[/fn (\w+)/, 1]
+      # current_tecs_celltype_name = nil
+      # current_tecs_entryport_name = nil
+      # funclist に格納する関数名の生成 (旧バージョン)
       entry_func_name = "#{@currennt_entry_structure[0]}.#{current_func_name_without_arguments}"
+      # funclist に格納する関数名の生成 (新バージョン)
+      # entry_func_name = "#{@current_tecs_celltype_name}_#{@current_tecs_entryport_name}_#{current_func_name_without_arguments}"
       # print "\t\t#{entry_func_name}\n"
       @current_entry_function = nil
       @current_entry_function = TCFlow::Function.new(["#{rust_file}", rust_file_lines.index(line)+1])
@@ -124,7 +129,7 @@ def parse_rust_functions(rust_file)
         call = "c" + camel_case(cname) + "." + after_dot
         call.prepend("->")
         call << "__T"
-        print "\t\t#{call}\n"
+        # print "\t\t#{call}\n"
         # call_func_name = TCFlow::Function.new(rust_file_lines.index(line))
         # call_func_name.set_name(call)
         # call_func_name = nil
