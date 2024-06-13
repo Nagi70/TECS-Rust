@@ -81,7 +81,7 @@ $(GEN_DIR)/rustflow.rbdmp :
 
 temp :
 	rustflow.rb -g $(GEN_DIR) $(RUST_SRCS)
-	tecsflow -g $(GEN_DIR) --rust=both
+	tecsflow -g $(GEN_DIR) --rust=only
 
 #####  end TECSFlow targets  #####
 

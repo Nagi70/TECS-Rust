@@ -46,6 +46,7 @@ $tool_version = "1.G.0"
 
 @@rustflow = false
 @@rustflow_option = nil
+@@repeat = false
 
 require "#{$tecsflow_base_path}/flowlib/classes.rb"
 require "#{$tecsflow_base_path}/tecslib/version.rb"
@@ -216,6 +217,7 @@ class Cell
   @@printed_func_nsp_list = {}    # function path in CDL like format
   @@printed_cell_list = {}
   @@printed_celltype_list = {}
+  # @@repeat = false
 
   def self.print_unused_func
     parent_cell = []
@@ -520,23 +522,27 @@ class Cell
   def print_flow indent_level, no_caller_cell, call_port_name, call_subsc, callee_cell, entry_port_name, callee_subsc, func_name
     indent_level = print_indent indent_level
     no_cell_name = no_caller_cell
-    if @@rustflow then
-      rust_call_port_name = "#{snake_case(call_port_name.to_s)}".to_sym
-      print_rust_name no_cell_name, rust_call_port_name, call_subsc, func_name
-    else
-      print_name no_cell_name, call_port_name, call_subsc, func_name
-    end
-    print " => "
-    no_cell_name = false
-    if @@rustflow then
-      rust_entry_port_structure = "#{camel_case(snake_case(entry_port_name.to_s))}For#{get_rust_celltype_name(callee_cell.get_celltype)}".to_sym
-      callee_cell.print_rust_name no_cell_name, rust_entry_port_structure, callee_subsc, func_name
-    else
-      callee_cell.print_name no_cell_name, entry_port_name, callee_subsc, func_name
+    if @@repeat == false then
+      if @@rustflow then
+        rust_call_port_name = "#{snake_case(call_port_name.to_s)}".to_sym
+        print_rust_name no_cell_name, rust_call_port_name, call_subsc, func_name
+      else
+        print_name no_cell_name, call_port_name, call_subsc, func_name
+      end
+      print " => "
+      no_cell_name = false
+      if @@rustflow then
+        rust_entry_port_structure = "#{camel_case(snake_case(entry_port_name.to_s))}For#{get_rust_celltype_name(callee_cell.get_celltype)}".to_sym
+        callee_cell.print_rust_name no_cell_name, rust_entry_port_structure, callee_subsc, func_name
+      else
+        callee_cell.print_name no_cell_name, entry_port_name, callee_subsc, func_name
+      end
     end
 
-    if @@rustflow_option == "both" then
-      print "\n"
+    if @@rustflow_option == "both" || @@repeat == true then
+      if @@repeat == false then
+        print "\n"
+      end
       indent_level = print_indent indent_level
       no_cell_name = no_caller_cell
       print_name no_cell_name, call_port_name, call_subsc, func_name
@@ -547,13 +553,127 @@ class Cell
   end
 end
 
+class FlowTreeNode
+  attr_accessor :value, :children, :parent, :callport_name, :callfunc_name, :cellname, :entryport_name
+
+  def initialize(value)
+    @value = sanitize_value(value)
+    @children = []
+    @parent = nil
+    @callport_name, @callfunc_name, @cellname, @entryport_name = split_flow_line(value)
+  end
+
+  def add_child(child)
+    child.parent = self
+    @children << child
+  end
+
+  def display(level = 0)
+    puts "#{'  ' * level}#{value}"
+    children.each { |child| child.display(level + 1) }
+  end
+
+  def find_node(value)
+    return self if @value.include?(value)
+
+    children.each do |child|
+      result = child.find_node(value)
+      return result if result
+    end
+    nil
+  end
+
+  def find_nodes_by_cellname(target_cellname)
+    results = []
+    traverse do |node|
+      results << node if node.cellname == target_cellname
+    end
+    results
+  end
+
+  def flow_from_root_to_node(node_or_nodes)
+    nodes = [node_or_nodes].flatten
+    nodes.map do |node|
+      path = node.path_to_root
+      path.map do |n|
+        if n.parent
+          "#{n.callport_name}.#{n.callfunc_name} => #{n.cellname}.#{n.entryport_name}.#{n.callfunc_name}"
+        else
+          n.value
+        end
+      end.join(' -> ')
+    end
+  end
+
+  def traverse(&block)
+    yield self
+    children.each { |child| child.traverse(&block) }
+  end
+
+  def path_to_root
+    node = self
+    path = []
+    while node
+      path << node
+      node = node.parent
+    end
+    path.reverse
+  end
+
+  def formatted_path_to_root
+    path = path_to_root
+    path.map.with_index do |n, index|
+      if index == 0
+        n.value
+      elsif n.parent
+        "#{n.callport_name}.#{n.callfunc_name} => #{n.cellname}.#{n.entryport_name}.#{n.callfunc_name}"
+      end
+    end.compact.join(' -> ')
+  end
+
+  def sanitize_value(value)
+    # 正規表現を使って余分な部分を取り除く
+    value.sub(/\s*\(.*?\)\s*$/, '').sub(/: printed$/, '')
+  end
+
+  def root_value
+    node = self
+    node = node.parent while node.parent
+    node.value
+  end
+
+  private
+
+  def split_flow_line(line)
+    callport_name_in_flow = nil
+    callfunc_name_in_flow = nil
+    cellname_in_flow = nil
+    entryport_name_in_flow = nil
+
+    if line.include?("=>")
+      cfunc_statement = line.split("=>")[0].strip
+      callport_name_in_flow = cfunc_statement.split(".")[0].strip
+      callfunc_name_in_flow = cfunc_statement.split(".")[1].strip
+      efunc_statement = line.split("=>")[1].strip.sub(/: printed$/, '')
+      if efunc_statement.include?(":")
+        cellname_in_flow = efunc_statement.split(":")[0].strip
+        entryport_name_in_flow = efunc_statement.split(":")[1].split(".")[0].strip
+      else
+        cellname_in_flow = efunc_statement.split(".")[0].strip
+        entryport_name_in_flow = efunc_statement.split(".")[1].strip
+      end
+    end
+
+    return callport_name_in_flow, callfunc_name_in_flow, cellname_in_flow, entryport_name_in_flow
+  end
+end
+
 module TECSFlow
   include Locale_printer
+  # include FlowTreeNode
   require 'json'
   def self.main
     doing = "nothing"
-    log_file = File.open( "#{$gen}/tecsflow.log", "w" )
-    $stdout = log_file
     begin
       print "reading '#{$tecsgen_dump_file_name}'\n"
       doing = "file reading"
@@ -584,11 +704,6 @@ module TECSFlow
     Namespace.set_root $root_namespace
     $root_namespace.print_all_cells
     print_unref_function
-
-    $stdout = STDOUT
-    log_file.close
-    print_file = File.read( "#{$gen}/tecsflow.log" )
-    print print_file
 
     generate_json_file
     
@@ -629,22 +744,208 @@ module TECSFlow
     }
   end
 
-  def self.generate_json_file 
-    log_file = File.read( "#{$gen}/tecsflow.log" )
+  def self.generate_json_file
 
-    data = []
-    call_flow_data = []
+    log_file = File.open( "#{$gen}/tecsflow.log", "w" )
+    $stdout = log_file
+
+    Cell.class_variable_set(:@@repeat, true)
+    Cell.class_variable_set(:@@printed_func_nsp_list, {})
+    Cell.class_variable_set(:@@printed_cell_list, {})
+    Cell.class_variable_set(:@@printed_celltype_list, {})
+
+    $root_namespace.print_all_cells
+
+    $stdout = STDOUT
+    log_file.close
+
+    # trees = process_file("#{$gen}/tecsflow.txt")
+    trees = process_file("#{$gen}/tecsflow.log")
+
+    # trees.each_with_index do |tree, index|
+    #   puts "Tree #{index + 1}:"
+    #   tree.display
+    #   puts "----------------------------"
+    # end
 
     cell_list = $root_namespace.get_cell_list
+
+    json_obj = []
+
     cell_list.each{ |cell|
-      print "cell: #{cell.get_name}\n"
-      print "celltype: #{cell.get_celltype.get_name}\n"
+      # "Cell": "Motor",
+		  # "Celltype": "tMotor"
+      cellname = cell.get_name.to_s
+      celltype = cell.get_celltype.get_name.to_s
+
+      cell_obj = {
+        "Cell": cellname,
+        "Celltype": celltype,
+        "Accessed": []
+      }
+
+      trees.each_with_index do |tree, index|
+
+        # root_active_cell = nil
+
+        puts "Searching for '#{cellname}' in Tree #{index + 1}:"
+
+        # その active_cell tree のなかに、cellname があるかどうかを探す
+        found_nodes = tree.find_nodes_by_cellname(cellname)
+
+        # あれば、以下の処理を行う
+        if found_nodes.any?
+          # "ActiveCell": "Task1",
+		    	# "Celltype": "tTaskRs"
+		    	# "Callport": "cTaskbody"
+		    	# "Calleeport": "eTaskbody"
+		    	# "Function": "main"
+          # "Path": [
+          #   {
+          #     "CellName": "Taskbody",
+          #     "Celltype": "tTaskbody"
+          #     "Callport": "cAAA"
+          #     "Calleeport": "eAAA"
+          #     "Function": "BBB"
+          #   },
+
+          # JSONオブジェクトの初期化
+
+          found_nodes.each do |node|
+
+            path = node.formatted_path_to_root
+            array = path.split("=>").map(&:strip)
+
+            # 最初の要素の処理
+            first_element = array[0]
+            first_split = first_element.split("->")
+            active_cell = first_split[0].strip
+            callport = first_split[1].strip.split(".")[0]
+            function = first_split[1].strip.split(".")[1]
+
+            # 二番目の要素の処理
+            second_element = array[1]
+            second_split = second_element.split("->")
+            calleeport = second_split[0].strip.split(".")[1]
+
+
+
+            # 最初の要素の情報をJSONオブジェクトに追加
+            accessed_item = {
+              "ActiveCell": active_cell,
+              "Celltype": nil,
+              "Callport": callport,
+              "Calleeport": calleeport,
+              "Function": function,
+              "Path": []
+            }
+
+            # 二番目以降の要素の処理
+            (array[1..-1] || []).each_with_index do |element, index|
+              break if index == array.size - 2
+              next_split = element.split("->")
+              cell_name = next_split[0].strip.split(".")[0]
+              callport = next_split[1].strip.split(".")[0]
+              function = next_split[1].strip.split(".")[1]
+              calleeport = if array[index + 2]
+                             array[index + 2].split("->")[0].strip.split(".")[1]
+                           else
+                             ""
+                           end
+                         
+              path_item = {
+                "CellName": cell_name,
+                "Celltype": nil,
+                "Callport": callport,
+                "Calleeport": calleeport,
+                "Function": function
+              }
+              accessed_item[:Path] << path_item
+            
+            end
+            cell_obj[:Accessed] << accessed_item
+
+          end
+          # print accessed_obj
+
+        end
+
+        # accessed_hash = {
+          # ActiveCell: root_active_cell.get_name.to_s,
+          # Celltype: root_active_cell.get_celltype.get_global_name.to_s,
+          # Callport: 
+          # Function: 
+          # Path: path_data
+        # }
+        # accessed_data.push(accessed_hash)
+      end
+
+      json_obj.push(cell_obj)
+
+
+      # data_hash = {
+      #   Cell: cell.get_name.to_s,
+      #   Celltype: cell.get_celltype.get_name.to_s,
+      #   Accessed: accessed_data
+      # }
+      # data.push(data_hash)
     }
 
-    json_file = File.open( "#{$gen}/tecsflow.json", "w" )
-    json_file.close
+    json_file = File.open( "#{$gen}/tecsflow.json", "w" ) do |f|
+      f.write(JSON.pretty_generate(json_obj))
+    end
+  end
+
+  def self.process_file(file)
+
+    trees = []
+    current_lines = []
+  
+    File.foreach(file) do |line|
+      next if line.strip.empty? || !line.strip.start_with?("[active cell]") && current_lines.empty?
+      # break if line.strip == '--- unreferenced entry functions ---'
+      if line.strip.start_with?("[active cell]")
+        trees << create_tree_from_lines(current_lines) unless current_lines.empty?
+        current_lines = [line.strip.split("::").last.strip]
+      else
+        current_lines << line
+      end
+    end
+  
+    trees << create_tree_from_lines(current_lines) unless current_lines.empty?
+    trees
+  end
+
+  def self.create_tree_from_lines(lines)
+    root = nil
+    current_node = nil
+    node_stack = []
+  
+    lines.each_with_index do |line, index|
+      indent_level = line.match(/^\s*/)[0].size
+      node_value = index.zero? ? line.strip.split(' ').first : line.strip
+      node = FlowTreeNode.new(node_value)
+  
+      if indent_level == 0
+        root = node
+        current_node = root
+        node_stack = [[current_node, indent_level]]
+      else
+        while node_stack.any? && node_stack.last[1] >= indent_level
+          node_stack.pop
+        end
+        parent_node, _ = node_stack.last
+        parent_node.add_child(node) if parent_node
+        current_node = node
+        node_stack.push([current_node, indent_level])
+      end
+    end
+  
+    root
   end
 
 end
+
+
 
 TECSFlow.main
