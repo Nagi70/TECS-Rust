@@ -48,6 +48,11 @@ $tool_version = "1.G.0"
 @@rustflow_option = nil
 @@repeat = false
 
+$cell_list_hash = {}
+$flow_json_hash = {}
+$flow_stack = []
+$path_item_stack = []
+
 require "#{$tecsflow_base_path}/flowlib/classes.rb"
 require "#{$tecsflow_base_path}/tecslib/version.rb"
 require "#{$tecsflow_base_path}/tecsgen.rb"
@@ -134,18 +139,43 @@ class Namespace
   #   return @cell_list
   # end
 
+  def create_cell_list_json_hash
+    @cell_list.each{ |cell|
+      # next if cell.get_celltype.is_active? == true
+      # if cell.get_celltype.is_active? == true then
+      #   $flow_stack.push [cell, 0]
+      #   next
+      # end
+      cellname = cell.get_name.to_s
+      celltype = cell.get_celltype.get_name.to_s
+      cell_obj = {
+        "Cell": cellname,
+        "Celltype": celltype,
+        "Accessed": []
+      }
+      $flow_json_hash[cellname] = cell_obj
+
+      # print "cell.get.namespace_path: #{cell.get_namespace_path}\n"
+    }
+  end
+
   #=== print_all_cells
   # print all call flow beginning with active cell's call port function
   def print_all_cells
     # for each active cell
     # print @cell_list
+
+    create_cell_list_json_hash
+
   	@cell_list.each{|cell|
       # print "cell: #{cell.get_name}\n"
  			celltype = cell.get_celltype
  			call_funcs = {}
   		if celltype.is_active? then
   			if ! celltype.kind_of? CompositeCelltype then
-		  		print "[active cell] #{cell.get_namespace_path}"
+          $flow_stack = []
+          $flow_stack.push [cell, 0]
+          print "[active cell] #{cell.get_namespace_path}"
           print_locale cell.get_locale
           print "\n"
 		  		cell.get_join_list.get_items.each{ |j|
@@ -261,6 +291,53 @@ class Cell
     }
   end
 
+  def create_path_item_hash indent_level, no_caller_cell, call_port_name, call_subsc, callee_cell, entry_port_name, callee_subsc, func_name
+
+    path_item = {
+      "CellName": callee_cell.get_name,
+      "Celltype": callee_cell.get_celltype.get_name,
+      "Callport": call_port_name, # この呼び口は、呼び元のセルのポート名であるため、正しくない
+      "Calleeport": entry_port_name, # この受け口は、呼び元のセルの、呼び先ポート名であるため、正しくない
+      "Function": func_name, # この関数名は、呼び元のセルの、呼び口関数名であるため、正しくない
+    }
+
+    while $path_item_stack.any? && $path_item_stack.last[1] >= indent_level
+      $path_item_stack.pop
+    end
+
+    $path_item_stack.push [path_item, indent_level]
+
+    path_item_stack_copy = Marshal.load(Marshal.dump($path_item_stack))
+
+    # $path_item_stack を全て accessed_item に追加
+    accessed_item = {
+      "ActiveCell": $flow_stack.first[0].get_name,
+      "Celltype": $flow_stack.first[0].get_celltype.get_name,
+      "Callport": $path_item_stack[0][0][:Callport],
+      "Calleeport": $path_item_stack[0][0][:Calleeport],
+      "Function": $path_item_stack[0][0][:Function],
+      "Path": []
+    }
+
+    # 1つ先のセルの Callport, Calleeport, Function を取得
+    path_item_stack_copy.each_with_index{ |path_item_temp, i|
+      break if i == path_item_stack_copy.length - 1
+      path_item_temp[0][:Callport] = $path_item_stack[i+1][0][:Callport]
+      path_item_temp[0][:Calleeport] = $path_item_stack[i+1][0][:Calleeport]
+      path_item_temp[0][:Function] = $path_item_stack[i+1][0][:Function]
+      accessed_item[:Path].push path_item_temp[0]
+    }
+
+    $flow_json_hash[$path_item_stack.last[0][:CellName].to_s][:Accessed] << Marshal.load(Marshal.dump(accessed_item))
+
+    while $flow_stack.any? && $flow_stack.last[1] >= indent_level
+      $flow_stack.pop
+    end
+
+    $flow_stack.push [callee_cell, indent_level]
+
+  end
+
   def get_function_nsp port_name, func_name, parent_cell
     if @in_composite == false then
       nsp = get_namespace_path.to_s.sub( /^::/, "")
@@ -287,6 +364,7 @@ class Cell
     func_nsp = get_function_nsp entry_port_name, func_name, parent_cell
     # print "\nentry:", func_nsp, "\n"
     @@printed_cell_list[ self ] = true
+    ###### ここで printed 判断しているが、現在がリーフであるかどうかとは同義ではない
     if @@printed_func_nsp_list[ func_nsp ] then
       # print "\n"
       # print_indent indent_level
@@ -307,6 +385,8 @@ class Cell
         print "\n"
         function.set_printed
         function.get_call_funcs.each{ |call_func_name, func|
+          # print "call_func_name: #{call_func_name}\n"
+          # print "func: #{func}\n"
           # print "#{indent}#{fname} \n"
           # decompose
           no_caller_cell = true
@@ -328,6 +408,9 @@ class Cell
       # parent_cell.each{|c| print c.get_name, "\n" }
       cell.print_entry_func_flow ep_name, func_name, indent_level, parent_cell
     end
+    ###### 出力が終わる、つまりリーフの時はここで終了する
+    ###### リーフ以外のケースにおいても、通ることがある
+    # print "checked\n"
   end
 
   def print_call_func_flow no_caller_cell, call_func_name, indent_level, parent_cell = []
@@ -342,6 +425,7 @@ class Cell
       call_subsc = m[2]
       # print "print_call_func_flow: #{call_func_name} => #{call_port}.#{function}\n"
       # p "call_subsc=", call_subsc
+      ##### 現在のケースは call_subsc は nil
       if call_subsc == nil then
         join = get_join_list.get_item call_port
         print_call_func_flow_sub indent_level, no_caller_cell, call_port, call_subsc, function, join, parent_cell
@@ -387,18 +471,26 @@ class Cell
 
   def print_call_func_flow_sub indent_level, no_caller_cell, call_port, call_subsc, function, join, parent_cell
     # print "j = join : #{join}\n"
+    # print "parent_cell = ", parent_cell, "\n"
+    # print "indent_level = ", indent_level, "\n"
+    # print "no_caller_cell = ", no_caller_cell, "\n"
+    # print "call_port = ", call_port, "\n"
+    # print "call_subsc = ", call_subsc, "\n"
+    # print "function = ", function, "\n"
+    # print "join = ", join.get_name, "\n"
+
     j = join
     if j != nil then
       if ! $unopt then
         callee_cell = j.get_rhs_cell
-        # print "callee_cell = ", callee_cell, "\n"
+        # print "callee_cell = ", callee_cell.get_name, "\n"
         callee_port = j.get_rhs_port.get_name
         # print "callee_port = ", callee_port, "\n"
         callee_subsc = j.get_rhs_subscript
         # print "callee_subsc = ", callee_subsc, "\n"
       else
         callee_cell = j.get_rhs_cell1
-        # print "callee_cell = ", callee_cell, "\n"
+        # print "callee_cell = ", callee_cell.get_name, "\n"
         callee_port = j.get_rhs_port1
         # print "callee_port = ", callee_port, "\n"
         callee_subsc = j.get_rhs_subscript1
@@ -520,6 +612,18 @@ class Cell
   end
 
   def print_flow indent_level, no_caller_cell, call_port_name, call_subsc, callee_cell, entry_port_name, callee_subsc, func_name
+    # print "indent_level = ", indent_level, "\n"
+    # print "no_caller_cell = ", no_caller_cell, "\n"
+    # print "call_port_name = ", call_port_name, "\n"
+    # print "call_subsc = ", call_subsc, "\n"
+    # print "callee_cell = ", callee_cell, "\n"
+    # print "callee_cell.get_name = ", callee_cell.get_name, "\n"
+    # print "entry_port_name = ", entry_port_name, "\n"
+    # print "callee_subsc = ", callee_subsc, "\n"
+    # print "func_name = ", func_name, "\n"
+    
+    create_path_item_hash indent_level, no_caller_cell, call_port_name, call_subsc, callee_cell, entry_port_name, callee_subsc, func_name
+    
     indent_level = print_indent indent_level
     no_cell_name = no_caller_cell
     if @@repeat == false then
@@ -697,15 +801,44 @@ module TECSFlow
       $tcflow_funclist = TCFlow::Function.load_funclist $tcflow_dump_file_name
       # funclist の出力
       # print "$tcflow_funclist = ", $tcflow_funclist, "\n"
+      temp = $tcflow_funclist[:"ETaskbodyForTTaskbody.main"]
+      # print "@name = ", temp.get_name, "\n"
+      # print "@call_funcs = ", temp.get_call_funcs, "\n"
+      # print "stop = ", temp.get_call_funcs[:'->cMotor.stop__T'], "\n"
     rescue
       print "fatal: fail to load '#{$tcflow_dump_file_name}' in #{doing}\n"
       exit 1
     end
     Namespace.set_root $root_namespace
+
+    # cell_list = $root_namespace.get_cell_list
+    # cell_hash = {}
+    # cell_list.each{ |cell|
+      # cell_hash[ cell.get_name ] = cell
+      # print "cell = ", cell, "\n"
+    # }
+    # temp = cell_hash[:'Motor']
+    # print "cell_name = ", temp.get_name, "\n"
+
     $root_namespace.print_all_cells
     print_unref_function
 
-    generate_json_file
+    cell_list = $root_namespace.get_cell_list
+    json_list = []
+    cell_list.each{ |cell|
+      next if cell.get_celltype.is_active?
+      json_list << $flow_json_hash[cell.get_name.to_s]
+    }
+
+    json_file = File.open( "#{$gen}/tecsflow_temp.json", "w" ) do |f|
+      f.write(JSON.pretty_generate(json_list))
+    end
+
+    # json_file = File.open( "#{$gen}/tecsflow_temp.json", "w" ) do |f|
+      # f.write(JSON.pretty_generate($flow_json_hash))
+    # end
+
+    # generate_json_file
     
   end
 
@@ -759,22 +892,16 @@ module TECSFlow
     $stdout = STDOUT
     log_file.close
 
-    # trees = process_file("#{$gen}/tecsflow.txt")
     trees = process_file("#{$gen}/tecsflow.log")
-
-    # trees.each_with_index do |tree, index|
-    #   puts "Tree #{index + 1}:"
-    #   tree.display
-    #   puts "----------------------------"
-    # end
 
     cell_list = $root_namespace.get_cell_list
 
     json_obj = []
 
     cell_list.each{ |cell|
-      # "Cell": "Motor",
-		  # "Celltype": "tMotor"
+
+      next if cell.get_celltype.is_active?
+
       cellname = cell.get_name.to_s
       celltype = cell.get_celltype.get_name.to_s
 
@@ -786,28 +913,11 @@ module TECSFlow
 
       trees.each_with_index do |tree, index|
 
-        # root_active_cell = nil
-
-        puts "Searching for '#{cellname}' in Tree #{index + 1}:"
-
         # その active_cell tree のなかに、cellname があるかどうかを探す
         found_nodes = tree.find_nodes_by_cellname(cellname)
 
         # あれば、以下の処理を行う
         if found_nodes.any?
-          # "ActiveCell": "Task1",
-		    	# "Celltype": "tTaskRs"
-		    	# "Callport": "cTaskbody"
-		    	# "Calleeport": "eTaskbody"
-		    	# "Function": "main"
-          # "Path": [
-          #   {
-          #     "CellName": "Taskbody",
-          #     "Celltype": "tTaskbody"
-          #     "Callport": "cAAA"
-          #     "Calleeport": "eAAA"
-          #     "Function": "BBB"
-          #   },
 
           # JSONオブジェクトの初期化
 
@@ -828,12 +938,18 @@ module TECSFlow
             second_split = second_element.split("->")
             calleeport = second_split[0].strip.split(".")[1]
 
-
+            accessed_celltype = nil
+            cell_list.each do |c|
+              if c.get_name.to_s == active_cell then
+                accessed_celltype = c.get_celltype.get_name.to_s
+                break
+              end
+            end
 
             # 最初の要素の情報をJSONオブジェクトに追加
             accessed_item = {
               "ActiveCell": active_cell,
-              "Celltype": nil,
+              "Celltype": accessed_celltype,
               "Callport": callport,
               "Calleeport": calleeport,
               "Function": function,
@@ -852,10 +968,18 @@ module TECSFlow
                            else
                              ""
                            end
-                         
+              
+              path_celltype = nil
+              cell_list.each do |c|
+                if c.get_name.to_s == cell_name then
+                  path_celltype = c.get_celltype.get_name.to_s
+                  break
+                end
+              end
+
               path_item = {
                 "CellName": cell_name,
-                "Celltype": nil,
+                "Celltype": path_celltype,
                 "Callport": callport,
                 "Calleeport": calleeport,
                 "Function": function
@@ -866,29 +990,10 @@ module TECSFlow
             cell_obj[:Accessed] << accessed_item
 
           end
-          # print accessed_obj
-
         end
-
-        # accessed_hash = {
-          # ActiveCell: root_active_cell.get_name.to_s,
-          # Celltype: root_active_cell.get_celltype.get_global_name.to_s,
-          # Callport: 
-          # Function: 
-          # Path: path_data
-        # }
-        # accessed_data.push(accessed_hash)
       end
 
       json_obj.push(cell_obj)
-
-
-      # data_hash = {
-      #   Cell: cell.get_name.to_s,
-      #   Celltype: cell.get_celltype.get_name.to_s,
-      #   Accessed: accessed_data
-      # }
-      # data.push(data_hash)
     }
 
     json_file = File.open( "#{$gen}/tecsflow.json", "w" ) do |f|
@@ -903,7 +1008,6 @@ module TECSFlow
   
     File.foreach(file) do |line|
       next if line.strip.empty? || !line.strip.start_with?("[active cell]") && current_lines.empty?
-      # break if line.strip == '--- unreferenced entry functions ---'
       if line.strip.start_with?("[active cell]")
         trees << create_tree_from_lines(current_lines) unless current_lines.empty?
         current_lines = [line.strip.split("::").last.strip]
