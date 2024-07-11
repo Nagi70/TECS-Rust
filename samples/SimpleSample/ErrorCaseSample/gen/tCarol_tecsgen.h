@@ -12,7 +12,7 @@
  * idx_is_id(actual) :  no(no)
  * singleton         :  no
  * has_CB            :  no
- * has_INIB          :  no
+ * has_INIB          :  yes
  * rom               :  yes
  * CB initializer    :  no
  */
@@ -28,14 +28,24 @@
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
-/* cell CB (dummy) type definition #_CCDP_# */
-typedef struct tag_tCarol_CB {
-    int  dummy;
-} tCarol_CB;
+/* cell INIB type definition #_CIP_# */
+typedef const struct tag_tCarol_INIB {
+    /* call port #_TCP_# */
+    /* call port #_NEP_# */ 
+    /* attribute(RO) #_ATO_# */ 
+    int32_t        carol_attr;
+}  tCarol_INIB;
+
+/* CB not exist. CB corresponding to INIB #_DCI_# */
+#define tCarol_CB_tab           tCarol_INIB_tab
+#define tCarol_CB               tCarol_INIB
+#define tag_tCarol_CB           tag_tCarol_INIB
+
 /* singleton cell CB prototype declaration #_MCPB_# */
+extern tCarol_INIB  tCarol_INIB_tab[];
 
 /* celltype IDX type #_CTIX_# */
-typedef int   tCarol_IDX;
+typedef const struct tag_tCarol_INIB *tCarol_IDX;
 
 /* prototype declaration of entry port function #_EPP_# */
 /* sHello */
@@ -64,7 +74,15 @@ void         tCarol_eCarol_Hello(tCarol_IDX idx);
 
 
 /* celll CB macro #_GCB_# */
-#define tCarol_GET_CELLCB(idx) ((void *)0)
+#define tCarol_GET_CELLCB(idx) (idx)
+
+/* attr access  #_AAM_# */
+#define tCarol_ATTR_carol_attr( p_that )	((p_that)->carol_attr)
+
+#define tCarol_GET_carol_attr(p_that)	((p_that)->carol_attr)
+
+
+
 #ifndef TECSFLOW
  /* call port function macro #_CPM_# */
 #define tCarol_cPerson_Hello( p_that ) \
@@ -113,6 +131,11 @@ void           tCarol_eCarol_Hello_skel( const struct tag_sHello_VDES *epd);
 /* celltype IDX type (abbrev) #_CTIXA_# */
 #define CELLIDX	tCarol_IDX
 
+
+/* attr access macro (abbrev) #_AAMA_# */
+#define ATTR_carol_attr      tCarol_ATTR_carol_attr( p_cellcb )
+
+
 /* call port function macro (abbrev) #_CPMA_# */
 #define cPerson_Hello( ) \
           ((void)p_cellcb, tCarol_cPerson_Hello( p_cellcb ))
@@ -123,9 +146,10 @@ void           tCarol_eCarol_Hello_skel( const struct tag_sHello_VDES *epd);
 /* entry port function macro (abbrev) #_EPM_# */
 #define eCarol_Hello     tCarol_eCarol_Hello
 
-/* iteration code (FOREACH_CELL) (niether CB, nor NIB exit) #_NFEC_# */
+/* iteration code (FOREACH_CELL) #_FEC_# */
 #define FOREACH_CELL(i,p_cb)   \
-    for((i)=0;(i)<0;(i)++){
+    for( (i) = 0; (i) < tCarol_N_CELL; (i)++ ){ \
+       //(p_cb) = &tCarol_CB_tab[i];
 
 #define END_FOREACH_CELL   }
 

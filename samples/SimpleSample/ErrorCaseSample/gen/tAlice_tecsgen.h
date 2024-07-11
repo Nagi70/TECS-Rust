@@ -33,6 +33,8 @@ typedef const struct tag_tAlice_INIB {
     /* call port #_TCP_# */
     struct tag_sHello_VDES const*cPerson; /* TCP_2 */
     /* call port #_NEP_# */ 
+    /* attribute(RO) #_ATO_# */ 
+    int32_t        alice_attr;
 }  tAlice_INIB;
 
 /* CB not exist. CB corresponding to INIB #_DCI_# */
@@ -65,6 +67,14 @@ void         tAlice_eAlice_Hello(tAlice_IDX idx);
 
 /* celll CB macro #_GCB_# */
 #define tAlice_GET_CELLCB(idx) (idx)
+
+/* attr access  #_AAM_# */
+#define tAlice_ATTR_alice_attr( p_that )	((p_that)->alice_attr)
+
+#define tAlice_GET_alice_attr(p_that)	((p_that)->alice_attr)
+
+
+
 #ifndef TECSFLOW
  /* call port function macro #_CPM_# */
 #define tAlice_cPerson_Hello( p_that ) \
@@ -110,6 +120,11 @@ extern "C" {
 
 /* celltype IDX type (abbrev) #_CTIXA_# */
 #define CELLIDX	tAlice_IDX
+
+
+/* attr access macro (abbrev) #_AAMA_# */
+#define ATTR_alice_attr      tAlice_ATTR_alice_attr( p_cellcb )
+
 
 /* call port function macro (abbrev) #_CPMA_# */
 #define cPerson_Hello( ) \

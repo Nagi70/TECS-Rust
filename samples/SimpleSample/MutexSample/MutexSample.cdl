@@ -1,0 +1,105 @@
+signature sHello {
+    void Hello(void);
+};
+
+signature sTaskbody {
+    void main(void);
+};
+
+[active]
+celltype tTask{
+    call sTaskbody cTaskbody;
+    call sHello cPerson;
+    attr {
+        int32_t id;
+    };
+};
+
+[generate(RustGenPlugin,"lib")]
+celltype tTaskbody {
+    call sHello cPerson;
+    entry sTaskbody eTaskbody;
+};
+
+[generate(RustGenPlugin,"lib")]
+celltype tAlice {
+    call sHello cCarol;
+    entry sHello eAlice1;
+    entry sHello eAlice2;
+    attr{
+        int32_t id;
+    };
+
+    var{
+        int32_t count = 0;
+    };
+};
+
+[generate(RustGenPlugin,"lib")]
+celltype tBob {
+    call sHello cCarol;
+    entry sHello eBob;
+    attr{
+        int32_t id;
+    };
+
+    var{
+        int32_t count = 0;
+    };
+};
+
+[generate(RustGenPlugin,"lib")]
+celltype tCarol {
+    entry sHello eCarol;
+    attr{
+        int32_t id;
+    };
+
+    var{
+        int32_t count = 0;
+    };
+};
+
+[generate(RustGenPlugin,"lib")]
+cell tTask Task1 {
+    cTaskbody = Taskbody1.eTaskbody;
+    cPerson = Carol1.eCarol;
+    id = 0;
+};
+
+[generate(RustGenPlugin,"lib")]
+cell tTask Task2 {
+    cTaskbody = Taskbody2.eTaskbody;
+    cPerson = Bob.eBob;
+    id = 0;
+};
+
+cell tTaskbody Taskbody1 {
+    cPerson = Alice.eAlice1;
+};
+
+cell tTaskbody Taskbody2 {
+    cPerson = Alice.eAlice2;
+};
+
+cell tAlice Alice {
+    cCarol = Carol2.eCarol;
+    id = 0;
+};
+
+cell tBob Bob {
+    cCarol = Carol3.eCarol;
+    id = 0;
+};
+
+cell tCarol Carol1 {
+    id = 1;
+};
+
+cell tCarol Carol2 {
+    id = 1;
+};
+
+cell tCarol Carol3 {
+    id = 1;
+};

@@ -6,32 +6,45 @@ signature sHello {
 celltype tAlice {
     call sHello cPerson;
     entry sHello eAlice;
+    attr {
+        int32_t alice_attr;
+    };
 };
 
 [generate(RustGenPlugin,"lib")]
 celltype tBob {
     call sHello cPerson;
     entry sHello eBob;
+    attr {
+        int32_t bob_attr;
+    };
 };
 
 [generate(RustGenPlugin,"lib")]
 celltype tCarol {
     call sHello cPerson;
     entry sHello eCarol;
+    attr {
+        int32_t carol_attr;
+    };
 };
 
 cell tAlice Alice1 {
     cPerson = Bob.eBob;
+    alice_attr = 1;
 };
 
 cell tAlice Alice2 {
     cPerson = Carol.eCarol;
+    alice_attr = 2;
 };
 
 cell tBob Bob {
     cPerson = Alice1.eAlice;
+    bob_attr = 3;
 };
 
 cell tCarol Carol {
     cPerson = Alice2.eAlice;
+    carol_attr = 4;
 };

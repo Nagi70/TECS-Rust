@@ -5,6 +5,7 @@ where
 	T: SHello,
 {
 	pub c_person: &'a T,
+	pub carol_attr: i32,
 }
 
 pub struct ECarolForTCarol<'a>{
@@ -14,6 +15,7 @@ pub struct ECarolForTCarol<'a>{
 #[link_section = ".rodata"]
 pub static CAROL: TCarol<EAliceForTAlice> = TCarol {
 	c_person: &EALICEFORALICE2,
+	carol_attr: 4,
 };
 
 #[link_section = ".rodata"]
@@ -22,7 +24,7 @@ pub static ECAROLFORCAROL: ECarolForTCarol = ECarolForTCarol {
 };
 
 impl<T: SHello> TCarol<'_, T> {
-	pub fn get_cell_ref(&self) -> &T {
-		&self.c_person
+	pub fn get_cell_ref(&self) -> (&T, &i32) {
+		(&self.c_person, &self.carol_attr)
 	}
 }

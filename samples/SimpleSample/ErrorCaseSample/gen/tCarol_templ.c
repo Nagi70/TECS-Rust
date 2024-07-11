@@ -8,6 +8,9 @@
  * Don't edit the comments between #[<...>]# and #[</...>]#
  * These comment are used by tecsmerege when merging.
  *
+ * attr access macro #_CAAM_#
+ * carol_attr       int32_t          ATTR_carol_attr 
+ *
  * call port function #_TCPF_#
  * call port: cPerson signature: sHello context:task
  *   void           cPerson_Hello( );

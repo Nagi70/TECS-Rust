@@ -1167,15 +1167,20 @@ class RustGenCelltypePlugin < CelltypePlugin
     # ポートの接続先が一意であるかどうかを判断し，一意でない場合は，そのシグニチャの名前を返す
     def check_gen_dyn_for_port port
         if port.get_port_type == :CALL then
-            if port.get_real_callee_port == nil then
+            if port.get_real_callee_port == nil then  # TODO：joinではなくportで接続先を確認しているため、より厳密なチェックが必要になる可能性がある 
+                # 呼び先が一意でない かつ 受け口を持っている場合に動的ディスパッチ
                 port.get_celltype.get_port_list.each{ |entryport|
                     if entryport.get_port_type == :ENTRY then
                         return "dyn " + get_rust_signature_name(port.get_signature)
                     end
                 }
+                return nil
             else
                 return nil
             end
+        else
+            # 受け口だった場合nilを返すが、この関数は実装を分離すべき
+            return nil
         end
     end
 

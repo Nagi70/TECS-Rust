@@ -30,12 +30,16 @@ tAlice_INIB tAlice_INIB_tab[] = {
         /* call port (INIB) #_CP_# */ 
         &Bob_eBob_des,                           /* cPerson #_CCP1_# */
         /* entry port #_EP_# */ 
+        /* attribute(RO) */ 
+        1,                                       /* alice_attr */
     },
     /* cell: tAlice_CB_tab[1]:  Alice2 id=2 */
     {
         /* call port (INIB) #_CP_# */ 
         &Carol_eCarol_des,                       /* cPerson #_CCP1_# */
         /* entry port #_EP_# */ 
+        /* attribute(RO) */ 
+        2,                                       /* alice_attr */
     },
 };
 

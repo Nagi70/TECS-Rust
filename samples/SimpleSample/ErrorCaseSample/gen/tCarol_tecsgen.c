@@ -9,7 +9,7 @@
 /* eCarol */
 struct tag_tCarol_eCarol_DES {
     const struct tag_sHello_VMT *vmt;
-    int           idx;
+    tCarol_IDX  idx;
 };
 
 /* entry port skelton function #_EPSF_# */
@@ -32,9 +32,19 @@ const struct tag_sHello_VMT tCarol_eCarol_MT_ = {
 /* call port array #_CPA_# */
 
 /* array of attr/var #_AVAI_# */
+/* cell INIB #_INIB_# */
+tCarol_INIB tCarol_INIB_tab[] = {
+    /* cell: tCarol_CB_tab[0]:  Carol id=1 */
+    {
+        /* entry port #_EP_# */ 
+        /* attribute(RO) */ 
+        4,                                       /* carol_attr */
+    },
+};
+
 /* entry port descriptor #_EPD_# */
 extern const struct tag_tCarol_eCarol_DES Carol_eCarol_des;
 const struct tag_tCarol_eCarol_DES Carol_eCarol_des = {
     &tCarol_eCarol_MT_,
-    0,
+    &tCarol_INIB_tab[0],      /* INIB 3 */
 };

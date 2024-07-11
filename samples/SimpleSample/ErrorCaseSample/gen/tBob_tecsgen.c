@@ -9,7 +9,7 @@
 /* eBob */
 struct tag_tBob_eBob_DES {
     const struct tag_sHello_VMT *vmt;
-    int           idx;
+    tBob_IDX  idx;
 };
 
 /* entry port skelton function #_EPSF_# */
@@ -32,9 +32,19 @@ const struct tag_sHello_VMT tBob_eBob_MT_ = {
 /* call port array #_CPA_# */
 
 /* array of attr/var #_AVAI_# */
+/* cell INIB #_INIB_# */
+tBob_INIB tBob_INIB_tab[] = {
+    /* cell: tBob_CB_tab[0]:  Bob id=1 */
+    {
+        /* entry port #_EP_# */ 
+        /* attribute(RO) */ 
+        3,                                       /* bob_attr */
+    },
+};
+
 /* entry port descriptor #_EPD_# */
 extern const struct tag_tBob_eBob_DES Bob_eBob_des;
 const struct tag_tBob_eBob_DES Bob_eBob_des = {
     &tBob_eBob_MT_,
-    0,
+    &tBob_INIB_tab[0],      /* INIB 3 */
 };
