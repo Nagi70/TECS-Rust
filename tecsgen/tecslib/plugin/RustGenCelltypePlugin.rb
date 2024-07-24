@@ -1189,6 +1189,39 @@ class RustGenCelltypePlugin < CelltypePlugin
         file.print "unsafe impl Send for #{get_rust_celltype_name(celltype)}<'_> {}\n"
     end
 
+    def json_parse file_path
+        require 'json'
+
+        # ファイルが存在する場合は読み取って処理
+        json_string = File.read(file_path)
+        data = JSON.parse(json_string)
+
+        accessed_cells = Hash.new { |hash, key| hash[key] = { "MultipleAccessed" => "false", "Celltype" => nil } }
+        access_count = Hash.new(0)
+
+        # すべてのセルのCelltypeを設定する
+        data.each do |entry|
+          accessed_cells[entry["Cell"]]["Celltype"] = entry["Celltype"]
+        end
+    
+        # すべてのセルのアクセス回数をカウント
+        data.each do |entry|
+          entry["Accessed"].each do |access|
+            active_cell = access["ActiveCell"]
+            access_count[entry["Cell"]] += 1
+          end
+        end
+    
+        # 複数のセルからアクセスされる場合にMultipleAccessedをtrueに設定
+        access_count.each do |cell, count|
+          accessed_cells[cell]["MultipleAccessed"] = "true" if count > 1
+        end
+    
+        result = accessed_cells.map { |cell, details| { cell => details } }
+    
+        return result
+    end
+
     #=== tCelltype_factory.h に挿入するコードを生成する
     # file 以外の他のファイルにファクトリコードを生成してもよい
     # セルタイププラグインが指定されたセルタイプのみ呼び出される
@@ -1222,6 +1255,21 @@ class RustGenCelltypePlugin < CelltypePlugin
             # gen_mod_test cell
 
             # file = CFile.open( "#{$gen}/#{global_file_name}.rs", "w" )
+
+            json_parse_result = []
+
+            json_file_path = "#{$gen}/tecsflow.json"
+            if File.exist?(json_file_path) && File.exist?("./#{$target}.cdl") then
+                cdl_time = File.mtime("./#{$target}.cdl")
+                json_time = File.mtime(json_file_path)
+                if cdl_time < json_time then
+                    puts "#{@celltype.get_global_name.to_s}: json_parse"
+                    json_parse_result = json_parse json_file_path
+                else
+                    puts "cdl file is newer than json file"
+                end
+            end
+
             file = CFile.open( "#{$gen}/#{snake_case(@celltype.get_global_name.to_s)}.rs", "w")
 
             @use_string_list = []

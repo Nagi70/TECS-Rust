@@ -11,7 +11,7 @@ pub struct ETaskbodyForTTaskbody<'a>{
 
 #[link_section = ".rodata"]
 pub static TASKBODY1: TTaskbody = TTaskbody {
-	c_person: &EALICE1FORALICE,
+	c_person: &EALICE1FORALICE2,
 };
 
 #[link_section = ".rodata"]
@@ -21,7 +21,7 @@ pub static ETASKBODYFORTASKBODY1: ETaskbodyForTTaskbody = ETaskbodyForTTaskbody 
 
 #[link_section = ".rodata"]
 pub static TASKBODY2: TTaskbody = TTaskbody {
-	c_person: &EALICE2FORALICE,
+	c_person: &EALICE2FORALICE2,
 };
 
 #[link_section = ".rodata"]

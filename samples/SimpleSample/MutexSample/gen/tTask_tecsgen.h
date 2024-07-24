@@ -86,16 +86,16 @@ typedef const struct tag_tTask_INIB *tTask_IDX;
 #define tTask_cTaskbody_main( p_that ) \
 	  tTaskbody_eTaskbody_main( \
 	   (p_that)->cTaskbody )
-#define tTask_cPerson_Hello( p_that ) \
-	  (p_that)->cPerson->VMT->Hello__T( \
+#define tTask_cPerson_hello( p_that ) \
+	  (p_that)->cPerson->VMT->hello__T( \
 	   (p_that)->cPerson )
 
 #else  /* TECSFLOW */
 #define tTask_cTaskbody_main( p_that ) \
 	  (p_that)->cTaskbody.main__T( \
  )
-#define tTask_cPerson_Hello( p_that ) \
-	  (p_that)->cPerson.Hello__T( \
+#define tTask_cPerson_hello( p_that ) \
+	  (p_that)->cPerson.hello__T( \
  )
 
 #endif /* TECSFLOW */
@@ -139,8 +139,8 @@ extern "C" {
 /* call port function macro (abbrev) #_CPMA_# */
 #define cTaskbody_main( ) \
           ((void)p_cellcb, tTask_cTaskbody_main( p_cellcb ))
-#define cPerson_Hello( ) \
-          tTask_cPerson_Hello( p_cellcb )
+#define cPerson_hello( ) \
+          tTask_cPerson_hello( p_cellcb )
 
 
 

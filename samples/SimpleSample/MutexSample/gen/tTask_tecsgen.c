@@ -8,7 +8,7 @@
 
 /* entry port descriptor referenced by call port (differ from actual definition) #_CPEPD_# */
 extern struct tag_sTaskbody_VDES Taskbody1_eTaskbody_des;
-extern struct tag_sHello_VDES Carol1_eCarol_des;
+extern struct tag_sHello_VDES Alice1_eAlice1_des;
 
 extern struct tag_sTaskbody_VDES Taskbody2_eTaskbody_des;
 extern struct tag_sHello_VDES Bob_eBob_des;
@@ -23,7 +23,7 @@ tTask_INIB tTask_INIB_tab[] = {
     {
         /* call port (INIB) #_CP_# */ 
         &tTaskbody_INIB_tab[0],                  /* cTaskbody #_CCP2_# */
-        &Carol1_eCarol_des,                      /* cPerson #_CCP1_# */
+        &Alice1_eAlice1_des,                     /* cPerson #_CCP1_# */
         /* attribute(RO) */ 
         0,                                       /* id */
     },

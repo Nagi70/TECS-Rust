@@ -830,7 +830,7 @@ module TECSFlow
       json_list << $flow_json_hash[cell.get_name.to_s]
     }
 
-    json_file = File.open( "#{$gen}/tecsflow_temp.json", "w" ) do |f|
+    json_file = File.open( "#{$gen}/tecsflow.json", "w" ) do |f|
       f.write(JSON.pretty_generate(json_list))
     end
 

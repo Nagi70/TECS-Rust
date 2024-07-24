@@ -30,7 +30,7 @@ pub static ECAROLFORCAROL1: ECarolForTCarol = ECarolForTCarol {
 
 #[link_section = ".rodata"]
 pub static CAROL2: TCarol = TCarol {
-	id: 1,
+	id: 2,
 	variable: &CAROL2VAR,
 };
 
@@ -41,21 +41,6 @@ pub static CAROL2VAR: Mutex<TCarolVar> = Mutex::new(TCarolVar {
 #[link_section = ".rodata"]
 pub static ECAROLFORCAROL2: ECarolForTCarol = ECarolForTCarol {
 	cell: &CAROL2,
-};
-
-#[link_section = ".rodata"]
-pub static CAROL3: TCarol = TCarol {
-	id: 1,
-	variable: &CAROL3VAR,
-};
-
-pub static CAROL3VAR: Mutex<TCarolVar> = Mutex::new(TCarolVar {
-	count: 0,
-});
-
-#[link_section = ".rodata"]
-pub static ECAROLFORCAROL3: ECarolForTCarol = ECarolForTCarol {
-	cell: &CAROL3,
 };
 
 impl<> TCarol<'_> {

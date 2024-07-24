@@ -15,7 +15,7 @@
  * call port: cTaskbody signature: sTaskbody context:task
  *   void           cTaskbody_main( );
  * call port: cPerson signature: sHello context:task
- *   void           cPerson_Hello( );
+ *   void           cPerson_hello( );
  *
  * #[</PREAMBLE>]# */
 

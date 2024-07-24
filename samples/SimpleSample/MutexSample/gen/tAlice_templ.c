@@ -13,8 +13,8 @@
  * count            int32_t          VAR_count       
  *
  * call port function #_TCPF_#
- * call port: cCarol signature: sHello context:task
- *   void           cCarol_Hello( );
+ * call port: cPerson signature: sHello context:task
+ *   void           cPerson_hello( );
  *
  * #[</PREAMBLE>]# */
 
@@ -33,18 +33,18 @@
  * context:    task
  * #[</ENTRY_PORT>]# */
 
-/* #[<ENTRY_FUNC>]# eAlice1_Hello
- * name:         eAlice1_Hello
- * global_name:  tAlice_eAlice1_Hello
+/* #[<ENTRY_FUNC>]# eAlice1_hello
+ * name:         eAlice1_hello
+ * global_name:  tAlice_eAlice1_hello
  * oneway:       false
  * #[</ENTRY_FUNC>]# */
 void
-eAlice1_Hello(CELLIDX idx)
+eAlice1_hello(CELLIDX idx)
 {
 	CELLCB	*p_cellcb = GET_CELLCB(idx);
 
 	/* Put statements here #_TEFB_# */
-#warning "'eAlice1_Hello' needs to be edited."   /* delete this line after edit */
+#warning "'eAlice1_hello' needs to be edited."   /* delete this line after edit */
 
 }
 
@@ -54,18 +54,18 @@ eAlice1_Hello(CELLIDX idx)
  * context:    task
  * #[</ENTRY_PORT>]# */
 
-/* #[<ENTRY_FUNC>]# eAlice2_Hello
- * name:         eAlice2_Hello
- * global_name:  tAlice_eAlice2_Hello
+/* #[<ENTRY_FUNC>]# eAlice2_hello
+ * name:         eAlice2_hello
+ * global_name:  tAlice_eAlice2_hello
  * oneway:       false
  * #[</ENTRY_FUNC>]# */
 void
-eAlice2_Hello(CELLIDX idx)
+eAlice2_hello(CELLIDX idx)
 {
 	CELLCB	*p_cellcb = GET_CELLCB(idx);
 
 	/* Put statements here #_TEFB_# */
-#warning "'eAlice2_Hello' needs to be edited."   /* delete this line after edit */
+#warning "'eAlice2_hello' needs to be edited."   /* delete this line after edit */
 
 }
 

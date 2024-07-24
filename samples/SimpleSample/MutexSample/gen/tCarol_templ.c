@@ -29,18 +29,18 @@
  * context:    task
  * #[</ENTRY_PORT>]# */
 
-/* #[<ENTRY_FUNC>]# eCarol_Hello
- * name:         eCarol_Hello
- * global_name:  tCarol_eCarol_Hello
+/* #[<ENTRY_FUNC>]# eCarol_hello
+ * name:         eCarol_hello
+ * global_name:  tCarol_eCarol_hello
  * oneway:       false
  * #[</ENTRY_FUNC>]# */
 void
-eCarol_Hello(CELLIDX idx)
+eCarol_hello(CELLIDX idx)
 {
 	CELLCB	*p_cellcb = GET_CELLCB(idx);
 
 	/* Put statements here #_TEFB_# */
-#warning "'eCarol_Hello' needs to be edited."   /* delete this line after edit */
+#warning "'eCarol_hello' needs to be edited."   /* delete this line after edit */
 
 }
 

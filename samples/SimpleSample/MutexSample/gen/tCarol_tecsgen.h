@@ -49,7 +49,7 @@ typedef struct tag_tCarol_CB *tCarol_IDX;
 
 /* prototype declaration of entry port function #_EPP_# */
 /* sHello */
-void         tCarol_eCarol_Hello(tCarol_IDX idx);
+void         tCarol_eCarol_hello(tCarol_IDX idx);
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
@@ -58,7 +58,7 @@ void         tCarol_eCarol_Hello(tCarol_IDX idx);
 #ifndef TOPPERS_CB_TYPE_ONLY
 
 #define tCarol_ID_BASE              (1)  /* ID Base  #_NIDB_# */
-#define tCarol_N_CELL               (3)  /*  number of cells  #_NCEL_# */
+#define tCarol_N_CELL               (2)  /*  number of cells  #_NCEL_# */
 
 /* IDX validation macro #_CVI_# */
 #define tCarol_VALID_IDX(IDX) (1)
@@ -92,7 +92,7 @@ extern "C" {
 
 /* prototype declaration of entry port function (referenced when VMT useless optimise enabled) #_EPSP_# */
 /* eCarol */
-void           tCarol_eCarol_Hello_skel( const struct tag_sHello_VDES *epd);
+void           tCarol_eCarol_hello_skel( const struct tag_sHello_VDES *epd);
 
 #ifndef TOPPERS_CB_TYPE_ONLY
 
@@ -130,7 +130,7 @@ void           tCarol_eCarol_Hello_skel( const struct tag_sHello_VDES *epd);
 
 
 /* entry port function macro (abbrev) #_EPM_# */
-#define eCarol_Hello     tCarol_eCarol_Hello
+#define eCarol_hello     tCarol_eCarol_hello
 
 /* iteration code (FOREACH_CELL) #_FEC_# */
 #define FOREACH_CELL(i,p_cb)   \

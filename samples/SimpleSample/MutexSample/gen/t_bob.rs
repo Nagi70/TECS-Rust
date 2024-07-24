@@ -20,7 +20,7 @@ pub struct EBobForTBob<'a>{
 
 #[link_section = ".rodata"]
 pub static BOB: TBob<ECarolForTCarol> = TBob {
-	c_carol: &ECAROLFORCAROL3,
+	c_carol: &ECAROLFORCAROL2,
 	id: 0,
 	variable: &BOBVAR,
 };

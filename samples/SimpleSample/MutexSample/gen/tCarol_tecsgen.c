@@ -14,25 +14,23 @@ struct tag_tCarol_eCarol_DES {
 
 /* entry port skelton function #_EPSF_# */
 /* eCarol */
-void           tCarol_eCarol_Hello_skel( const struct tag_sHello_VDES *epd)
+void           tCarol_eCarol_hello_skel( const struct tag_sHello_VDES *epd)
 {
     struct tag_tCarol_eCarol_DES *lepd
         = (struct tag_tCarol_eCarol_DES *)epd;
-    tCarol_eCarol_Hello( lepd->idx );
+    tCarol_eCarol_hello( lepd->idx );
 }
 
 /* entry port skelton function table #_EPSFT_# */
 /* eCarol */
 const struct tag_sHello_VMT tCarol_eCarol_MT_ = {
-    tCarol_eCarol_Hello_skel,
+    tCarol_eCarol_hello_skel,
 };
 
 /* entry port descriptor referenced by call port (differ from actual definition) #_CPEPD_# */
 
 
-
 /* call port array #_CPA_# */
-
 
 
 /* array of attr/var #_AVAI_# */
@@ -48,13 +46,7 @@ tCarol_INIB tCarol_INIB_tab[] = {
     {
         /* entry port #_EP_# */ 
         /* attribute(RO) */ 
-        1,                                       /* id */
-    },
-    /* cell: tCarol_CB_tab[2]:  Carol3 id=3 */
-    {
-        /* entry port #_EP_# */ 
-        /* attribute(RO) */ 
-        1,                                       /* id */
+        2,                                       /* id */
     },
 };
 
@@ -74,13 +66,6 @@ struct tag_tCarol_CB tCarol_CB_tab[] = {
         /* var */ 
         0,                                       /* count */
     },
-    /* cell: tCarol_CB_tab[2]:  Carol3 id=3 */
-    {
-        &tCarol_INIB_tab[2],                     /* _inib */
-        /* entry port #_EP_# */ 
-        /* var */ 
-        0,                                       /* count */
-    },
 };
 
 /* entry port descriptor #_EPD_# */
@@ -93,9 +78,4 @@ extern const struct tag_tCarol_eCarol_DES Carol2_eCarol_des;
 const struct tag_tCarol_eCarol_DES Carol2_eCarol_des = {
     &tCarol_eCarol_MT_,
     &tCarol_CB_tab[1],      /* CB 3 */
-};
-extern const struct tag_tCarol_eCarol_DES Carol3_eCarol_des;
-const struct tag_tCarol_eCarol_DES Carol3_eCarol_des = {
-    &tCarol_eCarol_MT_,
-    &tCarol_CB_tab[2],      /* CB 3 */
 };

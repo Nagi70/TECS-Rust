@@ -15,9 +15,9 @@
 /* eTaskbody : omitted by entry port optimize */
 
 /* entry port descriptor referenced by call port (differ from actual definition) #_CPEPD_# */
-extern struct tag_sHello_VDES Alice_eAlice1_des;
+extern struct tag_sHello_VDES Alice2_eAlice1_des;
 
-extern struct tag_sHello_VDES Alice_eAlice2_des;
+extern struct tag_sHello_VDES Alice2_eAlice2_des;
 
 /* call port array #_CPA_# */
 
@@ -28,13 +28,13 @@ tTaskbody_INIB tTaskbody_INIB_tab[] = {
     /* cell: tTaskbody_CB_tab[0]:  Taskbody1 id=1 */
     {
         /* call port (INIB) #_CP_# */ 
-        &Alice_eAlice1_des,                      /* cPerson #_CCP1_# */
+        &Alice2_eAlice1_des,                     /* cPerson #_CCP1_# */
         /* entry port #_EP_# */ 
     },
     /* cell: tTaskbody_CB_tab[1]:  Taskbody2 id=2 */
     {
         /* call port (INIB) #_CP_# */ 
-        &Alice_eAlice2_des,                      /* cPerson #_CCP1_# */
+        &Alice2_eAlice2_des,                     /* cPerson #_CCP1_# */
         /* entry port #_EP_# */ 
     },
 };

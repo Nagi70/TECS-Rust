@@ -1,5 +1,5 @@
 signature sHello {
-    void Hello(void);
+    void hello(void);
 };
 
 signature sTaskbody {
@@ -15,15 +15,15 @@ celltype tTask{
     };
 };
 
-[generate(RustGenPlugin,"lib")]
+[generate(ItronrsGenPlugin,"lib")]
 celltype tTaskbody {
     call sHello cPerson;
     entry sTaskbody eTaskbody;
 };
 
-[generate(RustGenPlugin,"lib")]
+[generate(ItronrsGenPlugin,"lib")]
 celltype tAlice {
-    call sHello cCarol;
+    call sHello cPerson;
     entry sHello eAlice1;
     entry sHello eAlice2;
     attr{
@@ -35,7 +35,7 @@ celltype tAlice {
     };
 };
 
-[generate(RustGenPlugin,"lib")]
+[generate(ItronrsGenPlugin,"lib")]
 celltype tBob {
     call sHello cCarol;
     entry sHello eBob;
@@ -48,7 +48,7 @@ celltype tBob {
     };
 };
 
-[generate(RustGenPlugin,"lib")]
+[generate(ItronrsGenPlugin,"lib")]
 celltype tCarol {
     entry sHello eCarol;
     attr{
@@ -60,14 +60,26 @@ celltype tCarol {
     };
 };
 
-[generate(RustGenPlugin,"lib")]
+[generate(ItronrsGenPlugin,"lib")]
+celltype tDeb {
+    entry sHello eDeb;
+    attr{
+        int32_t id;
+    };
+
+    var{
+        int32_t count = 0;
+    };
+};
+
+[generate(ItronrsGenPlugin,"lib")]
 cell tTask Task1 {
     cTaskbody = Taskbody1.eTaskbody;
-    cPerson = Carol1.eCarol;
+    cPerson = Alice1.eAlice1;
     id = 0;
 };
 
-[generate(RustGenPlugin,"lib")]
+[generate(ItronrsGenPlugin,"lib")]
 cell tTask Task2 {
     cTaskbody = Taskbody2.eTaskbody;
     cPerson = Bob.eBob;
@@ -75,20 +87,25 @@ cell tTask Task2 {
 };
 
 cell tTaskbody Taskbody1 {
-    cPerson = Alice.eAlice1;
+    cPerson = Alice2.eAlice1;
 };
 
 cell tTaskbody Taskbody2 {
-    cPerson = Alice.eAlice2;
+    cPerson = Alice2.eAlice2;
 };
 
-cell tAlice Alice {
-    cCarol = Carol2.eCarol;
-    id = 0;
+cell tAlice Alice1 {
+    cPerson = Deb.eDeb;
+    id = 1;
+};
+
+cell tAlice Alice2 {
+    cPerson = Carol1.eCarol;
+    id = 2;
 };
 
 cell tBob Bob {
-    cCarol = Carol3.eCarol;
+    cCarol = Carol2.eCarol;
     id = 0;
 };
 
@@ -97,9 +114,9 @@ cell tCarol Carol1 {
 };
 
 cell tCarol Carol2 {
-    id = 1;
+    id = 2;
 };
 
-cell tCarol Carol3 {
-    id = 1;
+cell tDeb Deb {
+    id = 0;
 };

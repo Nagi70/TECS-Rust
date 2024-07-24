@@ -51,7 +51,7 @@ typedef struct tag_tBob_CB *tBob_IDX;
 
 /* prototype declaration of entry port function #_EPP_# */
 /* sHello */
-void         tBob_eBob_Hello(tBob_IDX idx);
+void         tBob_eBob_hello(tBob_IDX idx);
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
@@ -92,13 +92,13 @@ void         tBob_eBob_Hello(tBob_IDX idx);
 
 #ifndef TECSFLOW
  /* call port function macro #_CPM_# */
-#define tBob_cCarol_Hello( p_that ) \
-	  tCarol_eCarol_Hello( \
-	   &tCarol_CB_tab[2] )
+#define tBob_cCarol_hello( p_that ) \
+	  tCarol_eCarol_hello( \
+	   &tCarol_CB_tab[1] )
 
 #else  /* TECSFLOW */
-#define tBob_cCarol_Hello( p_that ) \
-	  (p_that)->cCarol.Hello__T( \
+#define tBob_cCarol_hello( p_that ) \
+	  (p_that)->cCarol.hello__T( \
  )
 
 #endif /* TECSFLOW */
@@ -112,7 +112,7 @@ extern "C" {
 
 /* prototype declaration of entry port function (referenced when VMT useless optimise enabled) #_EPSP_# */
 /* eBob */
-void           tBob_eBob_Hello_skel( const struct tag_sHello_VDES *epd);
+void           tBob_eBob_hello_skel( const struct tag_sHello_VDES *epd);
 
 #ifndef TOPPERS_CB_TYPE_ONLY
 
@@ -147,14 +147,14 @@ void           tBob_eBob_Hello_skel( const struct tag_sHello_VDES *epd);
 #define VAR_count            tBob_VAR_count( p_cellcb )
 
 /* call port function macro (abbrev) #_CPMA_# */
-#define cCarol_Hello( ) \
-          ((void)p_cellcb, tBob_cCarol_Hello( p_cellcb ))
+#define cCarol_hello( ) \
+          ((void)p_cellcb, tBob_cCarol_hello( p_cellcb ))
 
 
 
 
 /* entry port function macro (abbrev) #_EPM_# */
-#define eBob_Hello       tBob_eBob_Hello
+#define eBob_hello       tBob_eBob_hello
 
 /* iteration code (FOREACH_CELL) #_FEC_# */
 #define FOREACH_CELL(i,p_cb)   \

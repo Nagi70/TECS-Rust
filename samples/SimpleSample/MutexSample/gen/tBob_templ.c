@@ -14,7 +14,7 @@
  *
  * call port function #_TCPF_#
  * call port: cCarol signature: sHello context:task
- *   void           cCarol_Hello( );
+ *   void           cCarol_hello( );
  *
  * #[</PREAMBLE>]# */
 
@@ -33,18 +33,18 @@
  * context:    task
  * #[</ENTRY_PORT>]# */
 
-/* #[<ENTRY_FUNC>]# eBob_Hello
- * name:         eBob_Hello
- * global_name:  tBob_eBob_Hello
+/* #[<ENTRY_FUNC>]# eBob_hello
+ * name:         eBob_hello
+ * global_name:  tBob_eBob_hello
  * oneway:       false
  * #[</ENTRY_FUNC>]# */
 void
-eBob_Hello(CELLIDX idx)
+eBob_hello(CELLIDX idx)
 {
 	CELLCB	*p_cellcb = GET_CELLCB(idx);
 
 	/* Put statements here #_TEFB_# */
-#warning "'eBob_Hello' needs to be edited."   /* delete this line after edit */
+#warning "'eBob_hello' needs to be edited."   /* delete this line after edit */
 
 }
 

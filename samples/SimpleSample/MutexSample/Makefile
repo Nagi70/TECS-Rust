@@ -31,7 +31,7 @@ PRE_TECSGEN_TARGET =
 # Post-tecsgen target
 POST_TECSGEN_TARGET =
 
-RUST_SRCS = $(SRC_DIR)/t_motor_impl.rs $(SRC_DIR)/t_powerdown_impl.rs $(SRC_DIR)/t_sensor_impl.rs $(SRC_DIR)/t_task_rs_impl.rs $(SRC_DIR)/t_taskbody_impl.rs
+RUST_SRCS = $(SRC_DIR)/t_alice_impl.rs $(SRC_DIR)/t_bob_impl.rs $(SRC_DIR)/t_carol_impl.rs $(SRC_DIR)/t_deb_impl.rs $(SRC_DIR)/t_taskbody_impl.rs
 
 allall: tecs
 	make all     # in order to include generated Makefile.tecsgen & Makefile.depend
@@ -62,6 +62,9 @@ tecsflow : $(GEN_DIR)/tecsgen.rbdmp tcflow
 tecsflow_u : $(GEN_DIR)/tecsgen.rbdmp tcflow
 	tecsflow -g $(GEN_DIR) -U
 
+tecsflow_rust : $(GEN_DIR)/tecsgen.rbdmp rustflow
+	tecsflow -g $(GEN_DIR) --rust=only
+
 $(GEN_DIR)/tecsgen.rbdmp : tecs
 
 tcflow : tecs
@@ -76,11 +79,11 @@ rustflow : tecs
 	make rustflow_exec
 
 rustflow_exec : $(GEN_DIR)/rustflow.rbdmp
-$(GEN_DIR)/rustflow.rbdmp : 
-	rustflow.rb -g $(GEN_DIR) $(RUST_SRCS)
+$(GEN_DIR)/rustflow.rbdmp : $(RUST_SRCS)
+	rustflow.rb -g $(GEN_DIR) $^
 
-temp :
-	rustflow.rb -g $(GEN_DIR) $(RUST_SRCS)
+temp : $(RUST_SRCS)
+	rustflow.rb -g $(GEN_DIR) $^
 	tecsflow -g $(GEN_DIR) --rust=only
 
 #####  end TECSFlow targets  #####

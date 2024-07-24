@@ -98,6 +98,8 @@ class ItronrsGenCelltypePlugin < RustGenCelltypePlugin
             tempfile.print "#![no_std]\n"
             tempfile.print "#![feature(const_option)]\n"
             tempfile.print "mod kernel_cfg;\n"
+            tempfile.print "mod tecs_mutex;\n"
+            tempfile.print "mod tecs_print;\n"
             tempfile.close
         end
         super(celltype)
@@ -179,6 +181,191 @@ class ItronrsGenCelltypePlugin < RustGenCelltypePlugin
             file.print "use itron::#{object_module}::#{object_ref};\n"
         end
     end
+
+    # tecs_mutex.rs を生成する
+    def gen_tecs_mutex_rs
+        if File.exist?("#{$gen}/tecs_mutex.rs") == false then
+            contents = <<~'EOS'
+use itron::mutex::{MutexRef, LockError, UnlockError};
+use crate::print;
+use crate::print::*;
+
+
+pub trait LockableForMutex {
+    fn lock(&self);
+    fn unlock(&self);
+}
+
+pub struct TECSMutexRef<'a>{
+	pub inner: MutexRef<'a>, //MutexRef
+}
+
+pub struct TECSDummyMutexRef{
+}
+
+impl LockableForMutex for TECSMutexRef<'_>{
+    fn lock(&self){
+        match self.inner.lock(){
+            Ok(_) => {
+            },
+            Err(e) => {
+                match e {
+                    BadContext => {
+                        print!("BadContextError::BadContext", );
+                        loop{}
+                    },
+                    NotSupported => {
+                        loop{}
+                    },
+                    BadId => {
+                        print!("BadContextError::BadId", );
+                        loop{}
+                    },
+                    AccessDenied => {
+                        print!("BadContextError::AccessDenied", );
+                        loop{}
+                    },
+                    Released => {
+                        print!("BadContextError::Released", );
+                        loop{}
+                    },
+                    TerminateErrorRequest => {
+                        print!("TerminateErrorReason::BadContext", );
+                        loop{}
+                    },
+                    Deleted => {
+                        print!("BadContextError::Deleted", );
+                        loop{}
+                    },
+                    BadParam => {
+                        print!("BadContextError::BadParam", );
+                        loop{}
+                    },
+                    DeadLock => {
+                        print!("BadContextError::DeadLock", );
+                        loop{}
+                    },
+                }
+            },
+        }
+    }
+    fn unlock(&self){
+        match self.inner.unlock(){
+            Ok(_) => {
+            },
+            Err(e) => {
+                match e {
+                    BadContext => {
+                        print!("BadContextError::BadContext", );
+                        loop{}
+                    },
+                    BadId => {
+                        print!("BadContextError::BadId", );
+                        loop{}
+                    },
+                    AccessDenied => {
+                        print!("BadContextError::AccessDenied", );
+                        loop{}
+                    },
+                    BadSequence => {
+                        print!("BadContextError::BadSequence", );
+                        loop{}
+                    },
+                }
+            },
+        }
+    }
+}
+
+impl LockableForMutex for TECSDummyMutexRef{
+    fn lock(&self){
+    }
+    fn unlock(&self){
+    }
+}
+
+pub static DUMMY_MUTEX_REF: TECSDummyMutexRef = TECSDummyMutexRef{
+};
+            EOS
+
+            mutex_file = CFile.open( "#{$gen}/tecs_mutex.rs", "w" )
+            mutex_file.print contents
+            mutex_file.close
+
+        end
+    end
+
+    # syslog の Rust ラップである print.rs を生成する
+    def gen_tecs_print_rs
+        if File.exist?("#{$gen}/tecs_print.rs") == false then
+            contents = <<~'EOS'
+use itron::abi::*;
+
+extern "C"{
+    pub fn syslog_wri_log(prio: uint_t, p_syslog: *const Syslog) -> ER;
+}
+
+#[repr(C)]
+pub struct Syslog {
+    pub logtype: uint_t,
+    pub logtim: HRTCNT,
+    pub loginfo: [uint_t; TMAX_LONINFO],
+}
+
+pub type HRTCNT = u32;
+
+const TMAX_LONINFO: usize = 6;
+
+pub const LOG_TYPE_COMMENT: u32 = 0x1;
+
+pub const LOG_EMERG: u32 = 0x0;
+pub const LOG_ALERT: u32 = 0x1;
+pub const LOG_CRIT: u32 = 0x2;
+pub const LOG_ERROR: u32 = 0x3;
+pub const LOG_WARNING: u32 = 0x4;
+pub const LOG_NOTICE: u32 = 0x5;
+pub const LOG_INFO: u32 = 0x6;
+pub const LOG_DEBUG: u32 = 0x7;
+
+#[no_mangle]
+#[macro_export]
+#[macro_use]
+macro_rules! print{
+    ($fmt : expr, $($arg : expr),*) => {
+
+        let ini_ary = {
+            let mut ary : [uint_t; 6] = [0; 6];
+
+            ary[0] = concat!($fmt, '\0').as_bytes().as_ptr() as uint_t;
+
+            let mut _index = 1;
+            $(
+                {
+                    ary[_index] = $arg as uint_t;
+                    _index = _index + 1;
+                }
+            )*
+            ary
+        } ; 
+
+        let mut _syslog = Syslog {
+            logtype : LOG_TYPE_COMMENT,
+            logtim : 0,
+            loginfo : ini_ary
+        };
+
+        unsafe{
+            let _ = syslog_wri_log(LOG_NOTICE, &_syslog);
+        }
+    };
+}
+            EOS
+
+            print_file = CFile.open( "#{$gen}/tecs_print.rs", "w" )
+            print_file.print contents
+            print_file.close
+        end
+    end
         
     #=== tCelltype_factory.h に挿入するコードを生成する
     # file 以外の他のファイルにファクトリコードを生成してもよい
@@ -190,6 +377,10 @@ class ItronrsGenCelltypePlugin < RustGenCelltypePlugin
         # }
 
         super(file)
+
+        gen_tecs_mutex_rs
+
+        gen_tecs_print_rs
 
         # @celltype.get_cell_list.each{ |cell|
         #     if cell.is_generate? then

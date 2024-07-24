@@ -68,13 +68,13 @@ void         tTaskbody_eTaskbody_main(tTaskbody_IDX idx);
 #define tTaskbody_GET_CELLCB(idx) (idx)
 #ifndef TECSFLOW
  /* call port function macro #_CPM_# */
-#define tTaskbody_cPerson_Hello( p_that ) \
-	  (p_that)->cPerson->VMT->Hello__T( \
+#define tTaskbody_cPerson_hello( p_that ) \
+	  (p_that)->cPerson->VMT->hello__T( \
 	   (p_that)->cPerson )
 
 #else  /* TECSFLOW */
-#define tTaskbody_cPerson_Hello( p_that ) \
-	  (p_that)->cPerson.Hello__T( \
+#define tTaskbody_cPerson_hello( p_that ) \
+	  (p_that)->cPerson.hello__T( \
  )
 
 #endif /* TECSFLOW */
@@ -113,8 +113,8 @@ extern "C" {
 #define CELLIDX	tTaskbody_IDX
 
 /* call port function macro (abbrev) #_CPMA_# */
-#define cPerson_Hello( ) \
-          tTaskbody_cPerson_Hello( p_cellcb )
+#define cPerson_hello( ) \
+          tTaskbody_cPerson_hello( p_cellcb )
 
 
 

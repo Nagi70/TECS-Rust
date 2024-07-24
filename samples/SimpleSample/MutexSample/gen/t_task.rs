@@ -1,4 +1,4 @@
-use crate::{s_taskbody::*, t_taskbody::*, s_hello::*, t_carol::*, t_bob::*};
+use crate::{s_taskbody::*, t_taskbody::*, s_hello::*, t_alice::*, t_bob::*};
 
 pub struct TTask<'a, T, U>
 where
@@ -11,9 +11,9 @@ where
 }
 
 #[link_section = ".rodata"]
-pub static TASK1: TTask<ETaskbodyForTTaskbody, ECarolForTCarol> = TTask {
+pub static TASK1: TTask<ETaskbodyForTTaskbody, EAlice1ForTAlice> = TTask {
 	c_taskbody: &ETASKBODYFORTASKBODY1,
-	c_person: &ECAROLFORCAROL1,
+	c_person: &EALICE1FORALICE1,
 	id: 0,
 };
 
