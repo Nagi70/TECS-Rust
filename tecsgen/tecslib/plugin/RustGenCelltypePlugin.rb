@@ -884,7 +884,7 @@ class RustGenCelltypePlugin < CelltypePlugin
                 else
                     # check_only_entryport_celltype では，dyn な呼び口を判定していないため，ここで判定する
                     celltype.get_port_list.each{ |port|
-                        if check_gen_dyn_for_port(port) == nil then
+                        if check_gen_dyn_for_port(port) == nil && use_jenerics_alphabet.length != 0 then
                             file.print "<"
                         end
                         break
@@ -915,7 +915,7 @@ class RustGenCelltypePlugin < CelltypePlugin
                 else
                     # check_only_entryport_celltype では，dyn な呼び口を判定していないため，ここで判定する
                     celltype.get_port_list.each{ |port|
-                        if check_gen_dyn_for_port(port) == nil then
+                        if check_gen_dyn_for_port(port) == nil && use_jenerics_alphabet.length != 0 then
                             file.print ">"
                         end
                         break
@@ -993,10 +993,11 @@ class RustGenCelltypePlugin < CelltypePlugin
                     celltype.get_var_list.each{ |var|
                         var_type_name = var.get_type.get_type_str
                         if check_lifetime_annotation(var_type_name) then
-                            return_tuple_type_list[-1].concat("<'a>>")
+                            return_tuple_type_list[-1].concat("<'a>")
                             break
                         end
                     }
+                    return_tuple_type_list[-1].concat(">")
                     return_tuple_list.push("&self.variable")
                 end
 

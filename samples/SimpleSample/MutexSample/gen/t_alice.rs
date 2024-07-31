@@ -63,7 +63,7 @@ pub static EALICE2FORALICE2: EAlice2ForTAlice = EAlice2ForTAlice {
 };
 
 impl TAlice<'_> {
-	pub fn get_cell_ref(&self) -> (&dyn SHello, &i32, &Mutex<TAliceVar) {
+	pub fn get_cell_ref(&self) -> (&dyn SHello, &i32, &Mutex<TAliceVar>) {
 		(&self.c_person, &self.id, &self.variable)
 	}
 }

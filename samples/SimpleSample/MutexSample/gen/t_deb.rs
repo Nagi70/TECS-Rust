@@ -28,8 +28,8 @@ pub static EDEBFORDEB: EDebForTDeb = EDebForTDeb {
 	cell: &DEB,
 };
 
-impl<> TDeb<'_> {
-	pub fn get_cell_ref(&self) -> (&i32, &Mutex<TDebVar) {
+impl TDeb<'_> {
+	pub fn get_cell_ref(&self) -> (&i32, &Mutex<TDebVar>) {
 		(&self.id, &self.variable)
 	}
 }

@@ -43,8 +43,8 @@ pub static ECAROLFORCAROL2: ECarolForTCarol = ECarolForTCarol {
 	cell: &CAROL2,
 };
 
-impl<> TCarol<'_> {
-	pub fn get_cell_ref(&self) -> (&i32, &Mutex<TCarolVar) {
+impl TCarol<'_> {
+	pub fn get_cell_ref(&self) -> (&i32, &Mutex<TCarolVar>) {
 		(&self.id, &self.variable)
 	}
 }

@@ -35,7 +35,7 @@ pub static EBOBFORBOB: EBobForTBob = EBobForTBob {
 };
 
 impl<T: SHello> TBob<'_, T> {
-	pub fn get_cell_ref(&self) -> (&T, &i32, &Mutex<TBobVar) {
+	pub fn get_cell_ref(&self) -> (&T, &i32, &Mutex<TBobVar>) {
 		(&self.c_carol, &self.id, &self.variable)
 	}
 }
