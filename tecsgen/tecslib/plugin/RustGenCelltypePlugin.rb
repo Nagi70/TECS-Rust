@@ -42,6 +42,7 @@ class RustGenCelltypePlugin < CelltypePlugin
     CLASS_NAME_SUFFIX = ""
     @@b_signature_header_generated = false
     @@module_generated = false
+    @@mutex_ref_id = 1
 
     #celltype::     Celltype        セルタイプ（インスタンス）
     def initialize( celltype, option )
@@ -52,6 +53,8 @@ class RustGenCelltypePlugin < CelltypePlugin
       @plugin_arg_str = CDLString.remove_dquote option
       @plugin_arg_list = {}
       @cell_list =[]
+      @dyn_mutex_ref = false
+      @json_parse_result = []
     end
   
     #=== 新しいセル
@@ -357,7 +360,7 @@ class RustGenCelltypePlugin < CelltypePlugin
                 end
 
                 # 関数の引数部分を生成
-                trait_file.print "(&self"
+                trait_file.print "(&'static self"
                 param_list_item = func_head.get_paramlist.get_items
                 num = param_list_item.size
                 num.times do
@@ -552,9 +555,9 @@ class RustGenCelltypePlugin < CelltypePlugin
     def gen_rust_cell_structure_callport file, callport_list, use_jenerics_alphabet
         callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
             if check_gen_dyn_for_port(callport) == nil then
-                file.print "\tpub #{snake_case(callport.get_name.to_s)}: &'a #{alphabet},\n"
+                file.print "\t#{snake_case(callport.get_name.to_s)}: &'a #{alphabet},\n"
             else
-                file.print "\tpub #{snake_case(callport.get_name.to_s)}: &'a (#{check_gen_dyn_for_port(callport)} + Sync + Send),\n"
+                file.print "\t#{snake_case(callport.get_name.to_s)}: &'a (#{check_gen_dyn_for_port(callport)} + Sync + Send),\n"
             end
         end
     end
@@ -565,7 +568,7 @@ class RustGenCelltypePlugin < CelltypePlugin
             if attr.is_omit? then
                 next
             else
-                file.print "\tpub #{attr.get_name.to_s}: #{c_type_to_rust_type(attr.get_type)},\n"
+                file.print "\t#{attr.get_name.to_s}: #{c_type_to_rust_type(attr.get_type)},\n"
             end
         }
     end
@@ -573,7 +576,7 @@ class RustGenCelltypePlugin < CelltypePlugin
     # セル構造体の変数フィールドの定義を生成
     def gen_rust_cell_structure_variable file, celltype
         if celltype.get_var_list.length != 0 then
-            file.print "\tpub variable: &'a Mutex<#{get_rust_celltype_name(celltype)}Var"
+            file.print "\tvariable: &'a Mutex<#{get_rust_celltype_name(celltype)}Var"
             # ライフタイムアノテーションの生成部
             # TODO：ライフタイムについては，もう少し厳格にする必要がある
             celltype.get_var_list.each{ |var|
@@ -786,7 +789,7 @@ class RustGenCelltypePlugin < CelltypePlugin
                     if lifetime_flag then
                         file.print "<'a>"
                     end
-                    file.print"(&self"
+                    file.print"(&'static self"
                     # param_num と sig_param_str_list の要素数が等しいことを前提としている
                     param_num = func_head.get_paramlist.get_items.size
                     param_num.times do
@@ -966,7 +969,7 @@ class RustGenCelltypePlugin < CelltypePlugin
                         break
                     end
                 }
-                file.print "(&self) -> "
+                file.print "(&'static self) -> "
 
                 # 返り値のタプル型の要素をまとめるための配列
                 return_tuple_type_list = []
@@ -975,7 +978,7 @@ class RustGenCelltypePlugin < CelltypePlugin
                 # 呼び口をタプルの配列に追加
                 callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
                     return_tuple_type_list.push("&#{alphabet}")
-                    return_tuple_list.push("&self.#{snake_case(callport.get_name.to_s)}")
+                    return_tuple_list.push("self.#{snake_case(callport.get_name.to_s)}")
                 end
 
                 # 属性をタプルの配列に追加
@@ -1039,84 +1042,6 @@ class RustGenCelltypePlugin < CelltypePlugin
                 end
                 
                 file.print"\n\t}\n}\n"
-
-                # # 返り値のタプル型の定義を生成
-                # callport_list.zip(use_jenerics_alphabet).each_with_index do |(callport, alphabet), index|
-                #     if index == 0 then
-                #         file.print "&#{alphabet}"
-                #     else
-                #         file.print ", &#{alphabet}"
-                #     end
-                # end
-                # @celltype.get_attribute_list.each{ |attr|
-                #     if attr.is_omit? then
-                #         next
-                #     end
-                #     if callport_list.length == 0 then
-                #         file.print "&#{c_type_to_rust_type(attr.get_type)}"
-                #     else
-                #         file.print ", &#{c_type_to_rust_type(attr.get_type)}"
-                #     end
-                # }
-
-                # if celltype.get_var_list.length != 0 then
-                #     if callport_list.length == 0 && celltype.get_attribute_list.length == 0 then
-                #         file.print "&Mutex<#{get_rust_celltype_name(celltype)}Var"
-                #         # ライフタイムアノテーションの生成部
-                #         # TODO：ライフタイムについては，もう少し厳格にする必要がある
-                #         @celltype.get_var_list.each{ |var|
-                #             var_type_name = var.get_type.get_type_str
-                #             if check_lifetime_annotation var_type_name then
-                #                 file.print "<'a>"
-                #                 break
-                #             end
-                #         }
-                #         file.print ">) {\n"
-                #     else
-                #         file.print ", &Mutex<#{get_rust_celltype_name(celltype)}Var"
-                #         # ライフタイムアノテーションの生成部
-                #         # TODO：ライフタイムについては，もう少し厳格にする必要がある
-                #         @celltype.get_var_list.each{ |var|
-                #             var_type_name = var.get_type.get_type_str
-                #             if check_lifetime_annotation(var_type_name) then
-                #                 file.print "<'a>"
-                #                 break
-                #             end
-                #         }
-                #         file.print ">) {\n"
-                #     end
-                # else
-                #     file.print ") {\n"
-                # end
-
-                # # 返り値のタプル型を生成
-                # file.print "\t\t("
-                # callport_list.each_with_index do |callport, index|
-                #     if index == 0 then
-                #         file.print "&self.#{snake_case(callport.get_name.to_s)}"
-                #     else
-                #         file.print ", &self.#{snake_case(callport.get_name.to_s)}"
-                #     end
-                # end
-                # celltype.get_attribute_list.each{ |attr|
-                #     if attr.is_omit? then
-                #         next
-                #     end
-                #     if callport_list.length == 0 then
-                #         file.print "&self.#{attr.get_name.to_s}"
-                #     else
-                #         file.print ", &self.#{attr.get_name.to_s}"
-                #     end
-                # }
-                # if celltype.get_var_list.length != 0 then
-                #     if callport_list.length == 0 && celltype.get_attribute_list.length == 0 then
-                #         file.print "&self.variable)\n\t}\n}\n\n"
-                #     else
-                #         file.print ", self.variable)\n\t}\n}\n\n"
-                #     end
-                # else
-                #     file.print ")\n\t}\n}\n\n"
-                # end
                 # get_cell_ref 関数を生成するのは1回だけでいいため，break する
                 break
 
@@ -1190,6 +1115,7 @@ class RustGenCelltypePlugin < CelltypePlugin
         file.print "unsafe impl Send for #{get_rust_celltype_name(celltype)}<'_> {}\n"
     end
 
+    # tecsflow.json をパースして、アクセスされたセルの情報を取得する
     def json_parse file_path
         require 'json'
 
@@ -1218,10 +1144,74 @@ class RustGenCelltypePlugin < CelltypePlugin
           accessed_cells[cell]["MultipleAccessed"] = "true" if count > 1
         end
     
-        result = accessed_cells.map { |cell, details| { cell => details } }
+        # result = accessed_cells.map { |cell, details| { cell => details } }
     
-        return result
+        # return result
+        return accessed_cells
     end
+
+    # 引数のセルが複数のタスクからアクセスされているかどうかを判断する
+    def check_multiple_accessed_for_cell cell
+        celltype = cell.get_celltype.get_global_name.to_s
+        if @json_parse_result[cell.get_global_name.to_s]["Celltype"] == celltype then
+            if @json_parse_result[cell.get_global_name.to_s]["MultipleAccessed"] == "true" then
+                return true
+            end
+            return false
+        end
+        puts "Error: JSON file does not include #{cell.get_global_name.to_s}"
+        return false
+    end
+
+    # 引数のセルタイプの mutex_ref に動的ディスパッチが必要かどうかを判断し、いる場合は dyn を、いらない場合は、ダミーかどうかを返す
+    def check_gen_dyn_for_mutex_ref celltype
+        dyn_check_results = celltype.get_cell_list.map { |cell| check_multiple_accessed_for_cell(cell) }
+        
+        if dyn_check_results.all?(true) then
+            return "no_dummy"
+        elsif dyn_check_results.all?(false) then
+            return "dummy"
+        else
+            return "dyn"
+        end
+    end
+
+    # セルタイプ構造体の mutex_ref フィールドの定義を生成
+    def gen_rust_cell_structure_mutex_ref file, celltype
+        # ItronrsPlugin で実装
+        # TODO: spinクレート版を実装する場合はこの関数を使う
+    end
+
+    # Sync変数構造体の定義を生成
+    def gen_rust_sync_variable_structure file, celltype
+        # ItronrsPlugin で実装
+        # TODO: spinクレート版を実装する場合はこの関数を使う
+    end
+
+    # Syncトレイトの実装を生成
+    def gen_rust_impl_sync_trait_for_sync_variable_structure file, celltype
+        # ItronrsPlugin で実装
+        # TODO: spinクレート版を実装する場合はこの関数を使う
+    end
+
+    # ミューテックスガード構造体の定義を生成
+    def gen_rust_mutex_guard_structure file, celltype
+        # ItronrsPlugin で実装
+        # TODO: spinクレート版を実装する場合はこの関数を使う
+    end
+
+    # mutex_ref フィールドの初期化を生成
+    def gen_rust_cell_structure_mutex_ref_initialize file, celltype, cell
+        # ItronrsPlugin で実装
+        # TODO: spinクレート版を実装する場合はこの関数を使う
+    end
+
+    # mutex_ref の初期化を生成
+    def gen_rust_mutex_ref_initialize file, cell
+        # ItronrsPlugin で実装
+        # TODO: spinクレート版を実装する場合はこの関数を使う
+    end
+
 
     #=== tCelltype_factory.h に挿入するコードを生成する
     # file 以外の他のファイルにファクトリコードを生成してもよい
@@ -1257,7 +1247,7 @@ class RustGenCelltypePlugin < CelltypePlugin
 
             # file = CFile.open( "#{$gen}/#{global_file_name}.rs", "w" )
 
-            json_parse_result = []
+            @json_parse_result = []
 
             json_file_path = "#{$gen}/tecsflow.json"
             if File.exist?(json_file_path) && File.exist?("./#{$target}.cdl") then
@@ -1265,7 +1255,7 @@ class RustGenCelltypePlugin < CelltypePlugin
                 json_time = File.mtime(json_file_path)
                 if cdl_time < json_time then
                     puts "#{@celltype.get_global_name.to_s}: json_parse"
-                    json_parse_result = json_parse json_file_path
+                    @json_parse_result = json_parse json_file_path
                 else
                     puts "cdl file is newer than json file"
                 end
@@ -1313,18 +1303,31 @@ class RustGenCelltypePlugin < CelltypePlugin
             # セル構造体の変数フィールドの定義を生成
             gen_rust_cell_structure_variable file, @celltype
 
+            print "#{@celltype.get_global_name.to_s}: gen_rust_cell_structure_mutex_ref\n"
+            # セル構造体の mutex_ref フィールドの定義を生成
+            gen_rust_cell_structure_mutex_ref file, @celltype
+
             file.print "}\n\n"
             
             print "#{@celltype.get_global_name.to_s}: gen_rust_variable_structure\n"
             # 変数構造体の定義を生成
             gen_rust_variable_structure file, @celltype
 
+            print "#{@celltype.get_global_name.to_s}: gen_rust_sync_variable_structure\n"
+            # Sync変数構造体の定義を生成
+            gen_rust_sync_variable_structure file, @celltype
+
+            print "#{@celltype.get_global_name.to_s}: gen_rust_impl_sync_trait_for_sync_variable_structure\n"
+            # Syncトレイトの実装を生成
+            gen_rust_impl_sync_trait_for_sync_variable_structure file, @celltype
+
             print "#{@celltype.get_global_name.to_s}: gen_rust_entry_structure\n"
             # 受け口構造体の定義と初期化を生成
-            # @celltype.get_cell_list.each{ |cell|
-            #     gen_rust_entry_structure file, @celltype, cell
-            # }
             gen_rust_entry_structure file, @celltype
+
+            print "#{@celltype.get_global_name.to_s}: gen_rust_entryport_structure_initialize\n"
+            # ミューテックスガード構造体の定義を生成
+            gen_rust_mutex_guard_structure file, @celltype
 
             print "#{@celltype.get_global_name.to_s}: gen_mod_in_main_lib_rs_for_celltype\n"
             # main.rs もしくは lib.rs に mod を追加する
@@ -1354,11 +1357,19 @@ class RustGenCelltypePlugin < CelltypePlugin
                 # セルの構造体の変数フィールドの初期化を生成
                 gen_rust_cell_structure_variable_initialize file, @celltype, cell
 
+                print "#{@celltype.get_global_name.to_s}: gen_rust_cell_structure_mutex_ref_initialize\n"
+                # mutex_ref フィールドの初期化を生成
+                gen_rust_cell_structure_mutex_ref_initialize file, @celltype, cell
+
                 file.print "};\n\n"
 
                 print "#{@celltype.get_global_name.to_s}: gen_rust_variable_structure_initialize\n"
                 # 変数構造体の初期化を生成
                 gen_rust_variable_structure_initialize file, cell
+
+                print "#{@celltype.get_global_name.to_s}: gen_rust_mutex_ref_initialize\n"
+                # mutex_ref の初期化を生成
+                gen_rust_mutex_ref_initialize file, cell
 
                 print "#{@celltype.get_global_name.to_s}: gen_rust_entryport_structure_initialize\n"
                 # 受け口構造体の初期化を生成

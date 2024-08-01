@@ -16,6 +16,7 @@ pub struct TECSDummyMutexRef{
 }
 
 impl LockableForMutex for TECSMutexRef<'_>{
+    #[inline]
     fn lock(&self){
         match self.inner.lock(){
             Ok(_) => {
@@ -61,6 +62,7 @@ impl LockableForMutex for TECSMutexRef<'_>{
             },
         }
     }
+    #[inline]
     fn unlock(&self){
         match self.inner.unlock(){
             Ok(_) => {
@@ -90,8 +92,10 @@ impl LockableForMutex for TECSMutexRef<'_>{
 }
 
 impl LockableForMutex for TECSDummyMutexRef{
+    #[inline]
     fn lock(&self){
     }
+    #[inline]
     fn unlock(&self){
     }
 }
