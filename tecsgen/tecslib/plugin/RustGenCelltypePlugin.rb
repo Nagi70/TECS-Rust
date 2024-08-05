@@ -1212,6 +1212,11 @@ class RustGenCelltypePlugin < CelltypePlugin
         # TODO: spinクレート版を実装する場合はこの関数を使う
     end
 
+    # ミューテックスガードに Drop トレイトを実装する
+    def gen_rust_impl_drop_for_mutex_guard_structure file, celltype
+        # ItronrsPlugin で実装
+        # TODO: spinクレート版を実装する場合はこの関数を使う
+    end
 
     #=== tCelltype_factory.h に挿入するコードを生成する
     # file 以外の他のファイルにファクトリコードを生成してもよい
@@ -1377,6 +1382,10 @@ class RustGenCelltypePlugin < CelltypePlugin
 
             } # celltype.get_cell_list.each
 
+            print "#{@celltype.get_global_name.to_s}: gen_rust_impl_drop_for_mutex_guard_structure\n"
+            # ミューテックスガードに Drop トレイトを実装する
+            gen_rust_impl_drop_for_mutex_guard_structure file, @celltype
+
         if check_only_entryport_celltype @celltype then
         else
             print "#{@celltype.get_global_name.to_s}: gen_rust_get_cell_ref\n"
@@ -1399,11 +1408,11 @@ class RustGenCelltypePlugin < CelltypePlugin
                 file = CFile.open( "#{$gen}/#{snake_case(@celltype.get_global_name.to_s)}_impl.rs", "w" )
 
                 print "#{@celltype.get_global_name.to_s}: gen_use_for_impl_file\n"
-                # implファイルようのuse文を生成
+                # implファイル用のuse文を生成
                 gen_use_for_impl_file file, @celltype
                 
                 print "#{@celltype.get_global_name.to_s}: gen_rust_entryport_function\n"
-                # セルタイプに受け口がある場合，impl を生成する
+                # セルタイプに受け口がある場合，impl ファイルを生成する
                 gen_rust_entryport_function file, @celltype, callport_list
                 break
             end

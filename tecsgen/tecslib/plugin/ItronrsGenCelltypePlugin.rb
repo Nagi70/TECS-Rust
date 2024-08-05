@@ -132,18 +132,20 @@ class ItronrsGenCelltypePlugin < RustGenCelltypePlugin
                     break
                 end
             }
-            file.print ",\n\n"
+            file.print ",\n"
         end
     end
 
     
     # セル構造体の mutex_ref フィールドの定義を生成
     def gen_rust_cell_structure_mutex_ref file, celltype
+        return if celltype.get_var_list.length == 0
+
         result = check_gen_dyn_for_mutex_ref celltype
         if result == "dyn" then
             file.print "\tmutex_ref: &'a (dyn LockableForMutex + Sync + Send),\n"
         elsif result == "dummy" then
-            file.print "\tmutex_ref: &'a TECSDummyMutexRef,\n"
+            # file.print "\tmutex_ref: &'a TECSDummyMutexRef,\n"
         else
             file.print "\tmutex_ref: &'a TECSMutexRef<'a>,\n"
         end
@@ -161,7 +163,7 @@ class ItronrsGenCelltypePlugin < RustGenCelltypePlugin
                 end
             }
             file.print "{\n"
-            file.print "\tpub unsafe_var: UnsafeCell<#{get_rust_celltype_name(celltype)}Var"
+            file.print "\tunsafe_var: UnsafeCell<#{get_rust_celltype_name(celltype)}Var"
             celltype.get_var_list.each{ |var|
                 var_type_name = var.get_type.get_type_str
                 if check_lifetime_annotation(var_type_name) then
@@ -169,13 +171,15 @@ class ItronrsGenCelltypePlugin < RustGenCelltypePlugin
                     break
                 end
             }
-            file.print ",\n"
+            file.print ">,\n"
             file.print "}\n\n"
         end
     end
 
     # Syncトレイトの実装を生成
     def gen_rust_impl_sync_trait_for_sync_variable_structure file, celltype
+        return if celltype.get_var_list.length == 0
+
         file.print "unsafe impl"
         celltype.get_var_list.each{ |var|
             var_type_name = var.get_type.get_type_str
@@ -197,13 +201,18 @@ class ItronrsGenCelltypePlugin < RustGenCelltypePlugin
 
     # ミューテックスガード構造体の定義を生成
     def gen_rust_mutex_guard_structure file, celltype
-        file.print "pub struct MutexGuardFor#{get_rust_celltype_name(celltype)}<'a>{\n"
+        return if celltype.get_var_list.length == 0
 
         result = check_gen_dyn_for_mutex_ref celltype
+
+        return if result == "dummy"
+
+        file.print "pub struct MutexGuardFor#{get_rust_celltype_name(celltype)}<'a>{\n"
+
         if result == "dyn" then
             file.print "\tmutex_ref: &'a (dyn LockableForMutex + Sync + Send),\n"
-        elsif result == "dummy" then
-            file.print "\tmutex_ref: &'a TECSDummyMutexRef,\n"
+        # elsif result == "dummy" then
+        #     file.print "\tmutex_ref: &'a TECSDummyMutexRef,\n"
         else
             file.print "\tmutex_ref: &'a TECSMutexRef<'a>,\n"
         end
@@ -232,7 +241,7 @@ class ItronrsGenCelltypePlugin < RustGenCelltypePlugin
             if attr.is_omit? then
                 next
             else
-                file.print "\tpub #{attr.get_name.to_s}: "
+                file.print "\t#{attr.get_name.to_s}: "
                 # file.print "#{c_type_to_rust_type(attr.get_type)}"
                 str = c_type_to_rust_type(attr.get_type)
                 # 属性や変数のフィールドに構造体がある場合は，ライフタイムを付与する必要がある
@@ -405,8 +414,16 @@ class ItronrsGenCelltypePlugin < RustGenCelltypePlugin
 
                 # ミューテックスガードを配列に追加
                 # TODO: 変数が無い、もしくはダミーだけの時にはミューテックスガードを生成しなくてもいいかも。しかし、get_cell_ref の返り値の数はそろえる必要がある
-                return_tuple_type_list.push("MutexGuardFor#{get_rust_celltype_name(celltype)}")
-                return_tuple_list.push("\t\t\tMutexGuardFor#{get_rust_celltype_name(celltype)}{\n\t\t\t\tmutex_ref: self.mutex_ref,\n\t\t\t}")
+                if celltype.get_var_list.length != 0 then
+                    result = check_gen_dyn_for_mutex_ref celltype
+                    if result == "dummy" then
+                        return_tuple_type_list.push("&TECSDummyMutexGuard")
+                        return_tuple_list.push("\t\t\t&DUMMY_MUTEX_GUARD")
+                    else
+                        return_tuple_type_list.push("MutexGuardFor#{get_rust_celltype_name(celltype)}")
+                        return_tuple_list.push("\t\t\tMutexGuardFor#{get_rust_celltype_name(celltype)}{\n\t\t\t\tmutex_ref: self.mutex_ref,\n\t\t\t}")
+                    end
+                end
 
                 if return_tuple_type_list.length != 1 then
                     file.print "("
@@ -425,7 +442,14 @@ class ItronrsGenCelltypePlugin < RustGenCelltypePlugin
                     file.print ")"
                 end
                 file.print " {\n"
-                file.print "\t\tself.mutex_ref.lock();\n"
+
+                if celltype.get_var_list.length != 0 then
+                    result = check_gen_dyn_for_mutex_ref celltype
+                    if result != "dummy" then
+                        file.print "\t\tself.mutex_ref.lock();\n"
+                    end
+                end
+
                 file.print "\t\t"
                 
                 if return_tuple_list.length != 1 then
@@ -455,6 +479,11 @@ class ItronrsGenCelltypePlugin < RustGenCelltypePlugin
 
     # mutex_ref フィールドの初期化を生成
     def gen_rust_cell_structure_mutex_ref_initialize file, celltype, cell
+        return if celltype.get_var_list.length == 0
+
+        result = check_gen_dyn_for_mutex_ref celltype
+        return if result == "dummy"
+
         multiple = check_multiple_accessed_for_cell cell
         if multiple then
             file.print "\tmutex_ref: &#{cell.get_global_name.to_s.upcase}_MUTEX_REF,\n"
@@ -501,6 +530,7 @@ class ItronrsGenCelltypePlugin < RustGenCelltypePlugin
 
     # mutex_ref の初期化を生成
     def gen_rust_mutex_ref_initialize file, cell
+        return if @celltype.get_var_list.length == 0
         multiple = check_multiple_accessed_for_cell cell
         if multiple then
             file.print "#[link_section = \".rodata\"]\n"
@@ -511,6 +541,128 @@ class ItronrsGenCelltypePlugin < RustGenCelltypePlugin
         end
     end
 
+    # ミューテックスガードに Drop トレイトを実装する
+    def gen_rust_impl_drop_for_mutex_guard_structure file, celltype
+        return if celltype.get_var_list.length == 0
+
+        result = check_gen_dyn_for_mutex_ref celltype
+        return if result == "dummy"
+
+        file.print "impl"
+        celltype.get_var_list.each{ |var|
+            var_type_name = var.get_type.get_type_str
+            if check_lifetime_annotation(var_type_name) then
+                file.print "<'a>"
+                break
+            end
+        }
+        file.print " Drop for MutexGuardFor#{get_rust_celltype_name(celltype)}"
+        celltype.get_var_list.each{ |var|
+            var_type_name = var.get_type.get_type_str
+            if check_lifetime_annotation(var_type_name) then
+                file.print "<'a>"
+                break
+            end
+        }
+        file.print " {\n"
+        file.print "\tfn drop(&mut self){\n"
+        file.print "\t\tself.mutex_ref.unlock();\n"
+        file.print "\t}\n"
+        file.print "}\n\n"
+    end
+
+    # セルタイプに受け口がある場合，受け口関数を生成する
+    def gen_rust_entryport_function file, celltype, callport_list
+        # セルタイプに受け口がある場合，impl を生成する
+        celltype.get_port_list.each{ |port|
+            if port.get_port_type == :ENTRY then
+                sig = port.get_signature
+
+                file.print "impl #{camel_case(snake_case(port.get_signature.get_global_name.to_s))} for #{camel_case(snake_case(port.get_name.to_s))}For#{get_rust_celltype_name(celltype)}<'_"
+                file.print ">"
+                file.print "{\n\n"
+
+                sig_param_str_list, _, lifetime_flag = get_sig_param_str sig
+
+                # 空の関数を生成
+                sig.get_function_head_array.each{ |func_head|
+                    # 関数のインライン化
+                    if port.is_inline? then
+                        file.print "\t#[inline]\n"
+                    end
+                    file.print "\tfn #{func_head.get_name}"
+                    if lifetime_flag then
+                        file.print "<'a>"
+                    end
+                    file.print"(&'static self"
+                    # param_num と sig_param_str_list の要素数が等しいことを前提としている
+                    param_num = func_head.get_paramlist.get_items.size
+                    param_num.times do
+                        current_param = sig_param_str_list.shift
+                        if current_param == "ignore" then
+                            next
+                        end
+                        file.print "#{current_param}"
+                    end
+                    file.print ") "
+
+                    # 返り値の型がunknown,つまりvoidのときは，-> を生成しない
+                    if c_type_to_rust_type(func_head.get_return_type) != "unknown" then
+                        file.print "-> #{c_type_to_rust_type(func_head.get_return_type)}"
+                    end
+
+                    file.print "{\n"
+
+                    if check_only_entryport_celltype(celltype) then
+                    else
+                        # get_cell_ref 関数の呼び出しを生成
+                        file.print "\t\tlet "
+
+                        # get_cell_ref 関数の返り値を格納するタプルを生成
+                        tuple_name_list = []
+                        callport_list.each{ |callport|
+                            tuple_name_list.push "#{snake_case(callport.get_name.to_s)}"
+                        }
+                        celltype.get_attribute_list.each{ |attr|
+                            if attr.is_omit? then
+                                next
+                            end
+                            tuple_name_list.push "#{attr.get_name.to_s}"
+                        }
+                        if celltype.get_var_list.length != 0 then
+                            tuple_name_list.push "var"
+                            tuple_name_list.push "_mg"
+                        end
+
+                        if tuple_name_list.length != 1 then
+                            file.print "("
+                        end
+
+                        tuple_name_list.each_with_index do |tuple_name, index|
+                            if index == tuple_name_list.length - 1 then
+                                file.print "#{tuple_name}"
+                                break
+                            end
+                            file.print "#{tuple_name}, "
+                        end
+
+                        if tuple_name_list.length != 1 then
+                            file.print ")"
+                        end
+
+                        file.print " = self.cell.get_cell_ref();\n"
+                    end
+                    file.print "\n"
+                    file.print"\t}\n"
+                }
+
+                file.print "}\n\n"
+
+            else
+            end
+        }
+    end
+
     # tecs_mutex.rs を生成する
     def gen_tecs_mutex_rs
         contents = <<~'EOS'
@@ -518,6 +670,7 @@ use itron::mutex::{MutexRef, LockError, UnlockError};
 use crate::print;
 use crate::print::*;
 
+pub type TECSDummyMutexGuard = i32;
 
 pub trait LockableForMutex {
     fn lock(&self);
@@ -531,8 +684,7 @@ pub struct TECSMutexRef<'a>{
 pub struct TECSDummyMutexRef{
 }
 
-pub struct TECSDummyMutexGuard{
-}
+pub static DUMMY_MUTEX_GUARD: TECSDummyMutexGuard = 0;
 
 impl LockableForMutex for TECSMutexRef<'_>{
     #[inline]

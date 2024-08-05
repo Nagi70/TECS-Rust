@@ -11,14 +11,7 @@ where
 {
 	c_taskbody: &'a T,
 	c_person: &'a U,
-	pub id: i32,
-	mutex_ref: &'a TECSDummyMutexRef,
-}
-
-unsafe impl Sync for SyncTTaskVar {}
-
-pub struct MutexGuardForTTask<'a>{
-	mutex_ref: &'a TECSDummyMutexRef,
+	id: i32,
 }
 
 #[link_section = ".rodata"]
@@ -26,7 +19,6 @@ pub static TASK1: TTask<ETaskbodyForTTaskbody, EAlice1ForTAlice> = TTask {
 	c_taskbody: &ETASKBODYFORTASKBODY1,
 	c_person: &EALICE1FORALICE1,
 	id: 0,
-	mutex_ref: &DUMMY_MUTEX_REF,
 };
 
 #[link_section = ".rodata"]
@@ -34,6 +26,5 @@ pub static TASK2: TTask<ETaskbodyForTTaskbody, EBobForTBob> = TTask {
 	c_taskbody: &ETASKBODYFORTASKBODY2,
 	c_person: &EBOBFORBOB,
 	id: 0,
-	mutex_ref: &DUMMY_MUTEX_REF,
 };
 

@@ -5,9 +5,8 @@ use crate::kernel_cfg::*;
 use spin::Mutex;
 pub struct TCarol<'a>
 {
-	pub id: i32,
+	id: i32,
 	variable SyncTCarolVar,
-
 	mutex_ref: &'a (dyn LockableForMutex + Sync + Send),
 }
 
@@ -16,7 +15,7 @@ pub struct TCarolVar{
 }
 
 pub struct SyncTCarolVar{
-	pub unsafe_var: UnsafeCell<TCarolVar,
+	unsafe_var: UnsafeCell<TCarolVar>,
 }
 
 unsafe impl Sync for SyncTCarolVar {}
@@ -69,6 +68,12 @@ pub static CAROL2VAR: SyncTCarolVar = SyncTCarolVar {
 pub static ECAROLFORCAROL2: ECarolForTCarol = ECarolForTCarol {
 	cell: &CAROL2,
 };
+
+impl Drop for MutexGuardForTCarol {
+	fn drop(&mut self){
+		self.mutex_ref.unlock();
+	}
+}
 
 impl TCarol<'_> {
 	pub fn get_cell_ref(&'static self) -> (&i32, &mut TCarolVar, MutexGuardForTCarol) {

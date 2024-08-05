@@ -2,6 +2,7 @@ use itron::mutex::{MutexRef, LockError, UnlockError};
 use crate::print;
 use crate::print::*;
 
+pub type TECSDummyMutexGuard = i32;
 
 pub trait LockableForMutex {
     fn lock(&self);
@@ -14,6 +15,8 @@ pub struct TECSMutexRef<'a>{
 
 pub struct TECSDummyMutexRef{
 }
+
+pub static DUMMY_MUTEX_GUARD: TECSDummyMutexGuard = 0;
 
 impl LockableForMutex for TECSMutexRef<'_>{
     #[inline]

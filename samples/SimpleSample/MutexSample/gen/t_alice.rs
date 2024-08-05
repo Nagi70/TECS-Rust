@@ -8,9 +8,8 @@ use crate::{s_hello::*, t_deb::*, t_carol::*};
 pub struct TAlice<'a>
 {
 	c_person: &'a (dyn SHello + Sync + Send),
-	pub id: i32,
+	id: i32,
 	variable SyncTAliceVar,
-
 	mutex_ref: &'a (dyn LockableForMutex + Sync + Send),
 }
 
@@ -19,7 +18,7 @@ pub struct TAliceVar{
 }
 
 pub struct SyncTAliceVar{
-	pub unsafe_var: UnsafeCell<TAliceVar,
+	unsafe_var: UnsafeCell<TAliceVar>,
 }
 
 unsafe impl Sync for SyncTAliceVar {}
@@ -88,6 +87,12 @@ pub static EALICE1FORALICE2: EAlice1ForTAlice = EAlice1ForTAlice {
 pub static EALICE2FORALICE2: EAlice2ForTAlice = EAlice2ForTAlice {
 	cell: &ALICE2,
 };
+
+impl Drop for MutexGuardForTAlice {
+	fn drop(&mut self){
+		self.mutex_ref.unlock();
+	}
+}
 
 impl TAlice<'_> {
 	pub fn get_cell_ref(&'static self) -> (&dyn SHello, &i32, &mut TAliceVar, MutexGuardForTAlice) {

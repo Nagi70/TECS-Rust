@@ -4,7 +4,7 @@ use crate::{t_carol::*, s_hello::*};
 impl SHello for ECarolForTCarol<'_>{
 
 	fn hello(&'static self) {
-		let (id, var) = self.cell.get_cell_ref();
+		let (id, var, _mg) = self.cell.get_cell_ref();
 
 	}
 }
