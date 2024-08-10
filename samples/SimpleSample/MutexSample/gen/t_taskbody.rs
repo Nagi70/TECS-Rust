@@ -36,6 +36,5 @@ pub static ETASKBODYFORTASKBODY2: ETaskbodyForTTaskbody = ETaskbodyForTTaskbody 
 impl TTaskbody<'_> {
 	pub fn get_cell_ref(&'static self) -> &dyn SHello {
 		self.c_person
-
 	}
 }

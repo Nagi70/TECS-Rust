@@ -418,10 +418,10 @@ class ItronrsGenCelltypePlugin < RustGenCelltypePlugin
                     result = check_gen_dyn_for_mutex_ref celltype
                     if result == "dummy" then
                         return_tuple_type_list.push("&TECSDummyMutexGuard")
-                        return_tuple_list.push("\t\t\t&DUMMY_MUTEX_GUARD")
+                        return_tuple_list.push("&DUMMY_MUTEX_GUARD")
                     else
                         return_tuple_type_list.push("MutexGuardFor#{get_rust_celltype_name(celltype)}")
-                        return_tuple_list.push("\t\t\tMutexGuardFor#{get_rust_celltype_name(celltype)}{\n\t\t\t\tmutex_ref: self.mutex_ref,\n\t\t\t}")
+                        return_tuple_list.push("MutexGuardFor#{get_rust_celltype_name(celltype)}{\n\t\t\t\tmutex_ref: self.mutex_ref,\n\t\t\t}")
                     end
                 end
 
@@ -458,8 +458,13 @@ class ItronrsGenCelltypePlugin < RustGenCelltypePlugin
 
                 # 返り値のタプルを生成
                 return_tuple_list.each_with_index do |return_tuple, index|
+                    if return_tuple_list.length == 1 then
+                        file.print "#{return_tuple}"
+                        break
+                    end
+
                     if index == return_tuple_list.length - 1 then
-                        file.print "#{return_tuple}\n"
+                        file.print "\t\t\t#{return_tuple}\n"
                         break
                     end
                     file.print "\t\t\t#{return_tuple},\n"
@@ -670,7 +675,7 @@ use itron::mutex::{MutexRef, LockError, UnlockError};
 use crate::print;
 use crate::print::*;
 
-pub type TECSDummyMutexGuard = i32;
+pub type TECSDummyMutexGuard = u32;
 
 pub trait LockableForMutex {
     fn lock(&self);
@@ -684,6 +689,7 @@ pub struct TECSMutexRef<'a>{
 pub struct TECSDummyMutexRef{
 }
 
+#[link_section = ".rodata"]
 pub static DUMMY_MUTEX_GUARD: TECSDummyMutexGuard = 0;
 
 impl LockableForMutex for TECSMutexRef<'_>{
@@ -771,6 +777,7 @@ impl LockableForMutex for TECSDummyMutexRef{
     }
 }
 
+#[link_section = ".rodata"]
 pub static DUMMY_MUTEX_REF: TECSDummyMutexRef = TECSDummyMutexRef{
 };
             EOS

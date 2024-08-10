@@ -1,11 +1,15 @@
+use core::cell::UnsafeCell;
+use crate::tecs_mutex::*;
+use core::num::NonZeroI32;
+use crate::kernel_cfg::*;
 use crate::{s_hello::*, t_alice::*};
 
 pub struct TCarol<'a, T>
 where
 	T: SHello,
 {
-	pub c_person: &'a T,
-	pub carol_attr: i32,
+	c_person: &'a T,
+	carol_attr: i32,
 }
 
 pub struct ECarolForTCarol<'a>{
@@ -24,7 +28,10 @@ pub static ECAROLFORCAROL: ECarolForTCarol = ECarolForTCarol {
 };
 
 impl<T: SHello> TCarol<'_, T> {
-	pub fn get_cell_ref(&self) -> (&T, &i32) {
-		(&self.c_person, &self.carol_attr)
+	pub fn get_cell_ref(&'static self) -> (&T, &i32) {
+		(
+			self.c_person,
+			&self.carol_attr
+		)
 	}
 }

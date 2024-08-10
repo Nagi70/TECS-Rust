@@ -37,7 +37,7 @@
 #  PLUGIN_domain_SRCS       .c files of plugin generated .c files for each domain
 #  CELLTYPE_domain_SRCS     .c files of celltype.c files for each domain
 
-TECS_IMPORT_CDLS = ErrorCaseSample.cdl gen/tmp_RustGenCelltypePlugin_post_code.cdl
+TECS_IMPORT_CDLS = ErrorCaseSample.cdl gen/tmp_ItronrsGenCelltypePlugin_post_code.cdl
 TECS_IMPORT_HEADERS =
 TECS_IMPORTS = $(TECS_IMPORT_CDLS) $(TECS_IMPORT_HEADERS)
 

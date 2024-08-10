@@ -1,9 +1,13 @@
+use core::cell::UnsafeCell;
+use crate::tecs_mutex::*;
+use core::num::NonZeroI32;
+use crate::kernel_cfg::*;
 use crate::{s_hello::*, t_bob::*, t_carol::*};
 
 pub struct TAlice<'a>
 {
-	pub c_person: &'a (dyn SHello + Sync + Send),
-	pub alice_attr: i32,
+	c_person: &'a (dyn SHello + Sync + Send),
+	alice_attr: i32,
 }
 
 pub struct EAliceForTAlice<'a>{
@@ -33,7 +37,10 @@ pub static EALICEFORALICE2: EAliceForTAlice = EAliceForTAlice {
 };
 
 impl TAlice<'_> {
-	pub fn get_cell_ref(&self) -> (&dyn SHello, &i32) {
-		(&self.c_person, &self.alice_attr)
+	pub fn get_cell_ref(&'static self) -> (&dyn SHello, &i32) {
+		(
+			self.c_person,
+			&self.alice_attr
+		)
 	}
 }

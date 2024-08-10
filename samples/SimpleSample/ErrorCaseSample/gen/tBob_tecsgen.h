@@ -11,10 +11,10 @@
  * multi-domain      :  no
  * idx_is_id(actual) :  no(no)
  * singleton         :  no
- * has_CB            :  no
+ * has_CB            :  yes
  * has_INIB          :  yes
  * rom               :  yes
- * CB initializer    :  no
+ * CB initializer    :  yes
  */
 
 /* global header #_IGH_# */
@@ -35,17 +35,19 @@ typedef const struct tag_tBob_INIB {
     /* attribute(RO) #_ATO_# */ 
     int32_t        bob_attr;
 }  tBob_INIB;
-
-/* CB not exist. CB corresponding to INIB #_DCI_# */
-#define tBob_CB_tab           tBob_INIB_tab
-#define tBob_CB               tBob_INIB
-#define tag_tBob_CB           tag_tBob_INIB
-
+/* cell CB type definition #_CCTPA_# */
+typedef struct tag_tBob_CB {
+    tBob_INIB  *_inib;
+    /* call port #_TCP_# */
+    /* call port #_NEP_# */ 
+    /* var #_VA_# */ 
+    int32_t        bob_var;
+}  tBob_CB;
 /* singleton cell CB prototype declaration #_MCPB_# */
-extern tBob_INIB  tBob_INIB_tab[];
+extern tBob_CB  tBob_CB_tab[];
 
 /* celltype IDX type #_CTIX_# */
-typedef const struct tag_tBob_INIB *tBob_IDX;
+typedef struct tag_tBob_CB *tBob_IDX;
 
 /* prototype declaration of entry port function #_EPP_# */
 /* sHello */
@@ -77,11 +79,16 @@ void         tBob_eBob_Hello(tBob_IDX idx);
 #define tBob_GET_CELLCB(idx) (idx)
 
 /* attr access  #_AAM_# */
-#define tBob_ATTR_bob_attr( p_that )	((p_that)->bob_attr)
+#define tBob_ATTR_bob_attr( p_that )	((p_that)->_inib->bob_attr)
 
-#define tBob_GET_bob_attr(p_that)	((p_that)->bob_attr)
+#define tBob_GET_bob_attr(p_that)	((p_that)->_inib->bob_attr)
 
 
+/* var access macro #_VAM_# */
+#define tBob_VAR_bob_var(p_that)	((p_that)->bob_var)
+
+#define tBob_GET_bob_var(p_that)	((p_that)->bob_var)
+#define tBob_SET_bob_var(p_that,val)	((p_that)->bob_var=(val))
 
 #ifndef TECSFLOW
  /* call port function macro #_CPM_# */
@@ -136,6 +143,9 @@ void           tBob_eBob_Hello_skel( const struct tag_sHello_VDES *epd);
 #define ATTR_bob_attr        tBob_ATTR_bob_attr( p_cellcb )
 
 
+/* var access macro (abbrev) #_VAMA_# */
+#define VAR_bob_var          tBob_VAR_bob_var( p_cellcb )
+
 /* call port function macro (abbrev) #_CPMA_# */
 #define cPerson_Hello( ) \
           ((void)p_cellcb, tBob_cPerson_Hello( p_cellcb ))
@@ -149,11 +159,16 @@ void           tBob_eBob_Hello_skel( const struct tag_sHello_VDES *epd);
 /* iteration code (FOREACH_CELL) #_FEC_# */
 #define FOREACH_CELL(i,p_cb)   \
     for( (i) = 0; (i) < tBob_N_CELL; (i)++ ){ \
-       //(p_cb) = &tBob_CB_tab[i];
+       (p_cb) = &tBob_CB_tab[i];
 
 #define END_FOREACH_CELL   }
 
 /* CB initialize macro #_CIM_# */
+#define INITIALIZE_CB(p_that)\
+	(p_that)->bob_var = 1;
+#define SET_CB_INIB_POINTER(i,p_that)\
+	(p_that)->_inib = &tBob_INIB_tab[(i)];
+
 #endif /* TOPPERS_CB_TYPE_ONLY */
 
 #ifndef TOPPERS_MACRO_ONLY

@@ -42,9 +42,20 @@ tBob_INIB tBob_INIB_tab[] = {
     },
 };
 
+/* cell CB #_CB_# */
+struct tag_tBob_CB tBob_CB_tab[] = {
+    /* cell: tBob_CB_tab[0]:  Bob id=1 */
+    {
+        &tBob_INIB_tab[0],                       /* _inib */
+        /* entry port #_EP_# */ 
+        /* var */ 
+        1,                                       /* bob_var */
+    },
+};
+
 /* entry port descriptor #_EPD_# */
 extern const struct tag_tBob_eBob_DES Bob_eBob_des;
 const struct tag_tBob_eBob_DES Bob_eBob_des = {
     &tBob_eBob_MT_,
-    &tBob_INIB_tab[0],      /* INIB 3 */
+    &tBob_CB_tab[0],      /* CB 3 */
 };

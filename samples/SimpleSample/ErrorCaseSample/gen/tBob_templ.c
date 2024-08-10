@@ -10,6 +10,7 @@
  *
  * attr access macro #_CAAM_#
  * bob_attr         int32_t          ATTR_bob_attr   
+ * bob_var          int32_t          VAR_bob_var     
  *
  * call port function #_TCPF_#
  * call port: cPerson signature: sHello context:task

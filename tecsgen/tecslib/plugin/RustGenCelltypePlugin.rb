@@ -43,6 +43,7 @@ class RustGenCelltypePlugin < CelltypePlugin
     @@b_signature_header_generated = false
     @@module_generated = false
     @@mutex_ref_id = 1
+    @@json_parse_result = []
 
     #celltype::     Celltype        セルタイプ（インスタンス）
     def initialize( celltype, option )
@@ -54,7 +55,6 @@ class RustGenCelltypePlugin < CelltypePlugin
       @plugin_arg_list = {}
       @cell_list =[]
       @dyn_mutex_ref = false
-      @json_parse_result = []
     end
   
     #=== 新しいセル
@@ -1123,7 +1123,7 @@ class RustGenCelltypePlugin < CelltypePlugin
         json_string = File.read(file_path)
         data = JSON.parse(json_string)
 
-        accessed_cells = Hash.new { |hash, key| hash[key] = { "MultipleAccessed" => "false", "Celltype" => nil } }
+        accessed_cells = Hash.new { |hash, key| hash[key] = { "ExclusiveContol" => "false", "Accessed" => 0, "Celltype" => nil } }
         access_count = Hash.new(0)
 
         # すべてのセルのCelltypeを設定する
@@ -1139,22 +1139,52 @@ class RustGenCelltypePlugin < CelltypePlugin
           end
         end
     
-        # 複数のセルからアクセスされる場合にMultipleAccessedをtrueに設定
+        # 複数のセルからアクセスされる場合に ExclusiveContol を true に設定
         access_count.each do |cell, count|
-          accessed_cells[cell]["MultipleAccessed"] = "true" if count > 1
+          accessed_cells[cell]["ExclusiveContol"] = "true" if count > 1
+          accessed_cells[cell]["Accessed"] = count
         end
     
         # result = accessed_cells.map { |cell, details| { cell => details } }
     
         # return result
+
+        # puts "#{accessed_cells}"
+
         return accessed_cells
+    end
+
+    # 排他制御をかけるかどうかを再判定する
+    def json_parse_update celltype, json_parse_result
+        return json_parse_result if celltype.is_active? == true
+
+        celltype.get_cell_list.each{ |cell|
+            celltype.get_port_list.each{ |callport|
+                if callport.get_port_type == :CALL then
+                    callee_cell_name = cell.get_join_list.get_item(callport.get_name).get_cell_name.to_s
+                    # puts "#{cell.get_global_name.to_s} -> #{callee_cell_name}"
+                    cell_accessed = json_parse_result[cell.get_global_name.to_s]["Accessed"]
+                    callee_cell_accessed = json_parse_result[callee_cell_name]["Accessed"]
+                    # puts "#{cell.get_global_name.to_s} -> #{callee_cell_name} : #{cell_accessed} -> #{callee_cell_accessed}"
+                    if cell_accessed == callee_cell_accessed then
+                        json_parse_result[callee_cell_name]["ExclusiveContol"] = "false"
+                    end
+                end
+            }
+        }
+        return json_parse_result
     end
 
     # 引数のセルが複数のタスクからアクセスされているかどうかを判断する
     def check_multiple_accessed_for_cell cell
+        # JSONファイルがパースされていない場合は、排他制御がいるものとして true を返す
+        if @@json_parse_result.length == 0 then
+            return true
+        end
+
         celltype = cell.get_celltype.get_global_name.to_s
-        if @json_parse_result[cell.get_global_name.to_s]["Celltype"] == celltype then
-            if @json_parse_result[cell.get_global_name.to_s]["MultipleAccessed"] == "true" then
+        if @@json_parse_result[cell.get_global_name.to_s]["Celltype"] == celltype then
+            if @@json_parse_result[cell.get_global_name.to_s]["ExclusiveContol"] == "true" then
                 return true
             end
             return false
@@ -1252,15 +1282,19 @@ class RustGenCelltypePlugin < CelltypePlugin
 
             # file = CFile.open( "#{$gen}/#{global_file_name}.rs", "w" )
 
-            @json_parse_result = []
-
             json_file_path = "#{$gen}/tecsflow.json"
             if File.exist?(json_file_path) && File.exist?("./#{$target}.cdl") then
                 cdl_time = File.mtime("./#{$target}.cdl")
                 json_time = File.mtime(json_file_path)
                 if cdl_time < json_time then
-                    puts "#{@celltype.get_global_name.to_s}: json_parse"
-                    @json_parse_result = json_parse json_file_path
+                    if @@json_parse_result.length == 0 then
+                        puts "#{@celltype.get_global_name.to_s}: json_parse"
+                        @@json_parse_result = json_parse json_file_path
+                    else
+                        puts "#{@celltype.get_global_name.to_s}: json_parse_update"
+                        @@json_parse_result = json_parse_update @celltype, @@json_parse_result
+                    end
+                    puts "#{@@json_parse_result}"
                 else
                     puts "cdl file is newer than json file"
                 end
