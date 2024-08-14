@@ -839,6 +839,8 @@ module TECSFlow
     # end
 
     # generate_json_file
+
+    analyze_deadlock json_list, cell_list
     
   end
 
@@ -1001,6 +1003,111 @@ module TECSFlow
     end
   end
 
+  def self.analyze_deadlock json_list, cell_list
+
+    cell_list_to_s = []
+    cell_list.each{ |cell|
+      cell_list_to_s << cell.get_name.to_s
+    }
+
+    active_cell_list = []
+    cell_list.each{ |cell|
+      active_cell_list << cell if cell.get_celltype.is_active?
+    }
+
+    accessed_cell_hash = cell_list_to_s.each_with_object({}) do |cell, h|
+      h[cell] = active_cell_list.each_with_object({}) do |task, sub_h|
+        sub_h[task.get_name.to_s] = false
+      end
+      h[cell]["ExclusiveControl"] = false
+    end
+
+    json_list.each do |entry|
+      cell_name = entry[:Cell].to_s
+      accessed = entry[:Accessed]
+
+      accessed.each do |task|
+        task_name = task[:ActiveCell].to_s
+        accessed_cell_hash[cell_name][task_name] = true
+      end
+    end
+
+    cell_list.each do |cell|
+      cell.get_celltype.get_port_list.each do |port|
+        next if port.get_port_type == :ENTRY
+        callee_cell_name = cell.get_join_list.get_item(port.get_name).get_cell_name.to_s
+        cell_count = 0
+        callee_cell_count = 0
+        active_cell_list.each do |task|
+          if accessed_cell_hash[cell.get_name.to_s][task.get_name.to_s] then
+            cell_count += 1
+          end
+          if accessed_cell_hash[callee_cell_name][task.get_name.to_s] then
+            callee_cell_count += 1
+          end
+        end
+        # puts "#{cell.get_name.to_s} -> #{callee_cell_name} : #{cell_count} -> #{callee_cell_count}"
+        if cell_count < callee_cell_count && callee_cell_count >= 2 then
+          accessed_cell_hash[callee_cell_name]["ExclusiveControl"] = true
+        end
+      end
+    end
+
+    exclusive_control_cells = accessed_cell_hash.select{ |k, v| v["ExclusiveControl"] == true }
+
+    # if active_cell_list.length > 1 then
+    # end
+
+    active_cell_list_to_s = []
+    active_cell_list.each{ |task|
+      active_cell_list_to_s << task.get_name.to_s
+    }
+
+    graph = Graph.new
+
+    exclusive_control_cells.each do |cell_k, task_v|
+      task_v.each do |tsk_k, tsk_v|
+        next if tsk_k == "ExclusiveControl"
+        graph.add_edge(cell_k, tsk_k) if tsk_v
+      end
+    end
+
+    graph.add_edge("Bob", "Task1")
+    graph.add_edge("Bob", "Task2")
+    graph.add_edge("Taskbody1", "Task1")
+    graph.add_edge("Taskbody2", "Task2")
+    graph.add_edge("Alice1", "Task1")
+    graph.add_edge("Alice1", "Task2")
+    graph.add_edge("Carol1", "Task3")
+    graph.add_edge("Bob", "Task3")
+    graph.add_edge("Alice1", "Task4")
+    graph.add_edge("Deb", "Task4")
+    graph.add_edge("Carol1", "Task2")
+
+    puts "graph: #{graph.inspect}"
+
+    cycles = graph.detect_cycles
+
+    # puts "#{accessed_cell_hash}"
+
+    # puts "cell_list: #{cell_list_to_s}"
+
+    # puts "active_cell_list: #{active_cell_list_to_s}"
+
+    # puts "exclusive_control_cells: #{exclusive_control_cells}"
+
+    if cycles.empty?
+      puts "サイクルは存在しません"
+    else
+      puts "サイクルが存在します。すべてのサイクル:"
+      cycles.each_with_index do |cycle, index|
+        puts "サイクル #{index + 1}: #{cycle.join(' -> ')}"
+      end
+    end
+
+
+  end
+
   def self.process_file(file)
 
     trees = []
@@ -1047,6 +1154,77 @@ module TECSFlow
   
     root
   end
+
+  require 'set'
+
+  class Graph
+    def initialize
+      @adj_list = {}
+    end
+  
+    def add_edge(v1, v2)
+      @adj_list[v1] ||= []
+      @adj_list[v2] ||= []
+      @adj_list[v1] << v2
+      @adj_list[v2] << v1
+    end
+  
+    def detect_cycles
+      visited = {}
+      cycles = []
+  
+      @adj_list.keys.each do |v|
+        visited[v] = false
+      end
+  
+      @adj_list.keys.each do |v|
+        next if visited[v]
+        detect_cycle_dfs(v, v, visited, [], cycles)
+      end
+  
+      unique_cycles(cycles)
+    end
+  
+    private
+  
+    def detect_cycle_dfs(start, v, visited, path, cycles)
+      visited[v] = true
+      path << v
+  
+      @adj_list[v].each do |neighbor|
+        if !visited[neighbor]
+          detect_cycle_dfs(start, neighbor, visited, path.dup, cycles)
+        elsif neighbor == start && path.length > 2
+          cycle = (path + [neighbor])
+          cycles << cycle unless contains_same_cycle?(cycles, cycle)
+        end
+      end
+  
+      visited[v] = false
+    end
+  
+    def contains_same_cycle?(cycles, new_cycle)
+      normalized_new_cycle = new_cycle.map { |v| v }.sort
+      cycles.any? { |cycle| cycle.map { |v| v }.sort == normalized_new_cycle }
+    end
+  
+    def unique_cycles(cycles)
+      seen_sets = Set.new
+      unique = []
+  
+      cycles.each do |cycle|
+        cycle_set = cycle.to_set
+        unless seen_sets.include?(cycle_set)
+          seen_sets.add(cycle_set)
+          unique << cycle
+        end
+      end
+  
+      unique
+    end
+  end
+  
+  
 
 end
 
