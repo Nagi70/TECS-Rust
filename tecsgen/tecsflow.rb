@@ -1072,19 +1072,19 @@ module TECSFlow
       end
     end
 
-    graph.add_edge("Bob", "Task1")
-    graph.add_edge("Bob", "Task2")
-    graph.add_edge("Taskbody1", "Task1")
-    graph.add_edge("Taskbody2", "Task2")
-    graph.add_edge("Alice1", "Task1")
-    graph.add_edge("Alice1", "Task2")
-    graph.add_edge("Carol1", "Task3")
-    graph.add_edge("Bob", "Task3")
-    graph.add_edge("Alice1", "Task4")
-    graph.add_edge("Deb", "Task4")
-    graph.add_edge("Carol1", "Task2")
+    # graph.add_edge("Bob", "Task1")
+    # graph.add_edge("Bob", "Task2")
+    # graph.add_edge("Taskbody1", "Task1")
+    # graph.add_edge("Taskbody2", "Task2")
+    # graph.add_edge("Alice1", "Task1")
+    # graph.add_edge("Alice1", "Task2")
+    # graph.add_edge("Carol1", "Task3")
+    # graph.add_edge("Bob", "Task3")
+    # graph.add_edge("Alice1", "Task4")
+    # graph.add_edge("Deb", "Task4")
+    # graph.add_edge("Carol1", "Task2")
 
-    puts "graph: #{graph.inspect}"
+    # puts "graph: #{graph.inspect}"
 
     cycles = graph.detect_cycles
 
@@ -1096,12 +1096,28 @@ module TECSFlow
 
     # puts "exclusive_control_cells: #{exclusive_control_cells}"
 
+    puts "--- cycles ---"
     if cycles.empty?
-      puts "サイクルは存在しません"
+      # puts "サイクルは存在しません"
     else
-      puts "サイクルが存在します。すべてのサイクル:"
+      # puts "サイクルが存在します。すべてのサイクル:"
       cycles.each_with_index do |cycle, index|
-        puts "サイクル #{index + 1}: #{cycle.join(' -> ')}"
+        tasks = []
+        resources = []
+
+        cycle.each do |cell|
+          if active_cell_list_to_s.include?(cell)
+            tasks << cell
+          else
+            resources << cell
+          end
+        end
+
+        tasks.uniq!
+        resources.uniq!
+
+        puts "[cycle #{index + 1}] ::#{tasks.join(', ')}"
+        puts "\t#{tasks[0]} -> (#{resources.join(', ')}) <- #{tasks[-1]}"
       end
     end
 
@@ -1182,7 +1198,8 @@ module TECSFlow
         detect_cycle_dfs(v, v, visited, [], cycles)
       end
   
-      unique_cycles(cycles)
+      filtered_cycles = unique_cycles(cycles)
+      filtered_cycles.select { |cycle| cycle.length < 7 } # 長さが6以上のサイクルを除外
     end
   
     private
