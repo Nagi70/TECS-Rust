@@ -1,0 +1,80 @@
+use core::cell::UnsafeCell;
+use crate::tecs_mutex::*;
+use core::num::NonZeroI32;
+use crate::kernel_cfg::*;
+use spin::Mutex;
+pub struct TCarol<'a>
+{
+	id: i32,
+	variable SyncTCarolVar,
+	mutex_ref: &'a TECSMutexRef<'a>,
+}
+
+pub struct TCarolVar{
+	pub count: i32,
+}
+
+pub struct SyncTCarolVar{
+	unsafe_var: UnsafeCell<TCarolVar>,
+}
+
+unsafe impl Sync for SyncTCarolVar {}
+
+pub struct ECarol1ForTCarol<'a>{
+	pub cell: &'a TCarol<'a>,
+}
+
+pub struct ECarol2ForTCarol<'a>{
+	pub cell: &'a TCarol<'a>,
+}
+
+pub struct MutexGuardForTCarol<'a>{
+	mutex_ref: &'a TECSMutexRef<'a>,
+}
+
+#[link_section = ".rodata"]
+pub static CAROL: TCarol = TCarol {
+	id: 0,
+	variable: &CAROLVAR,
+	mutex_ref: &CAROL_MUTEX_REF,
+};
+
+pub static CAROLVAR: SyncTCarolVar = SyncTCarolVar {
+	unsafe_var: UnsafeCell::new(TCarolVar {
+		count: 0,
+	}),
+};
+
+#[link_section = ".rodata"]
+pub static CAROL_MUTEX_REF: TECSMutexRef = TECSMutexRef{
+	inner: unsafe{MutexRef::from_raw_nonnull(NonZero::new(TECS_RUST_MUTEX_3).unwrap())},
+};
+
+#[link_section = ".rodata"]
+pub static ECAROL1FORCAROL: ECarol1ForTCarol = ECarol1ForTCarol {
+	cell: &CAROL,
+};
+
+#[link_section = ".rodata"]
+pub static ECAROL2FORCAROL: ECarol2ForTCarol = ECarol2ForTCarol {
+	cell: &CAROL,
+};
+
+impl Drop for MutexGuardForTCarol {
+	fn drop(&mut self){
+		self.mutex_ref.unlock();
+	}
+}
+
+impl TCarol<'_> {
+	pub fn get_cell_ref(&'static self) -> (&i32, &mut TCarolVar, MutexGuardForTCarol) {
+		self.mutex_ref.lock();
+		(
+			&self.id,
+			unsafe{&mut *self.variable.unsafe_var.get()},
+			MutexGuardForTCarol{
+				mutex_ref: self.mutex_ref,
+			}
+		)
+	}
+}

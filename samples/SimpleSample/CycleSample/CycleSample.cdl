@@ -1,0 +1,132 @@
+signature sHello {
+    void hello(void);
+};
+
+signature sTaskbody {
+    void main(void);
+};
+
+[active]
+celltype tTask{
+    call sTaskbody cTaskbody;
+    attr {
+        int32_t id;
+    };
+};
+
+[generate(ItronrsGenPlugin,"lib")]
+celltype tTaskbody {
+    call sHello cPerson1;
+    call sHello cPerson2;
+    entry sTaskbody eTaskbody;
+};
+
+[generate(ItronrsGenPlugin,"lib")]
+celltype tAlice {
+    entry sHello eAlice1;
+    entry sHello eAlice2;
+    attr{
+        int32_t id;
+    };
+
+    var{
+        int32_t count = 0;
+    };
+};
+
+[generate(ItronrsGenPlugin,"lib")]
+celltype tBob {
+    entry sHello eBob1;
+    entry sHello eBob2;
+    entry sHello eBob3;
+    entry sHello eBob4;
+    attr{
+        int32_t id;
+    };
+
+    var{
+        int32_t count = 0;
+    };
+};
+
+[generate(ItronrsGenPlugin,"lib")]
+celltype tCarol {
+    entry sHello eCarol1;
+    entry sHello eCarol2;
+    attr{
+        int32_t id;
+    };
+
+    var{
+        int32_t count = 0;
+    };
+};
+
+[generate(ItronrsGenPlugin,"lib")]
+celltype tDeb {
+    entry sHello eDeb1;
+    entry sHello eDeb2;
+    attr{
+        int32_t id;
+    };
+
+    var{
+        int32_t count = 0;
+    };
+};
+
+[generate(ItronrsGenPlugin,"lib")]
+cell tTask Task1 {
+    cTaskbody = Taskbody1.eTaskbody;
+    id = 1;
+};
+
+[generate(ItronrsGenPlugin,"lib")]
+cell tTask Task2 {
+    cTaskbody = Taskbody2.eTaskbody;
+    id = 2;
+};
+
+[generate(ItronrsGenPlugin,"lib")]
+cell tTask Task3 {
+    cTaskbody = Taskbody3.eTaskbody;
+    id = 3;
+};
+
+[generate(ItronrsGenPlugin,"lib")]
+cell tTask Task4 {
+    cTaskbody = Taskbody4.eTaskbody;
+    id = 4;
+};
+
+cell tTaskbody Taskbody1 {
+    cPerson1 = Alice.eAlice1;
+    cPerson2 = Bob.eBob1;
+};
+
+cell tTaskbody Taskbody2 {
+    cPerson1 = Alice.eAlice2;
+    cPerson2 = Bob.eBob2;
+};
+
+cell tTaskbody Taskbody3 {
+    cPerson1 = Bob.eBob3;
+    cPerson2 = Carol.eCarol1;
+};
+
+cell tTaskbody Taskbody4 {
+    cPerson1 = Bob.eBob4;
+    cPerson2 = Carol.eCarol2;
+};
+
+cell tAlice Alice {
+    id = 0;
+};
+
+cell tBob Bob {
+    id = 0;
+};
+
+cell tCarol Carol {
+    id = 0;
+};

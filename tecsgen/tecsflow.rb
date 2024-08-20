@@ -1010,11 +1010,19 @@ module TECSFlow
       cell_list_to_s << cell.get_name.to_s
     }
 
+    # アクティブセルのリストを取得
     active_cell_list = []
     cell_list.each{ |cell|
       active_cell_list << cell if cell.get_celltype.is_active?
     }
 
+    # アクティブセルの String リストを取得
+    active_cell_list_to_s = []
+    active_cell_list.each{ |task|
+      active_cell_list_to_s << task.get_name.to_s
+    }
+
+    # すべてのセルに対して、アクティブセル名のキーと、"ExclusiveControl" のキーを作成
     accessed_cell_hash = cell_list_to_s.each_with_object({}) do |cell, h|
       h[cell] = active_cell_list.each_with_object({}) do |task, sub_h|
         sub_h[task.get_name.to_s] = false
@@ -1022,6 +1030,7 @@ module TECSFlow
       h[cell]["ExclusiveControl"] = false
     end
 
+    # JSON のコールフローを解析し、どのアクティブセルからアクセスされるのかを格納
     json_list.each do |entry|
       cell_name = entry[:Cell].to_s
       accessed = entry[:Accessed]
@@ -1032,36 +1041,36 @@ module TECSFlow
       end
     end
 
+    # 排他制御をかけるセルを特定
     cell_list.each do |cell|
       cell.get_celltype.get_port_list.each do |port|
         next if port.get_port_type == :ENTRY
         callee_cell_name = cell.get_join_list.get_item(port.get_name).get_cell_name.to_s
-        cell_count = 0
+
+        # 呼び先のセルがアクセスされるアクティブセルの数をカウント
         callee_cell_count = 0
         active_cell_list.each do |task|
-          if accessed_cell_hash[cell.get_name.to_s][task.get_name.to_s] then
-            cell_count += 1
-          end
           if accessed_cell_hash[callee_cell_name][task.get_name.to_s] then
             callee_cell_count += 1
           end
         end
-        # puts "#{cell.get_name.to_s} -> #{callee_cell_name} : #{cell_count} -> #{callee_cell_count}"
-        if cell_count < callee_cell_count && callee_cell_count >= 2 then
+
+        # 呼び元と呼び先が同じアクセスされるアクティブセルを持っているかどうかを判定
+        same_accessed = true
+        current_cell_hash = accessed_cell_hash[cell.get_name.to_s].dup
+        current_cell_hash.delete("ExclusiveControl")
+        callee_cell_hash = accessed_cell_hash[callee_cell_name].dup
+        callee_cell_hash.delete("ExclusiveControl")
+        same_accessed = false if current_cell_hash != callee_cell_hash
+
+        # 呼び先のセルがアクセスされるアクティブセルの数が 2 以上で、かつ呼び元と呼び先が同じアクセスされるアクティブセルを持っていない場合、排他制御をかける
+        if same_accessed == false && callee_cell_count >= 2 then
           accessed_cell_hash[callee_cell_name]["ExclusiveControl"] = true
         end
       end
     end
 
     exclusive_control_cells = accessed_cell_hash.select{ |k, v| v["ExclusiveControl"] == true }
-
-    # if active_cell_list.length > 1 then
-    # end
-
-    active_cell_list_to_s = []
-    active_cell_list.each{ |task|
-      active_cell_list_to_s << task.get_name.to_s
-    }
 
     graph = Graph.new
 
@@ -1088,7 +1097,7 @@ module TECSFlow
 
     cycles = graph.detect_cycles
 
-    # puts "#{accessed_cell_hash}"
+    puts "#{accessed_cell_hash}"
 
     # puts "cell_list: #{cell_list_to_s}"
 
@@ -1096,7 +1105,7 @@ module TECSFlow
 
     # puts "exclusive_control_cells: #{exclusive_control_cells}"
 
-    puts "--- cycles ---"
+    puts "--- cycle deadlocks ---"
     if cycles.empty?
       # puts "サイクルは存在しません"
     else
