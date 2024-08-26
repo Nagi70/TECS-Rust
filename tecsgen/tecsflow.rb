@@ -44,14 +44,15 @@ $TECSFLOW = true
 $title = "tecsflow"
 $tool_version = "1.G.0"
 
-@@rustflow = false
-@@rustflow_option = nil
-@@repeat = false
+$rustflow = false
+$rustflow_option = nil
+$repeat = false
 
 $cell_list_hash = {}
 $flow_json_hash = {}
 $flow_stack = []
 $path_item_stack = []
+$reentry_cell_list = {}
 
 require "#{$tecsflow_base_path}/flowlib/classes.rb"
 require "#{$tecsflow_base_path}/tecslib/version.rb"
@@ -74,11 +75,11 @@ def analyze_option
     }
     parser.on('-r', '--rust=option',     'select only or both') { |option|
       if option == "only" then
-        @@rustflow = true
-        @@rustflow_option = "only"
+        $rustflow = true
+        $rustflow_option = "only"
       elsif option == "both" then
-        @@rustflow = true
-        @@rustflow_option = "both"
+        $rustflow = true
+        $rustflow_option = "both"
       else
         print "invalid option for --rust\n"
         exit 1
@@ -114,7 +115,7 @@ tecsgen = TECSGEN.new
 
 $tecsgen_dump_file_name = "#{$gen}/tecsgen.rbdmp"
 $tcflow_dump_file_name = "#{$gen}/tcflow.rbdmp"
-if @@rustflow then
+if $rustflow then
   $tcflow_dump_file_name = "#{$gen}/rustflow.rbdmp"
 end
 $root_namespace = nil
@@ -184,7 +185,7 @@ class Namespace
 			  			port.get_signature.get_function_head_array.each{ |f|
 			  			  func_name = "->#{port.get_name}.#{f.get_name}__T".to_sym
                 # print "func_name: #{func_name}\n"
-                # if @@rustflow then
+                # if $rustflow then
                 #   func_name = "#{snake_case(port.get_name.to_s)}.#{f.get_name}".to_sym
                 # end
 			  			  call_funcs[ func_name ] = false
@@ -197,7 +198,7 @@ class Namespace
   					if ep.get_port_type == :ENTRY then
   						ep.get_signature.get_function_head_array.each{ |f|
   							ep_func = "#{celltype.get_global_name}_#{ep.get_name}_#{f.get_name}".to_sym
-                if @@rustflow then
+                if $rustflow then
                   ep_func = "#{camel_case(snake_case(ep.get_name.to_s))}For#{get_rust_celltype_name(celltype)}.#{f.get_name}".to_sym
                   # print "print_all_cells: rustflow is true\n"
                 end
@@ -247,7 +248,7 @@ class Cell
   @@printed_func_nsp_list = {}    # function path in CDL like format
   @@printed_cell_list = {}
   @@printed_celltype_list = {}
-  # @@repeat = false
+  # $repeat = false
 
   def self.print_unused_func
     parent_cell = []
@@ -296,9 +297,9 @@ class Cell
     path_item = {
       "CellName": callee_cell.get_name,
       "Celltype": callee_cell.get_celltype.get_name,
-      "Callport": call_port_name, # この呼び口は、呼び元のセルのポート名であるため、正しくない
-      "Calleeport": entry_port_name, # この受け口は、呼び元のセルの、呼び先ポート名であるため、正しくない
-      "Function": func_name, # この関数名は、呼び元のセルの、呼び口関数名であるため、正しくない
+      "Callport": call_port_name, # この値は、自分のセルの呼び口を入れたいが、この時点では呼び元のセルのポート名であるため、正しくない
+      "Calleeport": entry_port_name, # この値は、自分のセルの受け口を入れたいが、この時点では呼び元のセルの呼び先ポート名であるため、正しくない
+      "Function": func_name, # この値は、自分のセルの対応する関数名を入れたいが、呼び元のセルの呼び口関数名であるため、正しくない
     }
 
     while $path_item_stack.any? && $path_item_stack.last[1] >= indent_level
@@ -319,9 +320,20 @@ class Cell
       "Path": []
     }
 
-    # 1つ先のセルの Callport, Calleeport, Function を取得
+    trace_list = []
+
+    # 1つ先のセルの Callport, Calleeport, Function を取得 (ここで上記の正しくない値をもつキーを正しい値に更新する)
+    # Path キーの値を作成している
     path_item_stack_copy.each_with_index{ |path_item_temp, i|
       break if i == path_item_stack_copy.length - 1
+
+      # ループ構造になっているセルを検出
+      if trace_list.include? path_item_temp[0][:CellName].to_s then
+        $reentry_cell_list[path_item_temp[0][:CellName].to_s] = $path_item_stack[i-1][0][:CellName].to_s
+      else
+        trace_list.push path_item_temp[0][:CellName].to_s
+      end
+
       path_item_temp[0][:Callport] = $path_item_stack[i+1][0][:Callport]
       path_item_temp[0][:Calleeport] = $path_item_stack[i+1][0][:Calleeport]
       path_item_temp[0][:Function] = $path_item_stack[i+1][0][:Function]
@@ -375,7 +387,7 @@ class Cell
     @@printed_func_nsp_list[ func_nsp ] = true
     if ! @celltype.kind_of? CompositeCelltype
       ep_func = "#{@celltype.get_global_name}_#{entry_port_name}_#{func_name}".to_sym
-      if @@rustflow then
+      if $rustflow then
         ep_func = "#{camel_case(snake_case(entry_port_name.to_s))}For#{get_rust_celltype_name(@celltype)}.#{func_name}".to_sym
         # print "print_entry_func_flow: rustflow is true\n"
       end
@@ -626,8 +638,8 @@ class Cell
     
     indent_level = print_indent indent_level
     no_cell_name = no_caller_cell
-    if @@repeat == false then
-      if @@rustflow then
+    if $repeat == false then
+      if $rustflow then
         rust_call_port_name = "#{snake_case(call_port_name.to_s)}".to_sym
         print_rust_name no_cell_name, rust_call_port_name, call_subsc, func_name
       else
@@ -635,7 +647,7 @@ class Cell
       end
       print " => "
       no_cell_name = false
-      if @@rustflow then
+      if $rustflow then
         rust_entry_port_structure = "#{camel_case(snake_case(entry_port_name.to_s))}For#{get_rust_celltype_name(callee_cell.get_celltype)}".to_sym
         callee_cell.print_rust_name no_cell_name, rust_entry_port_structure, callee_subsc, func_name
       else
@@ -643,8 +655,8 @@ class Cell
       end
     end
 
-    if @@rustflow_option == "both" || @@repeat == true then
-      if @@repeat == false then
+    if $rustflow_option == "both" || $repeat == true then
+      if $repeat == false then
         print "\n"
       end
       indent_level = print_indent indent_level
@@ -657,120 +669,120 @@ class Cell
   end
 end
 
-class FlowTreeNode
-  attr_accessor :value, :children, :parent, :callport_name, :callfunc_name, :cellname, :entryport_name
+# class FlowTreeNode
+#   attr_accessor :value, :children, :parent, :callport_name, :callfunc_name, :cellname, :entryport_name
 
-  def initialize(value)
-    @value = sanitize_value(value)
-    @children = []
-    @parent = nil
-    @callport_name, @callfunc_name, @cellname, @entryport_name = split_flow_line(value)
-  end
+#   def initialize(value)
+#     @value = sanitize_value(value)
+#     @children = []
+#     @parent = nil
+#     @callport_name, @callfunc_name, @cellname, @entryport_name = split_flow_line(value)
+#   end
 
-  def add_child(child)
-    child.parent = self
-    @children << child
-  end
+#   def add_child(child)
+#     child.parent = self
+#     @children << child
+#   end
 
-  def display(level = 0)
-    puts "#{'  ' * level}#{value}"
-    children.each { |child| child.display(level + 1) }
-  end
+#   def display(level = 0)
+#     puts "#{'  ' * level}#{value}"
+#     children.each { |child| child.display(level + 1) }
+#   end
 
-  def find_node(value)
-    return self if @value.include?(value)
+#   def find_node(value)
+#     return self if @value.include?(value)
 
-    children.each do |child|
-      result = child.find_node(value)
-      return result if result
-    end
-    nil
-  end
+#     children.each do |child|
+#       result = child.find_node(value)
+#       return result if result
+#     end
+#     nil
+#   end
 
-  def find_nodes_by_cellname(target_cellname)
-    results = []
-    traverse do |node|
-      results << node if node.cellname == target_cellname
-    end
-    results
-  end
+#   def find_nodes_by_cellname(target_cellname)
+#     results = []
+#     traverse do |node|
+#       results << node if node.cellname == target_cellname
+#     end
+#     results
+#   end
 
-  def flow_from_root_to_node(node_or_nodes)
-    nodes = [node_or_nodes].flatten
-    nodes.map do |node|
-      path = node.path_to_root
-      path.map do |n|
-        if n.parent
-          "#{n.callport_name}.#{n.callfunc_name} => #{n.cellname}.#{n.entryport_name}.#{n.callfunc_name}"
-        else
-          n.value
-        end
-      end.join(' -> ')
-    end
-  end
+#   def flow_from_root_to_node(node_or_nodes)
+#     nodes = [node_or_nodes].flatten
+#     nodes.map do |node|
+#       path = node.path_to_root
+#       path.map do |n|
+#         if n.parent
+#           "#{n.callport_name}.#{n.callfunc_name} => #{n.cellname}.#{n.entryport_name}.#{n.callfunc_name}"
+#         else
+#           n.value
+#         end
+#       end.join(' -> ')
+#     end
+#   end
 
-  def traverse(&block)
-    yield self
-    children.each { |child| child.traverse(&block) }
-  end
+#   def traverse(&block)
+#     yield self
+#     children.each { |child| child.traverse(&block) }
+#   end
 
-  def path_to_root
-    node = self
-    path = []
-    while node
-      path << node
-      node = node.parent
-    end
-    path.reverse
-  end
+#   def path_to_root
+#     node = self
+#     path = []
+#     while node
+#       path << node
+#       node = node.parent
+#     end
+#     path.reverse
+#   end
 
-  def formatted_path_to_root
-    path = path_to_root
-    path.map.with_index do |n, index|
-      if index == 0
-        n.value
-      elsif n.parent
-        "#{n.callport_name}.#{n.callfunc_name} => #{n.cellname}.#{n.entryport_name}.#{n.callfunc_name}"
-      end
-    end.compact.join(' -> ')
-  end
+#   def formatted_path_to_root
+#     path = path_to_root
+#     path.map.with_index do |n, index|
+#       if index == 0
+#         n.value
+#       elsif n.parent
+#         "#{n.callport_name}.#{n.callfunc_name} => #{n.cellname}.#{n.entryport_name}.#{n.callfunc_name}"
+#       end
+#     end.compact.join(' -> ')
+#   end
 
-  def sanitize_value(value)
-    # 正規表現を使って余分な部分を取り除く
-    value.sub(/\s*\(.*?\)\s*$/, '').sub(/: printed$/, '')
-  end
+#   def sanitize_value(value)
+#     # 正規表現を使って余分な部分を取り除く
+#     value.sub(/\s*\(.*?\)\s*$/, '').sub(/: printed$/, '')
+#   end
 
-  def root_value
-    node = self
-    node = node.parent while node.parent
-    node.value
-  end
+#   def root_value
+#     node = self
+#     node = node.parent while node.parent
+#     node.value
+#   end
 
-  private
+#   private
 
-  def split_flow_line(line)
-    callport_name_in_flow = nil
-    callfunc_name_in_flow = nil
-    cellname_in_flow = nil
-    entryport_name_in_flow = nil
+#   def split_flow_line(line)
+#     callport_name_in_flow = nil
+#     callfunc_name_in_flow = nil
+#     cellname_in_flow = nil
+#     entryport_name_in_flow = nil
 
-    if line.include?("=>")
-      cfunc_statement = line.split("=>")[0].strip
-      callport_name_in_flow = cfunc_statement.split(".")[0].strip
-      callfunc_name_in_flow = cfunc_statement.split(".")[1].strip
-      efunc_statement = line.split("=>")[1].strip.sub(/: printed$/, '')
-      if efunc_statement.include?(":")
-        cellname_in_flow = efunc_statement.split(":")[0].strip
-        entryport_name_in_flow = efunc_statement.split(":")[1].split(".")[0].strip
-      else
-        cellname_in_flow = efunc_statement.split(".")[0].strip
-        entryport_name_in_flow = efunc_statement.split(".")[1].strip
-      end
-    end
+#     if line.include?("=>")
+#       cfunc_statement = line.split("=>")[0].strip
+#       callport_name_in_flow = cfunc_statement.split(".")[0].strip
+#       callfunc_name_in_flow = cfunc_statement.split(".")[1].strip
+#       efunc_statement = line.split("=>")[1].strip.sub(/: printed$/, '')
+#       if efunc_statement.include?(":")
+#         cellname_in_flow = efunc_statement.split(":")[0].strip
+#         entryport_name_in_flow = efunc_statement.split(":")[1].split(".")[0].strip
+#       else
+#         cellname_in_flow = efunc_statement.split(".")[0].strip
+#         entryport_name_in_flow = efunc_statement.split(".")[1].strip
+#       end
+#     end
 
-    return callport_name_in_flow, callfunc_name_in_flow, cellname_in_flow, entryport_name_in_flow
-  end
-end
+#     return callport_name_in_flow, callfunc_name_in_flow, cellname_in_flow, entryport_name_in_flow
+#   end
+# end
 
 module TECSFlow
   include Locale_printer
@@ -884,7 +896,7 @@ module TECSFlow
     log_file = File.open( "#{$gen}/tecsflow.log", "w" )
     $stdout = log_file
 
-    Cell.class_variable_set(:@@repeat, true)
+    Cell.class_variable_set(:$repeat, true)
     Cell.class_variable_set(:@@printed_func_nsp_list, {})
     Cell.class_variable_set(:@@printed_cell_list, {})
     Cell.class_variable_set(:@@printed_celltype_list, {})
@@ -1081,35 +1093,13 @@ module TECSFlow
       end
     end
 
-    # graph.add_edge("Bob", "Task1")
-    # graph.add_edge("Bob", "Task2")
-    # graph.add_edge("Taskbody1", "Task1")
-    # graph.add_edge("Taskbody2", "Task2")
-    # graph.add_edge("Alice1", "Task1")
-    # graph.add_edge("Alice1", "Task2")
-    # graph.add_edge("Carol1", "Task3")
-    # graph.add_edge("Bob", "Task3")
-    # graph.add_edge("Alice1", "Task4")
-    # graph.add_edge("Deb", "Task4")
-    # graph.add_edge("Carol1", "Task2")
-
-    # puts "graph: #{graph.inspect}"
-
     cycles = graph.detect_cycles
 
-    puts "#{accessed_cell_hash}"
-
-    # puts "cell_list: #{cell_list_to_s}"
-
-    # puts "active_cell_list: #{active_cell_list_to_s}"
-
-    # puts "exclusive_control_cells: #{exclusive_control_cells}"
+    # puts "#{accessed_cell_hash}"
 
     puts "--- cycle deadlocks ---"
     if cycles.empty?
-      # puts "サイクルは存在しません"
     else
-      # puts "サイクルが存在します。すべてのサイクル:"
       cycles.each_with_index do |cycle, index|
         tasks = []
         resources = []
@@ -1130,6 +1120,29 @@ module TECSFlow
       end
     end
 
+
+    puts "--- reentry cycles ---"
+    # puts "#{$reentry_cell_list}"
+
+    $reentry_cell_list.each_with_index do |(reentered_cell, reentry_cell), index| 
+      # puts "#{reentry_cell} -> #{reentered_cell}"
+      if accessed_cell_hash[reentered_cell]["ExclusiveControl"] == true then
+        print "[re-entry #{index + 1}] ::"
+
+        accessed_cell_hash[reentry_cell].each_with_index do |(k, v), i|
+          next if k == "ExclusiveControl"
+          print ", " if i > 0
+          
+          if v then
+            print "#{k}"
+          end
+        end
+        print "\n"
+
+        puts "\t#{reentered_cell} is under exclusive control and will be re-entered on a call from #{reentry_cell}"
+
+      end
+    end
 
   end
 
@@ -1152,33 +1165,33 @@ module TECSFlow
     trees
   end
 
-  def self.create_tree_from_lines(lines)
-    root = nil
-    current_node = nil
-    node_stack = []
+  # def self.create_tree_from_lines(lines)
+  #   root = nil
+  #   current_node = nil
+  #   node_stack = []
   
-    lines.each_with_index do |line, index|
-      indent_level = line.match(/^\s*/)[0].size
-      node_value = index.zero? ? line.strip.split(' ').first : line.strip
-      node = FlowTreeNode.new(node_value)
+  #   lines.each_with_index do |line, index|
+  #     indent_level = line.match(/^\s*/)[0].size
+  #     node_value = index.zero? ? line.strip.split(' ').first : line.strip
+  #     node = FlowTreeNode.new(node_value)
   
-      if indent_level == 0
-        root = node
-        current_node = root
-        node_stack = [[current_node, indent_level]]
-      else
-        while node_stack.any? && node_stack.last[1] >= indent_level
-          node_stack.pop
-        end
-        parent_node, _ = node_stack.last
-        parent_node.add_child(node) if parent_node
-        current_node = node
-        node_stack.push([current_node, indent_level])
-      end
-    end
+  #     if indent_level == 0
+  #       root = node
+  #       current_node = root
+  #       node_stack = [[current_node, indent_level]]
+  #     else
+  #       while node_stack.any? && node_stack.last[1] >= indent_level
+  #         node_stack.pop
+  #       end
+  #       parent_node, _ = node_stack.last
+  #       parent_node.add_child(node) if parent_node
+  #       current_node = node
+  #       node_stack.push([current_node, indent_level])
+  #     end
+  #   end
   
-    root
-  end
+  #   root
+  # end
 
   require 'set'
 
