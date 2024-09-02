@@ -1,7 +1,7 @@
 __tool_info__ ("tecsgen") {
     "tecscde_version"     : "0.5.1.0",
     "cde_format_version"  : "0.5.0.0",
-    "save_date"           : "2024-06-03T18:14:36+09:00",
+    "save_date"           : "2024-09-02T16:37:54+09:00",
     "base_dir" : [
         "//wsl.localhost/Ubuntu-22.04/home/yosshy/tecsgen-V1.9.0-Beta5/tecsgen/HelloWorld",
         "C:/cygwin64/home/oyama/TECS/tecsgen/HelloWorld"
@@ -30,6 +30,10 @@ cell ::tTask Task2 {
     stackSize = 4096;
     taskAttribute = C_EXP( "TA_STA" );
 };
+cell ::tDataqueuePeer DataqueuePeer {
+
+    /*** call ports ***/
+};
 
 /*************************************************
  *         TOOL INFORMATION FOR TECSCDE          *
@@ -46,7 +50,7 @@ __tool_info__ ("tecscde") {
         {       /** cell_list[ 0 ] **/
             "type"     : "cell_location",
             "name"     : "HelloWorld",
-            "location" : [ 121.0, 10.0, 25.0, 15.0 ],
+            "location" : [ 143.0, 10.0, 25.0, 15.0 ],
             "region"   : "::",
             "port_location" : [
                 {
@@ -86,7 +90,7 @@ __tool_info__ ("tecscde") {
         {       /** cell_list[ 2 ] **/
             "type"     : "cell_location",
             "name"     : "HelloWorld0",
-            "location" : [ 93.0, 96.0, 20.0, 13.0 ],
+            "location" : [ 93.0, 95.0, 20.0, 13.0 ],
             "region"   : "::",
             "port_location" : [
                 {
@@ -122,6 +126,32 @@ __tool_info__ ("tecscde") {
                     "offset"    : 10.0
                 }
             ]
+        },
+        {       /** cell_list[ 4 ] **/
+            "type"     : "cell_location",
+            "name"     : "DataqueuePeer",
+            "location" : [ 133.0, 60.0, 22.0, 13.0 ],
+            "region"   : "::",
+            "port_location" : [
+                {
+                    "type"      : "port_location",
+                    "port_name" : "cInitializing",
+                    "edge"      : "EDGE_BOTTOM",
+                    "offset"    : 4
+                },
+                {
+                    "type"      : "port_location",
+                    "port_name" : "eDataqueue",
+                    "edge"      : "EDGE_TOP",
+                    "offset"    : 4
+                },
+                {
+                    "type"      : "port_location",
+                    "port_name" : "eiDataqueue",
+                    "edge"      : "EDGE_TOP",
+                    "offset"    : 8
+                }
+            ]
         }
     ],
     "join_list" : [
@@ -142,13 +172,13 @@ __tool_info__ ("tecscde") {
                      "position" : 14.0
                 },                {
                      "type"     : "HBar",
-                     "position" : 111.0
+                     "position" : 133.0
                 },                {
                      "type"     : "VBar",
                      "position" : 14.0
                 },                {
                      "type"     : "HBar",
-                     "position" : 121.0
+                     "position" : 143.0
                 }
             ]
         },
@@ -169,13 +199,13 @@ __tool_info__ ("tecscde") {
                      "position" : 78.0
                 },                {
                      "type"     : "VBar",
-                     "position" : 75.0
+                     "position" : 74.0
                 },                {
                      "type"     : "HBar",
                      "position" : 97.0
                 },                {
                      "type"     : "VBar",
-                     "position" : 96.0
+                     "position" : 95.0
                 }
             ]
         }
