@@ -107,12 +107,12 @@ class ItronrsGenCelltypePlugin < RustGenCelltypePlugin
     def gen_use_header file
         obj_ref_str = get_itronrs_kernel_obj_ref_str @celltype.get_global_name.to_s
         if obj_ref_str != "unknown" then
-            file.print "use crate::kernel_cfg::*;  //特別な生成部\n"
-            # file.print "use crate::kernel_obj_ref::*;  //特別な生成部\n"
-            file.print "use itron::abi::*;  //特別な生成部\n"
+            file.print "use crate::kernel_cfg::*;\n"
+            # file.print "use crate::kernel_obj_ref::*;\n"
+            file.print "use itron::abi::*;\n"
             # TODO: task の部分の変換
-            file.print "use itron::task::#{obj_ref_str};  //特別な生成部\n"
-            file.print "use core::num::NonZeroI32;  //特別な生成部\n"
+            file.print "use itron::task::#{obj_ref_str};\n"
+            file.print "use core::num::NonZeroI32;\n"
         end
         super(file)
     end
@@ -122,9 +122,9 @@ class ItronrsGenCelltypePlugin < RustGenCelltypePlugin
         global_file_name = snake_case(cell.get_global_name.to_s)
         lines = File.readlines("#{$gen}/#{global_file_name}.rs")
         # use 文を追加する
-        lines.insert(0, "use crate::kernel_obj_ref::*;  //特別な生成部\n")
-        lines.insert(0, "use itron::task::TaskRef;  //特別な生成部\n")
-        lines.insert(0, "use itron::abi::*;  //特別な生成部\n")
+        lines.insert(0, "use crate::kernel_obj_ref::*;\n")
+        lines.insert(0, "use itron::task::TaskRef;\n")
+        lines.insert(0, "use itron::abi::*;\n")
         File.open("#{$gen}/#{global_file_name}.rs", 'w') do |file|
             file.puts lines
         end
@@ -145,7 +145,7 @@ class ItronrsGenCelltypePlugin < RustGenCelltypePlugin
                 if str == "TaskRef" then
                     # ライフタイムを付与
                     str = "TaskRef<'a>"
-                    file.print "#{str},  //特別な生成部\n"
+                    file.print "#{str},\n"
                     # 書き込んでいるファイルを一度閉じる
                     # file.close
                     # creat_itron_rs_use cell

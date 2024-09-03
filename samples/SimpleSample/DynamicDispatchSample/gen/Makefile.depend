@@ -1,0 +1,20 @@
+# Celltype: tTask_rs  #_MDEP_#
+$(_TECS_OBJ_DIR)tTask_rs_tecsgen.o : tTask_rs_tecsgen.c  $(GEN_DIR)/tTaskbody_tecsgen.h  tTaskbody_inline.h $(GEN_DIR)/global_tecsgen.h $(GEN_DIR)/sTaskBody_tecsgen.h $(GEN_DIR)/sTask_tecsgen.h $(GEN_DIR)/siTask_tecsgen.h $(GEN_DIR)/tTask_rs_factory.h $(GEN_DIR)/tTask_rs_tecsgen.h tTask_rs_inline.h
+$(_TECS_OBJ_DIR)tTask_rs_templ.o : tTask_rs_templ.c  $(GEN_DIR)/tTaskbody_tecsgen.h  tTaskbody_inline.h $(GEN_DIR)/global_tecsgen.h $(GEN_DIR)/sTaskBody_tecsgen.h $(GEN_DIR)/sTask_tecsgen.h $(GEN_DIR)/siTask_tecsgen.h $(GEN_DIR)/tTask_rs_factory.h $(GEN_DIR)/tTask_rs_tecsgen.h tTask_rs_inline.h
+$(_TECS_OBJ_DIR)tTask_rs.o : tTask_rs.c  $(GEN_DIR)/tTaskbody_tecsgen.h  tTaskbody_inline.h $(GEN_DIR)/global_tecsgen.h $(GEN_DIR)/sTaskBody_tecsgen.h $(GEN_DIR)/sTask_tecsgen.h $(GEN_DIR)/siTask_tecsgen.h $(GEN_DIR)/tTask_rs_factory.h $(GEN_DIR)/tTask_rs_tecsgen.h tTask_rs_inline.h
+
+# Celltype: tMotorA  #_MDEP_#
+$(_TECS_OBJ_DIR)tMotorA_tecsgen.o : tMotorA_tecsgen.c $(GEN_DIR)/global_tecsgen.h $(GEN_DIR)/sMotor_tecsgen.h $(GEN_DIR)/tMotorA_factory.h $(GEN_DIR)/tMotorA_tecsgen.h tMotorA_inline.h
+$(_TECS_OBJ_DIR)tMotorA_templ.o : tMotorA_templ.c $(GEN_DIR)/global_tecsgen.h $(GEN_DIR)/sMotor_tecsgen.h $(GEN_DIR)/tMotorA_factory.h $(GEN_DIR)/tMotorA_tecsgen.h tMotorA_inline.h
+$(_TECS_OBJ_DIR)tMotorA.o : tMotorA.c $(GEN_DIR)/global_tecsgen.h $(GEN_DIR)/sMotor_tecsgen.h $(GEN_DIR)/tMotorA_factory.h $(GEN_DIR)/tMotorA_tecsgen.h tMotorA_inline.h
+
+# Celltype: tMotorB  #_MDEP_#
+$(_TECS_OBJ_DIR)tMotorB_tecsgen.o : tMotorB_tecsgen.c $(GEN_DIR)/global_tecsgen.h $(GEN_DIR)/sMotor_tecsgen.h $(GEN_DIR)/tMotorB_factory.h $(GEN_DIR)/tMotorB_tecsgen.h tMotorB_inline.h
+$(_TECS_OBJ_DIR)tMotorB_templ.o : tMotorB_templ.c $(GEN_DIR)/global_tecsgen.h $(GEN_DIR)/sMotor_tecsgen.h $(GEN_DIR)/tMotorB_factory.h $(GEN_DIR)/tMotorB_tecsgen.h tMotorB_inline.h
+$(_TECS_OBJ_DIR)tMotorB.o : tMotorB.c $(GEN_DIR)/global_tecsgen.h $(GEN_DIR)/sMotor_tecsgen.h $(GEN_DIR)/tMotorB_factory.h $(GEN_DIR)/tMotorB_tecsgen.h tMotorB_inline.h
+
+# Celltype: tTaskbody  #_MDEP_#
+$(_TECS_OBJ_DIR)tTaskbody_tecsgen.o : tTaskbody_tecsgen.c $(GEN_DIR)/global_tecsgen.h $(GEN_DIR)/sMotor_tecsgen.h $(GEN_DIR)/sTaskBody_tecsgen.h $(GEN_DIR)/tTaskbody_factory.h $(GEN_DIR)/tTaskbody_tecsgen.h tTaskbody_inline.h
+$(_TECS_OBJ_DIR)tTaskbody_templ.o : tTaskbody_templ.c $(GEN_DIR)/global_tecsgen.h $(GEN_DIR)/sMotor_tecsgen.h $(GEN_DIR)/sTaskBody_tecsgen.h $(GEN_DIR)/tTaskbody_factory.h $(GEN_DIR)/tTaskbody_tecsgen.h tTaskbody_inline.h
+$(_TECS_OBJ_DIR)tTaskbody.o : tTaskbody.c $(GEN_DIR)/global_tecsgen.h $(GEN_DIR)/sMotor_tecsgen.h $(GEN_DIR)/sTaskBody_tecsgen.h $(GEN_DIR)/tTaskbody_factory.h $(GEN_DIR)/tTaskbody_tecsgen.h tTaskbody_inline.h
+

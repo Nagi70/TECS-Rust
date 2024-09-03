@@ -1,0 +1,79 @@
+import(<kernel_rs.cdl>);
+
+typedef int_t   pup_direction_t;
+typedef int_t   pbio_port_id_t;
+typedef int_t   pbio_error_t;
+typedef int_t   Option_Ref_a_mut__pup_motor_t__;
+typedef int_t   Option_Ref_a_mut__pup_ultrasonic_sensor_t__;
+typedef int_t   bool;
+
+signature sMotor {
+    void set_motor_ref( void );
+    void setup( [in] pup_direction_t positive_direction, [in] bool reset_count );
+    void set_speed( [in] int32_t speed );
+    void stop( void );
+};
+
+[generate (RustGenPlugin, "lib")]
+celltype tMotorA {
+    [inline] entry sMotor eMotor;
+    attr {
+        pbio_port_id_t port = C_EXP("pbio_port_id_t::PBIO_PORT_ID_$port$");
+    };
+    var {
+       Option_Ref_a_mut__pup_motor_t__ motor = C_EXP("None");
+    };
+};
+
+[generate (RustGenPlugin, "lib")]
+celltype tMotorB {
+    [inline] entry sMotor eMotor;
+    attr {
+        pbio_port_id_t port = C_EXP("pbio_port_id_t::PBIO_PORT_ID_$port$");
+    };
+    var {
+       Option_Ref_a_mut__pup_motor_t__ motor = C_EXP("None");
+    };
+};
+
+[generate (RustGenPlugin, "lib")]
+celltype tTaskbody {
+    [inline] entry sTaskBody eTaskbody;
+    call sMotor cMotor;
+};
+
+cell tMotorA MotorA {
+    port = C_EXP("pbio_port_id_t::PBIO_PORT_ID_A");
+};
+
+cell tMotorB MotorB {
+    port = C_EXP("pbio_port_id_t::PBIO_PORT_ID_B");
+};
+
+cell tTaskbody Taskbody1 {
+    cMotor = MotorA.eMotor;
+};
+
+cell tTaskbody Taskbody2 {
+    cMotor = MotorB.eMotor;
+};
+
+[generate( ItronrsGenPlugin, "lib")]
+cell tTask_rs Task1{
+    cTaskBody = Taskbody1.eTaskbody;
+    id = C_EXP("TASK1");
+	task_ref = C_EXP("unsafe{TaskRef::from_raw_nonnull(NonZeroI32::new(TASK1).unwrap())}");
+    attribute = C_EXP("TA_ACT");
+    stackSize = 1024;
+    priority = 42;
+};
+
+[generate( ItronrsGenPlugin, "lib")]
+cell tTask_rs Task2{
+    cTaskBody = Taskbody2.eTaskbody;
+    id = C_EXP("TASK2");
+	task_ref = C_EXP("unsafe{TaskRef::from_raw_nonnull(NonZeroI32::new(TASK2).unwrap())}");
+    attribute = C_EXP("TA_ACT");
+    stackSize = 1024;
+    priority = 42;
+};
