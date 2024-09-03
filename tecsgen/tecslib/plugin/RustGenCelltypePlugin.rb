@@ -975,7 +975,7 @@ class RustGenCelltypePlugin < CelltypePlugin
                 # 呼び口をタプルの配列に追加
                 callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
                     return_tuple_type_list.push("&#{alphabet}")
-                    return_tuple_list.push("&self.#{snake_case(callport.get_name.to_s)}")
+                    return_tuple_list.push("self.#{snake_case(callport.get_name.to_s)}")
                 end
 
                 # 属性をタプルの配列に追加
