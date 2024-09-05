@@ -100,7 +100,7 @@ signature siNotificationHandler {
  *  タスクのセルタイプ
  */
 [active]
-celltype tTask_rs {
+celltype tTaskRs {
 	[inline] entry	sTask	eTask;
 	[inline] entry	siTask	eiTask;
 	call	sTaskBody	cTaskBody;
@@ -111,7 +111,7 @@ celltype tTask_rs {
 	attr {
 		[omit]ID		id = C_EXP("TSKID_$id$");
 		//TaskRef			task = C_EXP("TSKID_$id$_REF");
-		TaskRef			task_ref = C_EXP("unsafe{TaskRef::from_raw_nonnull(NonZeroI32::new(TSKID_$id$).unwrap())}");
+		TaskRef			taskRef = C_EXP("unsafe{TaskRef::from_raw_nonnull(NonZeroI32::new(TSKID_$id$).unwrap())}");
 		[omit] ATR		attribute = C_EXP("TA_NULL");
 		[omit] PRI		priority;
 		[omit] size_t	stackSize;
@@ -132,5 +132,39 @@ celltype tTask_rs {
 		//write("lib.rs", "mod kernel_cfg;");
 		//write("lib.rs", "mod kernel_obj_ref;");
 		//write("kernel_obj_ref.rs", "use crate::kernel_cfg::*;");
+	};
+};
+
+/*
+ *  ミューテックス操作のシグニチャ（タスクコンテキスト用）
+ */
+signature sMutex {
+	ER		lock(void);  // lock
+	ER		lockPolling(void);  // try_lock
+	ER		lockTimeout([in] TMO timeout);  // lock_timeout
+	ER		unlock(void);  // unlock
+	ER		initialize(void);  // initialize
+	ER		refer([out] T_RMTX *pk_mutexStatus);  // ref_mtx
+};
+
+/*
+ *  ミューテックスのセルタイプ
+ */
+celltype tMutexRs {
+	[inline] entry	sMutex	eMutex;
+
+	attr {
+		[omit] ID		id = C_EXP("MTXID_$id$");
+		[omit] ATR		attribute = C_EXP("TA_NULL");
+		[omit] PRI		ceilingPriority;
+		MutexRef		muteRef = C_EXP("unsafe{MutexRef::from_raw_nonnull(NonZeroI32::new(MTXID_$id$).unwrap())}");
+	};
+
+	factory {
+		write("tecsgen.cfg", "CRE_MTX(%s, { %s, %s });",
+								id, attribute, ceilingPriority);
+	};
+	FACTORY {
+		write("$ct$_factory.h", "#include \"kernel_cfg.h\"");
 	};
 };
