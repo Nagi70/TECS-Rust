@@ -32,50 +32,50 @@ struct tag_tBob_eBob4_DES {
 
 /* entry port skelton function #_EPSF_# */
 /* eBob1 */
-void           tBob_eBob1_hello_skel( const struct tag_sHello_VDES *epd)
+void           tBob_eBob1_helloFromThis_skel( const struct tag_sHello_VDES *epd)
 {
     struct tag_tBob_eBob1_DES *lepd
         = (struct tag_tBob_eBob1_DES *)epd;
-    tBob_eBob1_hello( lepd->idx );
+    tBob_eBob1_helloFromThis( lepd->idx );
 }
 /* eBob2 */
-void           tBob_eBob2_hello_skel( const struct tag_sHello_VDES *epd)
+void           tBob_eBob2_helloFromThis_skel( const struct tag_sHello_VDES *epd)
 {
     struct tag_tBob_eBob2_DES *lepd
         = (struct tag_tBob_eBob2_DES *)epd;
-    tBob_eBob2_hello( lepd->idx );
+    tBob_eBob2_helloFromThis( lepd->idx );
 }
 /* eBob3 */
-void           tBob_eBob3_hello_skel( const struct tag_sHello_VDES *epd)
+void           tBob_eBob3_helloFromThis_skel( const struct tag_sHello_VDES *epd)
 {
     struct tag_tBob_eBob3_DES *lepd
         = (struct tag_tBob_eBob3_DES *)epd;
-    tBob_eBob3_hello( lepd->idx );
+    tBob_eBob3_helloFromThis( lepd->idx );
 }
 /* eBob4 */
-void           tBob_eBob4_hello_skel( const struct tag_sHello_VDES *epd)
+void           tBob_eBob4_helloFromThis_skel( const struct tag_sHello_VDES *epd)
 {
     struct tag_tBob_eBob4_DES *lepd
         = (struct tag_tBob_eBob4_DES *)epd;
-    tBob_eBob4_hello( lepd->idx );
+    tBob_eBob4_helloFromThis( lepd->idx );
 }
 
 /* entry port skelton function table #_EPSFT_# */
 /* eBob1 */
 const struct tag_sHello_VMT tBob_eBob1_MT_ = {
-    tBob_eBob1_hello_skel,
+    tBob_eBob1_helloFromThis_skel,
 };
 /* eBob2 */
 const struct tag_sHello_VMT tBob_eBob2_MT_ = {
-    tBob_eBob2_hello_skel,
+    tBob_eBob2_helloFromThis_skel,
 };
 /* eBob3 */
 const struct tag_sHello_VMT tBob_eBob3_MT_ = {
-    tBob_eBob3_hello_skel,
+    tBob_eBob3_helloFromThis_skel,
 };
 /* eBob4 */
 const struct tag_sHello_VMT tBob_eBob4_MT_ = {
-    tBob_eBob4_hello_skel,
+    tBob_eBob4_helloFromThis_skel,
 };
 
 /* entry port descriptor referenced by call port (differ from actual definition) #_CPEPD_# */

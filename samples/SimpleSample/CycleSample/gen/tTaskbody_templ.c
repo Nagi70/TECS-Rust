@@ -10,9 +10,9 @@
  *
  * call port function #_TCPF_#
  * call port: cPerson1 signature: sHello context:task
- *   void           cPerson1_hello( );
+ *   void           cPerson1_helloFromThis( );
  * call port: cPerson2 signature: sHello context:task
- *   void           cPerson2_hello( );
+ *   void           cPerson2_helloFromThis( );
  *
  * #[</PREAMBLE>]# */
 

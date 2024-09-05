@@ -49,9 +49,9 @@ typedef struct tag_tAlice_CB *tAlice_IDX;
 
 /* prototype declaration of entry port function #_EPP_# */
 /* sHello */
-void         tAlice_eAlice1_hello(tAlice_IDX idx);
+void         tAlice_eAlice1_helloFromThis(tAlice_IDX idx);
 /* sHello */
-void         tAlice_eAlice2_hello(tAlice_IDX idx);
+void         tAlice_eAlice2_helloFromThis(tAlice_IDX idx);
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
@@ -94,9 +94,9 @@ extern "C" {
 
 /* prototype declaration of entry port function (referenced when VMT useless optimise enabled) #_EPSP_# */
 /* eAlice1 */
-void           tAlice_eAlice1_hello_skel( const struct tag_sHello_VDES *epd);
+void           tAlice_eAlice1_helloFromThis_skel( const struct tag_sHello_VDES *epd);
 /* eAlice2 */
-void           tAlice_eAlice2_hello_skel( const struct tag_sHello_VDES *epd);
+void           tAlice_eAlice2_helloFromThis_skel( const struct tag_sHello_VDES *epd);
 
 #ifndef TOPPERS_CB_TYPE_ONLY
 
@@ -134,8 +134,8 @@ void           tAlice_eAlice2_hello_skel( const struct tag_sHello_VDES *epd);
 
 
 /* entry port function macro (abbrev) #_EPM_# */
-#define eAlice1_hello    tAlice_eAlice1_hello
-#define eAlice2_hello    tAlice_eAlice2_hello
+#define eAlice1_helloFromThis tAlice_eAlice1_helloFromThis
+#define eAlice2_helloFromThis tAlice_eAlice2_helloFromThis
 
 /* iteration code (FOREACH_CELL) #_FEC_# */
 #define FOREACH_CELL(i,p_cb)   \

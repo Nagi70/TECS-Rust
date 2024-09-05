@@ -49,9 +49,9 @@ typedef struct tag_tCarol_CB *tCarol_IDX;
 
 /* prototype declaration of entry port function #_EPP_# */
 /* sHello */
-void         tCarol_eCarol1_hello(tCarol_IDX idx);
+void         tCarol_eCarol1_helloFromThis(tCarol_IDX idx);
 /* sHello */
-void         tCarol_eCarol2_hello(tCarol_IDX idx);
+void         tCarol_eCarol2_helloFromThis(tCarol_IDX idx);
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
@@ -94,9 +94,9 @@ extern "C" {
 
 /* prototype declaration of entry port function (referenced when VMT useless optimise enabled) #_EPSP_# */
 /* eCarol1 */
-void           tCarol_eCarol1_hello_skel( const struct tag_sHello_VDES *epd);
+void           tCarol_eCarol1_helloFromThis_skel( const struct tag_sHello_VDES *epd);
 /* eCarol2 */
-void           tCarol_eCarol2_hello_skel( const struct tag_sHello_VDES *epd);
+void           tCarol_eCarol2_helloFromThis_skel( const struct tag_sHello_VDES *epd);
 
 #ifndef TOPPERS_CB_TYPE_ONLY
 
@@ -134,8 +134,8 @@ void           tCarol_eCarol2_hello_skel( const struct tag_sHello_VDES *epd);
 
 
 /* entry port function macro (abbrev) #_EPM_# */
-#define eCarol1_hello    tCarol_eCarol1_hello
-#define eCarol2_hello    tCarol_eCarol2_hello
+#define eCarol1_helloFromThis tCarol_eCarol1_helloFromThis
+#define eCarol2_helloFromThis tCarol_eCarol2_helloFromThis
 
 /* iteration code (FOREACH_CELL) #_FEC_# */
 #define FOREACH_CELL(i,p_cb)   \

@@ -69,19 +69,19 @@ void         tTaskbody_eTaskbody_main(tTaskbody_IDX idx);
 #define tTaskbody_GET_CELLCB(idx) (idx)
 #ifndef TECSFLOW
  /* call port function macro #_CPM_# */
-#define tTaskbody_cPerson1_hello( p_that ) \
-	  (p_that)->cPerson1->VMT->hello__T( \
+#define tTaskbody_cPerson1_helloFromThis( p_that ) \
+	  (p_that)->cPerson1->VMT->helloFromThis__T( \
 	   (p_that)->cPerson1 )
-#define tTaskbody_cPerson2_hello( p_that ) \
-	  (p_that)->cPerson2->VMT->hello__T( \
+#define tTaskbody_cPerson2_helloFromThis( p_that ) \
+	  (p_that)->cPerson2->VMT->helloFromThis__T( \
 	   (p_that)->cPerson2 )
 
 #else  /* TECSFLOW */
-#define tTaskbody_cPerson1_hello( p_that ) \
-	  (p_that)->cPerson1.hello__T( \
+#define tTaskbody_cPerson1_helloFromThis( p_that ) \
+	  (p_that)->cPerson1.helloFromThis__T( \
  )
-#define tTaskbody_cPerson2_hello( p_that ) \
-	  (p_that)->cPerson2.hello__T( \
+#define tTaskbody_cPerson2_helloFromThis( p_that ) \
+	  (p_that)->cPerson2.helloFromThis__T( \
  )
 
 #endif /* TECSFLOW */
@@ -120,10 +120,10 @@ extern "C" {
 #define CELLIDX	tTaskbody_IDX
 
 /* call port function macro (abbrev) #_CPMA_# */
-#define cPerson1_hello( ) \
-          tTaskbody_cPerson1_hello( p_cellcb )
-#define cPerson2_hello( ) \
-          tTaskbody_cPerson2_hello( p_cellcb )
+#define cPerson1_helloFromThis( ) \
+          tTaskbody_cPerson1_helloFromThis( p_cellcb )
+#define cPerson2_helloFromThis( ) \
+          tTaskbody_cPerson2_helloFromThis( p_cellcb )
 
 
 

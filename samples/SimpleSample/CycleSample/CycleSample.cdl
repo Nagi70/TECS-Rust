@@ -1,5 +1,5 @@
 signature sHello {
-    void hello(void);
+    void helloFromThis(void);
 };
 
 signature sTaskbody {

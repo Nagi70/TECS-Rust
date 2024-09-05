@@ -49,13 +49,13 @@ typedef struct tag_tBob_CB *tBob_IDX;
 
 /* prototype declaration of entry port function #_EPP_# */
 /* sHello */
-void         tBob_eBob1_hello(tBob_IDX idx);
+void         tBob_eBob1_helloFromThis(tBob_IDX idx);
 /* sHello */
-void         tBob_eBob2_hello(tBob_IDX idx);
+void         tBob_eBob2_helloFromThis(tBob_IDX idx);
 /* sHello */
-void         tBob_eBob3_hello(tBob_IDX idx);
+void         tBob_eBob3_helloFromThis(tBob_IDX idx);
 /* sHello */
-void         tBob_eBob4_hello(tBob_IDX idx);
+void         tBob_eBob4_helloFromThis(tBob_IDX idx);
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
@@ -98,13 +98,13 @@ extern "C" {
 
 /* prototype declaration of entry port function (referenced when VMT useless optimise enabled) #_EPSP_# */
 /* eBob1 */
-void           tBob_eBob1_hello_skel( const struct tag_sHello_VDES *epd);
+void           tBob_eBob1_helloFromThis_skel( const struct tag_sHello_VDES *epd);
 /* eBob2 */
-void           tBob_eBob2_hello_skel( const struct tag_sHello_VDES *epd);
+void           tBob_eBob2_helloFromThis_skel( const struct tag_sHello_VDES *epd);
 /* eBob3 */
-void           tBob_eBob3_hello_skel( const struct tag_sHello_VDES *epd);
+void           tBob_eBob3_helloFromThis_skel( const struct tag_sHello_VDES *epd);
 /* eBob4 */
-void           tBob_eBob4_hello_skel( const struct tag_sHello_VDES *epd);
+void           tBob_eBob4_helloFromThis_skel( const struct tag_sHello_VDES *epd);
 
 #ifndef TOPPERS_CB_TYPE_ONLY
 
@@ -142,10 +142,10 @@ void           tBob_eBob4_hello_skel( const struct tag_sHello_VDES *epd);
 
 
 /* entry port function macro (abbrev) #_EPM_# */
-#define eBob1_hello      tBob_eBob1_hello
-#define eBob2_hello      tBob_eBob2_hello
-#define eBob3_hello      tBob_eBob3_hello
-#define eBob4_hello      tBob_eBob4_hello
+#define eBob1_helloFromThis tBob_eBob1_helloFromThis
+#define eBob2_helloFromThis tBob_eBob2_helloFromThis
+#define eBob3_helloFromThis tBob_eBob3_helloFromThis
+#define eBob4_helloFromThis tBob_eBob4_helloFromThis
 
 /* iteration code (FOREACH_CELL) #_FEC_# */
 #define FOREACH_CELL(i,p_cb)   \

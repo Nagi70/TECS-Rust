@@ -20,28 +20,28 @@ struct tag_tAlice_eAlice2_DES {
 
 /* entry port skelton function #_EPSF_# */
 /* eAlice1 */
-void           tAlice_eAlice1_hello_skel( const struct tag_sHello_VDES *epd)
+void           tAlice_eAlice1_helloFromThis_skel( const struct tag_sHello_VDES *epd)
 {
     struct tag_tAlice_eAlice1_DES *lepd
         = (struct tag_tAlice_eAlice1_DES *)epd;
-    tAlice_eAlice1_hello( lepd->idx );
+    tAlice_eAlice1_helloFromThis( lepd->idx );
 }
 /* eAlice2 */
-void           tAlice_eAlice2_hello_skel( const struct tag_sHello_VDES *epd)
+void           tAlice_eAlice2_helloFromThis_skel( const struct tag_sHello_VDES *epd)
 {
     struct tag_tAlice_eAlice2_DES *lepd
         = (struct tag_tAlice_eAlice2_DES *)epd;
-    tAlice_eAlice2_hello( lepd->idx );
+    tAlice_eAlice2_helloFromThis( lepd->idx );
 }
 
 /* entry port skelton function table #_EPSFT_# */
 /* eAlice1 */
 const struct tag_sHello_VMT tAlice_eAlice1_MT_ = {
-    tAlice_eAlice1_hello_skel,
+    tAlice_eAlice1_helloFromThis_skel,
 };
 /* eAlice2 */
 const struct tag_sHello_VMT tAlice_eAlice2_MT_ = {
-    tAlice_eAlice2_hello_skel,
+    tAlice_eAlice2_helloFromThis_skel,
 };
 
 /* entry port descriptor referenced by call port (differ from actual definition) #_CPEPD_# */

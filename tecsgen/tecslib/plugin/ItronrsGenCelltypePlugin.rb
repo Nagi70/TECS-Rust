@@ -595,7 +595,7 @@ class ItronrsGenCelltypePlugin < RustGenCelltypePlugin
                     if port.is_inline? then
                         file.print "\t#[inline]\n"
                     end
-                    file.print "\tfn #{func_head.get_name}"
+                    file.print "\tfn #{get_rust_function_name(func_head)}"
                     if lifetime_flag then
                         file.print "<'a>"
                     end

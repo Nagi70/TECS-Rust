@@ -20,7 +20,7 @@ struct tag_sHello_VDES {
 
 /* signature function table #_SFT_# */
 struct tag_sHello_VMT {
-    void           (*hello__T)( const struct tag_sHello_VDES *edp );
+    void           (*helloFromThis__T)( const struct tag_sHello_VDES *edp );
 };
 
 /* signature descriptor #_SDES_# for dynamic join */
@@ -31,6 +31,6 @@ typedef struct { struct tag_sHello_VDES *vdes; } Descriptor( sHello );
 #endif /* TOPPERS_MACRO_ONLY */
 
 /* function id */
-#define	FUNCID_SHELLO_HELLO                    (1)
+#define	FUNCID_SHELLO_HELLOFROMTHIS            (1)
 
 #endif /* sHello_TECSGEN_H */

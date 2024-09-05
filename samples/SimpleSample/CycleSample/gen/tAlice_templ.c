@@ -29,18 +29,18 @@
  * context:    task
  * #[</ENTRY_PORT>]# */
 
-/* #[<ENTRY_FUNC>]# eAlice1_hello
- * name:         eAlice1_hello
- * global_name:  tAlice_eAlice1_hello
+/* #[<ENTRY_FUNC>]# eAlice1_helloFromThis
+ * name:         eAlice1_helloFromThis
+ * global_name:  tAlice_eAlice1_helloFromThis
  * oneway:       false
  * #[</ENTRY_FUNC>]# */
 void
-eAlice1_hello(CELLIDX idx)
+eAlice1_helloFromThis(CELLIDX idx)
 {
 	CELLCB	*p_cellcb = GET_CELLCB(idx);
 
 	/* Put statements here #_TEFB_# */
-#warning "'eAlice1_hello' needs to be edited."   /* delete this line after edit */
+#warning "'eAlice1_helloFromThis' needs to be edited."   /* delete this line after edit */
 
 }
 
@@ -50,18 +50,18 @@ eAlice1_hello(CELLIDX idx)
  * context:    task
  * #[</ENTRY_PORT>]# */
 
-/* #[<ENTRY_FUNC>]# eAlice2_hello
- * name:         eAlice2_hello
- * global_name:  tAlice_eAlice2_hello
+/* #[<ENTRY_FUNC>]# eAlice2_helloFromThis
+ * name:         eAlice2_helloFromThis
+ * global_name:  tAlice_eAlice2_helloFromThis
  * oneway:       false
  * #[</ENTRY_FUNC>]# */
 void
-eAlice2_hello(CELLIDX idx)
+eAlice2_helloFromThis(CELLIDX idx)
 {
 	CELLCB	*p_cellcb = GET_CELLCB(idx);
 
 	/* Put statements here #_TEFB_# */
-#warning "'eAlice2_hello' needs to be edited."   /* delete this line after edit */
+#warning "'eAlice2_helloFromThis' needs to be edited."   /* delete this line after edit */
 
 }
 

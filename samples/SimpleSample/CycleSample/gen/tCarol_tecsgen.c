@@ -20,28 +20,28 @@ struct tag_tCarol_eCarol2_DES {
 
 /* entry port skelton function #_EPSF_# */
 /* eCarol1 */
-void           tCarol_eCarol1_hello_skel( const struct tag_sHello_VDES *epd)
+void           tCarol_eCarol1_helloFromThis_skel( const struct tag_sHello_VDES *epd)
 {
     struct tag_tCarol_eCarol1_DES *lepd
         = (struct tag_tCarol_eCarol1_DES *)epd;
-    tCarol_eCarol1_hello( lepd->idx );
+    tCarol_eCarol1_helloFromThis( lepd->idx );
 }
 /* eCarol2 */
-void           tCarol_eCarol2_hello_skel( const struct tag_sHello_VDES *epd)
+void           tCarol_eCarol2_helloFromThis_skel( const struct tag_sHello_VDES *epd)
 {
     struct tag_tCarol_eCarol2_DES *lepd
         = (struct tag_tCarol_eCarol2_DES *)epd;
-    tCarol_eCarol2_hello( lepd->idx );
+    tCarol_eCarol2_helloFromThis( lepd->idx );
 }
 
 /* entry port skelton function table #_EPSFT_# */
 /* eCarol1 */
 const struct tag_sHello_VMT tCarol_eCarol1_MT_ = {
-    tCarol_eCarol1_hello_skel,
+    tCarol_eCarol1_helloFromThis_skel,
 };
 /* eCarol2 */
 const struct tag_sHello_VMT tCarol_eCarol2_MT_ = {
-    tCarol_eCarol2_hello_skel,
+    tCarol_eCarol2_helloFromThis_skel,
 };
 
 /* entry port descriptor referenced by call port (differ from actual definition) #_CPEPD_# */

@@ -29,18 +29,18 @@
  * context:    task
  * #[</ENTRY_PORT>]# */
 
-/* #[<ENTRY_FUNC>]# eBob1_hello
- * name:         eBob1_hello
- * global_name:  tBob_eBob1_hello
+/* #[<ENTRY_FUNC>]# eBob1_helloFromThis
+ * name:         eBob1_helloFromThis
+ * global_name:  tBob_eBob1_helloFromThis
  * oneway:       false
  * #[</ENTRY_FUNC>]# */
 void
-eBob1_hello(CELLIDX idx)
+eBob1_helloFromThis(CELLIDX idx)
 {
 	CELLCB	*p_cellcb = GET_CELLCB(idx);
 
 	/* Put statements here #_TEFB_# */
-#warning "'eBob1_hello' needs to be edited."   /* delete this line after edit */
+#warning "'eBob1_helloFromThis' needs to be edited."   /* delete this line after edit */
 
 }
 
@@ -50,18 +50,18 @@ eBob1_hello(CELLIDX idx)
  * context:    task
  * #[</ENTRY_PORT>]# */
 
-/* #[<ENTRY_FUNC>]# eBob2_hello
- * name:         eBob2_hello
- * global_name:  tBob_eBob2_hello
+/* #[<ENTRY_FUNC>]# eBob2_helloFromThis
+ * name:         eBob2_helloFromThis
+ * global_name:  tBob_eBob2_helloFromThis
  * oneway:       false
  * #[</ENTRY_FUNC>]# */
 void
-eBob2_hello(CELLIDX idx)
+eBob2_helloFromThis(CELLIDX idx)
 {
 	CELLCB	*p_cellcb = GET_CELLCB(idx);
 
 	/* Put statements here #_TEFB_# */
-#warning "'eBob2_hello' needs to be edited."   /* delete this line after edit */
+#warning "'eBob2_helloFromThis' needs to be edited."   /* delete this line after edit */
 
 }
 
@@ -71,18 +71,18 @@ eBob2_hello(CELLIDX idx)
  * context:    task
  * #[</ENTRY_PORT>]# */
 
-/* #[<ENTRY_FUNC>]# eBob3_hello
- * name:         eBob3_hello
- * global_name:  tBob_eBob3_hello
+/* #[<ENTRY_FUNC>]# eBob3_helloFromThis
+ * name:         eBob3_helloFromThis
+ * global_name:  tBob_eBob3_helloFromThis
  * oneway:       false
  * #[</ENTRY_FUNC>]# */
 void
-eBob3_hello(CELLIDX idx)
+eBob3_helloFromThis(CELLIDX idx)
 {
 	CELLCB	*p_cellcb = GET_CELLCB(idx);
 
 	/* Put statements here #_TEFB_# */
-#warning "'eBob3_hello' needs to be edited."   /* delete this line after edit */
+#warning "'eBob3_helloFromThis' needs to be edited."   /* delete this line after edit */
 
 }
 
@@ -92,18 +92,18 @@ eBob3_hello(CELLIDX idx)
  * context:    task
  * #[</ENTRY_PORT>]# */
 
-/* #[<ENTRY_FUNC>]# eBob4_hello
- * name:         eBob4_hello
- * global_name:  tBob_eBob4_hello
+/* #[<ENTRY_FUNC>]# eBob4_helloFromThis
+ * name:         eBob4_helloFromThis
+ * global_name:  tBob_eBob4_helloFromThis
  * oneway:       false
  * #[</ENTRY_FUNC>]# */
 void
-eBob4_hello(CELLIDX idx)
+eBob4_helloFromThis(CELLIDX idx)
 {
 	CELLCB	*p_cellcb = GET_CELLCB(idx);
 
 	/* Put statements here #_TEFB_# */
-#warning "'eBob4_hello' needs to be edited."   /* delete this line after edit */
+#warning "'eBob4_helloFromThis' needs to be edited."   /* delete this line after edit */
 
 }
 
