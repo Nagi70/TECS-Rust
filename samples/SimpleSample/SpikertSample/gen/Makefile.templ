@@ -104,7 +104,7 @@ $(GEN_DIR)/tcflow.rbdmp : $(CELLTYPE_SRCS) $(PLUGIN_CELLTYPE_SRCS)
 $(_TECS_OBJ_DIR)%.o : %.c
 	$(CC) -c $(CFLAGS) -o $@ $<
 
-$(_TECS_OBJ_DIR)tTask_rs.o : tTask_rs.c
+$(_TECS_OBJ_DIR)tTaskRs.o : tTaskRs.c
 	$(CC) -c $(CFLAGS) -o $@ $<
  
 $(_TECS_OBJ_DIR)tMotor.o : tMotor.c

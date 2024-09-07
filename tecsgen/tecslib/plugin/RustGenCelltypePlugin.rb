@@ -351,7 +351,7 @@ class RustGenCelltypePlugin < CelltypePlugin
 
             sig.get_function_head_array.each{ |func_head|
                 return_flag = false
-                trait_file.print "\tfn #{func_head.get_name}"
+                trait_file.print "\tfn #{get_rust_function_name(func_head)}"
                 if lifetime_flag then
                     trait_file.print("<'a>")
                 end
@@ -496,6 +496,10 @@ class RustGenCelltypePlugin < CelltypePlugin
 
     def get_rust_celltype_name celltype
         return camel_case(snake_case(celltype.get_global_name.to_s))
+    end
+
+    def get_rust_function_name func_head
+        return snake_case(func_head.get_name.to_s)
     end
 
     # セルの構造体の定義の先頭部を生成
@@ -782,7 +786,7 @@ class RustGenCelltypePlugin < CelltypePlugin
                     if port.is_inline? then
                         file.print "\t#[inline]\n"
                     end
-                    file.print "\tfn #{func_head.get_name}"
+                    file.print "\tfn #{get_rust_function_name(func_head)}"
                     if lifetime_flag then
                         file.print "<'a>"
                     end

@@ -4,5 +4,5 @@ use itron::task::TaskRef;
 pub trait SiTask {
 	fn activate(&self)-> ER;
 	fn wakeup(&self)-> ER;
-	fn releaseWait(&self)-> ER;
+	fn release_wait(&self)-> ER;
 }

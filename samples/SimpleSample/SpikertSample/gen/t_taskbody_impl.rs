@@ -4,7 +4,7 @@ impl STaskBody for ETaskbodyForTTaskbody<'_>{
 
 	#[inline]
 	fn main(&self) {
-		let cell_ref = self.cell.get_cell_ref();
+		let (c_sensor, c_motor) = self.cell.get_cell_ref();
 
 	}
 }

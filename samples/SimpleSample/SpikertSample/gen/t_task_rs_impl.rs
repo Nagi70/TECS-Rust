@@ -4,67 +4,67 @@ impl STask for ETaskForTTaskRs<'_>{
 
 	#[inline]
 	fn activate(&self) -> ER{
-		let cell_ref = self.cell.get_cell_ref();
+		let (c_task_body, taskRef) = self.cell.get_cell_ref();
 
 	}
 	#[inline]
-	fn cancelActivate(&self) -> ER_UINT{
-		let cell_ref = self.cell.get_cell_ref();
+	fn cancel_activate(&self) -> ER_UINT{
+		let (c_task_body, taskRef) = self.cell.get_cell_ref();
 
 	}
 	#[inline]
-	fn getTaskState(&self, p_tskstat: &mut STAT) -> ER{
-		let cell_ref = self.cell.get_cell_ref();
+	fn get_task_state(&self, p_tskstat: &mut STAT) -> ER{
+		let (c_task_body, taskRef) = self.cell.get_cell_ref();
 
 	}
 	#[inline]
-	fn changePriority(&self, priority: &PRI) -> ER{
-		let cell_ref = self.cell.get_cell_ref();
+	fn change_priority(&self, priority: &PRI) -> ER{
+		let (c_task_body, taskRef) = self.cell.get_cell_ref();
 
 	}
 	#[inline]
-	fn getPriority(&self, p_priority: &mut PRI) -> ER{
-		let cell_ref = self.cell.get_cell_ref();
+	fn get_priority(&self, p_priority: &mut PRI) -> ER{
+		let (c_task_body, taskRef) = self.cell.get_cell_ref();
 
 	}
 	#[inline]
 	fn refer(&self, pk_taskStatus: &mut T_RTSK) -> ER{
-		let cell_ref = self.cell.get_cell_ref();
+		let (c_task_body, taskRef) = self.cell.get_cell_ref();
 
 	}
 	#[inline]
 	fn wakeup(&self) -> ER{
-		let cell_ref = self.cell.get_cell_ref();
+		let (c_task_body, taskRef) = self.cell.get_cell_ref();
 
 	}
 	#[inline]
-	fn cancelWakeup(&self) -> ER_UINT{
-		let cell_ref = self.cell.get_cell_ref();
+	fn cancel_wakeup(&self) -> ER_UINT{
+		let (c_task_body, taskRef) = self.cell.get_cell_ref();
 
 	}
 	#[inline]
-	fn releaseWait(&self) -> ER{
-		let cell_ref = self.cell.get_cell_ref();
+	fn release_wait(&self) -> ER{
+		let (c_task_body, taskRef) = self.cell.get_cell_ref();
 
 	}
 	#[inline]
 	fn suspend(&self) -> ER{
-		let cell_ref = self.cell.get_cell_ref();
+		let (c_task_body, taskRef) = self.cell.get_cell_ref();
 
 	}
 	#[inline]
 	fn resume(&self) -> ER{
-		let cell_ref = self.cell.get_cell_ref();
+		let (c_task_body, taskRef) = self.cell.get_cell_ref();
 
 	}
 	#[inline]
-	fn raiseTerminate(&self) -> ER{
-		let cell_ref = self.cell.get_cell_ref();
+	fn raise_terminate(&self) -> ER{
+		let (c_task_body, taskRef) = self.cell.get_cell_ref();
 
 	}
 	#[inline]
 	fn terminate(&self) -> ER{
-		let cell_ref = self.cell.get_cell_ref();
+		let (c_task_body, taskRef) = self.cell.get_cell_ref();
 
 	}
 }
@@ -73,17 +73,17 @@ impl SiTask for EiTaskForTTaskRs<'_>{
 
 	#[inline]
 	fn activate(&self) -> ER{
-		let cell_ref = self.cell.get_cell_ref();
+		let (c_task_body, taskRef) = self.cell.get_cell_ref();
 
 	}
 	#[inline]
 	fn wakeup(&self) -> ER{
-		let cell_ref = self.cell.get_cell_ref();
+		let (c_task_body, taskRef) = self.cell.get_cell_ref();
 
 	}
 	#[inline]
-	fn releaseWait(&self) -> ER{
-		let cell_ref = self.cell.get_cell_ref();
+	fn release_wait(&self) -> ER{
+		let (c_task_body, taskRef) = self.cell.get_cell_ref();
 
 	}
 }

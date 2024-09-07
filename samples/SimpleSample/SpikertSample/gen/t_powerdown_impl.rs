@@ -1,17 +1,17 @@
-use crate::{t_powerdown::*, s_powerdown::*};
+use crate::{t_powerdown::*, s_powerdown_m::*, s_powerdown_s::*};
 
-impl SPowerdown for EPowerdown1ForTPowerdown<'_>{
+impl SPowerdownM for EPowerdownMForTPowerdown<'_>{
 
 	#[inline]
-	fn powerdown(&self, error: &pbio_error_t) {
+	fn powerdown<'a>(&self, motor: &Option<&'a mut pup_motor_t>) {
 
 	}
 }
 
-impl SPowerdown for EPowerdown2ForTPowerdown<'_>{
+impl SPowerdownS for EPowerdownSForTPowerdown<'_>{
 
 	#[inline]
-	fn powerdown(&self, error: &pbio_error_t) {
+	fn powerdown<'a>(&self, ult: &Option<&'a mut pup_ultrasonic_sensor_t>) {
 
 	}
 }

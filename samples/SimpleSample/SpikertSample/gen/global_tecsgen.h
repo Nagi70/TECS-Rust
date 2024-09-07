@@ -13,6 +13,7 @@
 #ifndef TOPPERS_MACRO_ONLY
 
 typedef int_t          TaskRef;
+typedef int_t          MutexRef;
 typedef int_t          pup_direction_t;
 typedef int_t          pbio_port_id_t;
 typedef int_t          pbio_error_t;

@@ -21,7 +21,8 @@
 #include "global_tecsgen.h"
 
 /* signature header #_ISH_# */
-#include "sPowerdown_tecsgen.h"
+#include "sPowerdownM_tecsgen.h"
+#include "sPowerdownS_tecsgen.h"
 
 #ifndef TOPPERS_MACRO_ONLY
 
@@ -38,10 +39,10 @@ typedef struct tag_tPowerdown_CB {
 typedef int   tPowerdown_IDX;
 
 /* prototype declaration of entry port function #_EPP_# */
-/* sPowerdown */
-Inline void         tPowerdown_ePowerdown1_powerdown(tPowerdown_IDX idx, pbio_error_t error);
-/* sPowerdown */
-Inline void         tPowerdown_ePowerdown2_powerdown(tPowerdown_IDX idx, pbio_error_t error);
+/* sPowerdownM */
+Inline void         tPowerdown_ePowerdownM_powerdown(tPowerdown_IDX idx, Option_Ref_a_mut__pup_motor_t__ motor);
+/* sPowerdownS */
+Inline void         tPowerdown_ePowerdownS_powerdown(tPowerdown_IDX idx, Option_Ref_a_mut__pup_ultrasonic_sensor_t__ ult);
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
@@ -89,8 +90,8 @@ extern "C" {
 
 
 /* entry port function macro (abbrev) #_EPM_# */
-#define ePowerdown1_powerdown tPowerdown_ePowerdown1_powerdown
-#define ePowerdown2_powerdown tPowerdown_ePowerdown2_powerdown
+#define ePowerdownM_powerdown tPowerdown_ePowerdownM_powerdown
+#define ePowerdownS_powerdown tPowerdown_ePowerdownS_powerdown
 
 /* iteration code (FOREACH_CELL) (niether CB, nor NIB exit) #_NFEC_# */
 #define FOREACH_CELL(i,p_cb)   \
@@ -118,8 +119,8 @@ extern "C" {
 #undef END_FOREACH_CELL
 #undef INITIALIZE_CB
 #undef SET_CB_INIB_POINTER
-#undef ePowerdown1_powerdown
-#undef ePowerdown2_powerdown
+#undef ePowerdownM_powerdown
+#undef ePowerdownS_powerdown
 #endif /* TOPPERS_CB_TYPE_ONLY */
 
 #endif /* tPowerdown_TECSGENH */

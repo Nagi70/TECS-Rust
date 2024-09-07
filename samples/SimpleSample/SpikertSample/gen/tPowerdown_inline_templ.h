@@ -14,45 +14,45 @@
  * #[</PREAMBLE>]# */
 
 /* entry port function #_TEPF_# */
-/* #[<ENTRY_PORT>]# ePowerdown1
- * entry port: ePowerdown1
- * signature:  sPowerdown
+/* #[<ENTRY_PORT>]# ePowerdownM
+ * entry port: ePowerdownM
+ * signature:  sPowerdownM
  * context:    task
  * #[</ENTRY_PORT>]# */
 
-/* #[<ENTRY_FUNC>]# ePowerdown1_powerdown
- * name:         ePowerdown1_powerdown
- * global_name:  tPowerdown_ePowerdown1_powerdown
+/* #[<ENTRY_FUNC>]# ePowerdownM_powerdown
+ * name:         ePowerdownM_powerdown
+ * global_name:  tPowerdown_ePowerdownM_powerdown
  * oneway:       false
  * #[</ENTRY_FUNC>]# */
 Inline void
-ePowerdown1_powerdown(CELLIDX idx, pbio_error_t error)
+ePowerdownM_powerdown(CELLIDX idx, Option_Ref_a_mut__pup_motor_t__ motor)
 {
 	CELLCB	*p_cellcb = GET_CELLCB(idx);
 
 	/* Put statements here #_TEFB_# */
-#warning "'ePowerdown1_powerdown' needs to be edited."   /* delete this line after edit */
+#warning "'ePowerdownM_powerdown' needs to be edited."   /* delete this line after edit */
 
 }
 
-/* #[<ENTRY_PORT>]# ePowerdown2
- * entry port: ePowerdown2
- * signature:  sPowerdown
+/* #[<ENTRY_PORT>]# ePowerdownS
+ * entry port: ePowerdownS
+ * signature:  sPowerdownS
  * context:    task
  * #[</ENTRY_PORT>]# */
 
-/* #[<ENTRY_FUNC>]# ePowerdown2_powerdown
- * name:         ePowerdown2_powerdown
- * global_name:  tPowerdown_ePowerdown2_powerdown
+/* #[<ENTRY_FUNC>]# ePowerdownS_powerdown
+ * name:         ePowerdownS_powerdown
+ * global_name:  tPowerdown_ePowerdownS_powerdown
  * oneway:       false
  * #[</ENTRY_FUNC>]# */
 Inline void
-ePowerdown2_powerdown(CELLIDX idx, pbio_error_t error)
+ePowerdownS_powerdown(CELLIDX idx, Option_Ref_a_mut__pup_ultrasonic_sensor_t__ ult)
 {
 	CELLCB	*p_cellcb = GET_CELLCB(idx);
 
 	/* Put statements here #_TEFB_# */
-#warning "'ePowerdown2_powerdown' needs to be edited."   /* delete this line after edit */
+#warning "'ePowerdownS_powerdown' needs to be edited."   /* delete this line after edit */
 
 }
 

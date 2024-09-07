@@ -18,3 +18,5 @@ mod t_taskbody;
 mod t_taskbody_impl;
 mod t_powerdown;
 mod t_powerdown_impl;
+mod s_powerdown_m;
+mod s_powerdown_s;

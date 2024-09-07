@@ -16,8 +16,8 @@
  * ult              Option_Ref_a_mut__pup_ultrasonic_sensor_t__  VAR_ult         
  *
  * call port function #_TCPF_#
- * call port: cPowerdown signature: sPowerdown context:task
- *   void           cPowerdown_powerdown( pbio_error_t error );
+ * call port: cPowerdown signature: sPowerdownS context:task
+ *   void           cPowerdown_powerdown( Option_Ref_a_mut__pup_ultrasonic_sensor_t__ ult );
  *
  * #[</PREAMBLE>]# */
 

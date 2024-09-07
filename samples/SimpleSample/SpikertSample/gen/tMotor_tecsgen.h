@@ -21,7 +21,7 @@
 #include "global_tecsgen.h"
 
 /* signature header #_ISH_# */
-#include "sPowerdown_tecsgen.h"
+#include "sPowerdownM_tecsgen.h"
 #include "sMotor_tecsgen.h"
 
 #ifndef TOPPERS_MACRO_ONLY
@@ -94,14 +94,14 @@ Inline void         tMotor_eMotor_stop(tMotor_IDX idx);
 
 #ifndef TECSFLOW
  /* call port function macro #_CPM_# */
-#define tMotor_cPowerdown_powerdown( p_that, error ) \
-	  tPowerdown_ePowerdown1_powerdown( \
-	   (tPowerdown_IDX)0, (error) )
+#define tMotor_cPowerdown_powerdown( p_that, motor ) \
+	  tPowerdown_ePowerdownM_powerdown( \
+	   (tPowerdown_IDX)0, (motor) )
 
 #else  /* TECSFLOW */
-#define tMotor_cPowerdown_powerdown( p_that, error ) \
+#define tMotor_cPowerdown_powerdown( p_that, motor ) \
 	  (p_that)->cPowerdown.powerdown__T( \
- (error) )
+ (motor) )
 
 #endif /* TECSFLOW */
 #ifndef TOPPERS_MACRO_ONLY
@@ -139,8 +139,8 @@ extern "C" {
 #define VAR_motor            tMotor_VAR_motor( p_cellcb )
 
 /* call port function macro (abbrev) #_CPMA_# */
-#define cPowerdown_powerdown( error ) \
-          ((void)p_cellcb, tMotor_cPowerdown_powerdown( p_cellcb, error ))
+#define cPowerdown_powerdown( motor ) \
+          ((void)p_cellcb, tMotor_cPowerdown_powerdown( p_cellcb, motor ))
 
 
 

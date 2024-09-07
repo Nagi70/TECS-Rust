@@ -1,9 +1,9 @@
 use spin::Mutex;
-use crate::{s_powerdown::*, t_powerdown::*};
+use crate::{s_powerdown_m::*, t_powerdown::*};
 
 pub struct TMotor<'a, T>
 where
-	T: SPowerdown,
+	T: SPowerdownM,
 {
 	pub c_powerdown: &'a T,
 	pub port: pbio_port_id_t,
@@ -15,12 +15,12 @@ pub struct TMotorVar<'a>{
 }
 
 pub struct EMotorForTMotor<'a>{
-	pub cell: &'a TMotor<'a, EPowerdown1ForTPowerdown<'a>>,
+	pub cell: &'a TMotor<'a, EPowerdownMForTPowerdown<'a>>,
 }
 
 #[link_section = ".rodata"]
-pub static MOTOR: TMotor<EPowerdown1ForTPowerdown> = TMotor {
-	c_powerdown: &EPOWERDOWN1FORPOWERDOWN,
+pub static MOTOR: TMotor<EPowerdownMForTPowerdown> = TMotor {
+	c_powerdown: &EPOWERDOWNMFORPOWERDOWN,
 	port: pbio_port_id_t::PBIO_PORT_ID_A,
 	variable: &MOTORVAR,
 };
@@ -34,9 +34,9 @@ pub static EMOTORFORMOTOR: EMotorForTMotor = EMotorForTMotor {
 	cell: &MOTOR,
 };
 
-impl<'a, T: SPowerdown> TMotor<'a, T> {
+impl<'a, T: SPowerdownM> TMotor<'a, T> {
 	#[inline]
 	pub fn get_cell_ref<'a>(&self) -> (&T, &pbio_port_id_t, &Mutex<TMotorVar<'a>>) {
-		(&self.c_powerdown, &self.port, &self.variable)
+		(self.c_powerdown, &self.port, &self.variable)
 	}
 }

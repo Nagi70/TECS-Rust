@@ -2,11 +2,11 @@ pub struct TPowerdown
 {
 }
 
-pub struct EPowerdown1ForTPowerdown<'a>{
+pub struct EPowerdownMForTPowerdown<'a>{
 	pub cell: &'a TPowerdown,
 }
 
-pub struct EPowerdown2ForTPowerdown<'a>{
+pub struct EPowerdownSForTPowerdown<'a>{
 	pub cell: &'a TPowerdown,
 }
 
@@ -15,12 +15,12 @@ pub static POWERDOWN: TPowerdown = TPowerdown {
 };
 
 #[link_section = ".rodata"]
-pub static EPOWERDOWN1FORPOWERDOWN: EPowerdown1ForTPowerdown = EPowerdown1ForTPowerdown {
+pub static EPOWERDOWNMFORPOWERDOWN: EPowerdownMForTPowerdown = EPowerdownMForTPowerdown {
 	cell: &POWERDOWN,
 };
 
 #[link_section = ".rodata"]
-pub static EPOWERDOWN2FORPOWERDOWN: EPowerdown2ForTPowerdown = EPowerdown2ForTPowerdown {
+pub static EPOWERDOWNSFORPOWERDOWN: EPowerdownSForTPowerdown = EPowerdownSForTPowerdown {
 	cell: &POWERDOWN,
 };
 

@@ -6,17 +6,17 @@
 #include "tPowerdown_factory.h"
 
 /* entry port descriptor type #_EDT_# */
-/* ePowerdown1 : omitted by entry port optimize */
+/* ePowerdownM : omitted by entry port optimize */
 
-/* ePowerdown2 : omitted by entry port optimize */
+/* ePowerdownS : omitted by entry port optimize */
 
 /* entry port skelton function #_EPSF_# */
-/* ePowerdown1 : omitted by entry port optimize */
-/* ePowerdown2 : omitted by entry port optimize */
+/* ePowerdownM : omitted by entry port optimize */
+/* ePowerdownS : omitted by entry port optimize */
 
 /* entry port skelton function table #_EPSFT_# */
-/* ePowerdown1 : omitted by entry port optimize */
-/* ePowerdown2 : omitted by entry port optimize */
+/* ePowerdownM : omitted by entry port optimize */
+/* ePowerdownS : omitted by entry port optimize */
 
 /* entry port descriptor referenced by call port (differ from actual definition) #_CPEPD_# */
 
@@ -24,5 +24,5 @@
 
 /* array of attr/var #_AVAI_# */
 /* entry port descriptor #_EPD_# */
-/* ePowerdown1 : omitted by entry port optimize */
-/* ePowerdown2 : omitted by entry port optimize */
+/* ePowerdownM : omitted by entry port optimize */
+/* ePowerdownS : omitted by entry port optimize */

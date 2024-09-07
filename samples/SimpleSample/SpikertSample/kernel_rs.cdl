@@ -50,6 +50,8 @@
 import_C("tecs_kernel.h");
 
 typedef	int_t	TaskRef;
+typedef	int_t	MutexRef;
+
 
 /*
  *  タスク本体のシグニチャ

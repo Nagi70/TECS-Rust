@@ -16,8 +16,8 @@
  * motor            Option_Ref_a_mut__pup_motor_t__  VAR_motor       
  *
  * call port function #_TCPF_#
- * call port: cPowerdown signature: sPowerdown context:task
- *   void           cPowerdown_powerdown( pbio_error_t error );
+ * call port: cPowerdown signature: sPowerdownM context:task
+ *   void           cPowerdown_powerdown( Option_Ref_a_mut__pup_motor_t__ motor );
  *
  * #[</PREAMBLE>]# */
 

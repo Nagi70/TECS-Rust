@@ -27,6 +27,6 @@ pub static ETASKBODYFORTASKBODY: ETaskbodyForTTaskbody = ETaskbodyForTTaskbody {
 impl<T: SSensor, U: SMotor> TTaskbody<'_, T, U> {
 	#[inline]
 	pub fn get_cell_ref(&self) -> (&T, &U) {
-		(&self.c_sensor, &self.c_motor)
+		(self.c_sensor, self.c_motor)
 	}
 }
