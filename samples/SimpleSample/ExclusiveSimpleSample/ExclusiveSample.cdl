@@ -1,0 +1,123 @@
+signature sHello {
+    void hello(void);
+};
+
+signature sTaskbody {
+    void main(void);
+};
+
+[active]
+celltype tTask{
+    call sTaskbody cTaskbody;
+    attr {
+        int32_t id;
+    };
+};
+
+[generate(ItronrsGenPlugin,"lib")]
+celltype tTaskbody {
+    call sHello cPerson;
+    entry sTaskbody eTaskbody;
+};
+
+[generate(ItronrsGenPlugin,"lib")]
+celltype tAlice {
+    call sHello cBob;
+    call sHello cDeb;
+    entry sHello eAlice1;
+    entry sHello eAlice2;
+    attr{
+        int32_t id;
+    };
+
+    var{
+        int32_t count = 0;
+    };
+};
+
+[generate(ItronrsGenPlugin,"lib")]
+celltype tBob {
+    call sHello cCarol;
+    entry sHello eBob1;
+    entry sHello eBob2;
+    attr{
+        int32_t id;
+    };
+
+    var{
+        int32_t count = 0;
+    };
+};
+
+[generate(ItronrsGenPlugin,"lib")]
+celltype tCarol {
+    entry sHello eCarol;
+    attr{
+        int32_t id;
+    };
+
+    var{
+        int32_t count = 0;
+    };
+};
+
+[generate(ItronrsGenPlugin,"lib")]
+celltype tDeb {
+    entry sHello eDeb;
+    attr{
+        int32_t id;
+    };
+
+    var{
+        int32_t count = 0;
+    };
+};
+
+[generate(ItronrsGenPlugin,"lib")]
+cell tTask Task1 {
+    cTaskbody = Taskbody1.eTaskbody;
+    id = 0;
+};
+
+[generate(ItronrsGenPlugin,"lib")]
+cell tTask Task2 {
+    cTaskbody = Taskbody2.eTaskbody;
+    id = 0;
+};
+
+[generate(ItronrsGenPlugin,"lib")]
+cell tTask Task3 {
+    cTaskbody = Taskbody3.eTaskbody;
+    id = 0;
+};
+
+cell tTaskbody Taskbody1 {
+    cPerson = Alice.eAlice1;
+};
+
+cell tTaskbody Taskbody2 {
+    cPerson = Alice.eAlice2;
+};
+
+cell tTaskbody Taskbody3 {
+    cPerson = Bob.eBob2;
+};
+
+cell tAlice Alice {
+    cBob = Bob.eBob1;
+    cDeb = Deb.eDeb;
+    id = 0;
+};
+
+cell tBob Bob {
+    cCarol = Carol.eCarol;
+    id = 0;
+};
+
+cell tCarol Carol {
+    id = 0;
+};
+
+cell tDeb Deb {
+    id = 0;
+};

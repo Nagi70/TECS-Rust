@@ -157,6 +157,7 @@ module TECSCDE
   Color_hilite        = :magenta
   Color_incomplete    = :red
   Color_unjoin        = :magenta
+  Color_flow          = :orange
     # color names are found in setup_colormap
 
   #=== Canvas class
@@ -356,7 +357,7 @@ module TECSCDE
       #----- draw joins -----#
       # draw linew before draw texts (if other colors are used, it is better to lay texts upper side)
       @model.get_join_list.each{  |join|
-        drawJoin join
+        drawJoin join, flow_flag = false
       }
 
       refresh_canvas
@@ -716,7 +717,7 @@ module TECSCDE
       drawTargetReset
     end
 
-    def drawJoin join
+    def drawJoin join, flow_flag
       cport, eport, bars = join.get_ports_bars
       x, y = cport.get_position
       xm = mm2dot( x ) + 0.5
@@ -726,6 +727,10 @@ module TECSCDE
       if ! join.is_editable?
         # @canvasGc.set_foreground @@colors[ Color_uneditable ]
         @cairo_context_target.set_source_color( @@colors[ Color_uneditable ] )
+      end
+
+      if flow_flag
+        @cairo_context_target.set_source_color( @@colors[ Color_flow ] )
       end
 
       @cairo_context_target.move_to xm, ym

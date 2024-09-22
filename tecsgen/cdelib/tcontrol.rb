@@ -236,48 +236,6 @@ Structure of Palette Window
           json_file_path = File.join($gen, "tecsflow.json")
           if File.exist?(json_file_path)
             puts "object: #{object.get_name}"
-            # cports = object.get_cports
-            # puts "#{object.get_name}.cports: #{cports[:cTaskbody]}"
-            # if cports[:cTaskbody].kind_of?(TECSModel::TmCPort)
-            #   puts "cTaskbody is TmCPort"
-            #   join = cports[:cTaskbody].get_join
-            #   if join.kind_of?(TECSModel::TmJoin)
-            #     puts "cports[:cTaskbody].get_join is TmJoin"
-            #     puts "#{object.get_name} cport join: #{join}"
-            #   else
-            #     puts "cports[:cTaskbody].get_join is not TmJoin"
-            #   end
-            # else
-            #   puts "cTaskbody is not TmCPort"
-            # end
-
-            # puts "object.eports:"
-            # eports = object.get_eports
-            # puts "#{object.get_name}.eports: #{eports[:eBob2]}"
-            # if eports[:eBob2].kind_of?(TECSModel::TmEPort)
-            #   puts "#{eports[:eBob2].get_name} is TmEPort"
-            #   join = eports[:eBob2].get_joins
-            #   puts "number of joins: #{join.length}"
-            #   if join.first.kind_of?(TECSModel::TmJoin)
-            #     puts "eports[:eBob2].get_joins is TmJoin"
-            #     puts "#{object.get_name} eport join: #{join.first}"
-            #     join_cport = join.first.get_cport
-            #     if join_cport.kind_of?(TECSModel::TmCPort)
-            #       puts "#{join_cport.get_name} is TmCPort"
-            #       puts "#{join_cport.get_name} owner cell: #{join_cport.get_cell.get_name}"
-            #     end
-            #   end
-            # end
-
-            # cell_list = @model.get_cell_list
-            # cell = 0
-            # cell_list.each do |c|
-            #   if c.get_name == object.get_name
-            #     cell = c
-            #     break
-            #   end
-            # end
-            # puts "cell: #{cell.get_name}"
 
             require 'json'
             json_data = JSON.parse(File.read(json_file_path))
@@ -285,58 +243,54 @@ Structure of Palette Window
             object_json = nil
 
             json_data.each do |entry|
-              if entry["cell"] == object.get_name && entry["cell_type"] == object.get_celltype.get_name
+              if entry["Cell"] == object.get_name.to_s && entry["Celltype"] == object.get_celltype.get_name.to_s
                 object_json = entry
-                puts "object_json: #{object_json}"
                 break
               end
             end
 
-            object_json["Accessed"].each do |accessed|
+            if object_json != nil
+              object_json["Accessed"].each do |accessed|
 
-              break if object_json == nil
-
-              current_tmcell = nil
-              active_cell = accessed["ActiveCell"]
-              @model.get_cell_list.each do |cell|
-                if cell.get_name == active_cell && cell.get_celltype.get_name == accessed["Celltype"]
-                  current_tmcell = cell
-                  puts "current_tmcell: #{current_tmcell.get_name}"
-                  break
+                current_tmcell = nil
+                active_cell = accessed["ActiveCell"]
+                @model.get_cell_list.each do |cell|
+                  if cell.get_name.to_s == active_cell && cell.get_celltype.get_name.to_s == accessed["Celltype"]
+                    current_tmcell = cell
+                    break
+                  end
                 end
+
+                call_port = accessed["Callport"]
+                callee_port = accessed["Calleeport"]
+                accessed["Path"].each do |path|
+                  # 同じ名前の呼び口があるかもしれないので確認機構が必要かも
+                  cport = current_tmcell.get_cports[call_port.to_sym]
+                  break if cport == nil
+                  join = cport.get_join
+                  eport = join.get_eport
+                  break if eport.get_name.to_s != callee_port
+                  @view.drawJoin join, flow_flag = true
+                  # 接続されている次のセルを取得する
+                  break if eport.get_cell.get_name.to_s != path["CellName"] || eport.get_cell.get_celltype.get_name.to_s != path["Celltype"]
+                  current_tmcell = eport.get_cell
+                  call_port = path["Callport"]
+                  callee_port = path["Calleeport"]
+                end
+
+                # JSON の記述形式では最後のセルから自分のセルにつながる部分はないため、最後のセルにつながる join は個別で出力する
+                cports = current_tmcell.get_cports[call_port.to_sym]
+                join = cports.get_join
+                @view.drawJoin join, flow_flag = true
+
               end
-
-              call_port = accessed["CallPort"]
-              callee_port = accessed["CalleePort"]
-              accessed["Path"].each do |path|
-                # 同じ名前の呼び口があるかもしれないので確認機構が必要かも
-                cport = current_tmcell.get_cports[call_port.to_sym]
-                break if cport == nil
-                join = cport.get_join
-                eport = join.get_eport
-                break if eport.get_name != callee_port
-                puts "join: #{join.get_cport.get_name} -> #{join.get_eport.get_name}"
-                
-                # 接続されている次のセルを取得する
-                break if eport.get_cell.get_name != path["CellName"] || eport.get_cell.get_celltype.get_name != path["CellType"]
-                current_tmcell = eport.get_cell
-                call_port = path["CallPort"]
-                callee_port = path["CalleePort"]
-              end
-
-              next if current_tmcell != object
-              # JSON の記述形式から、最後のセルにつながる join は個別で出力する
-              cports = current_tmcell.get_cports[call_port.to_sym]
-              join = cports.get_join
-              puts "join: #{join.get_cport.get_name} -> #{join.get_eport.get_name}"
-
             end
 
+            @view.refresh_canvas
 
           else
             puts "#{json_file_path} does not exist."
           end
-          puts "state: #{state}"
           @sub_mode = :SM_MOVING_CELL_BAR
           # p "FOUND Cell or Bar"
           if state.shift_mask?
@@ -347,6 +301,7 @@ Structure of Palette Window
             @hilite_objs.reset( object )
           end
           @view.draw_hilite_objects @hilite_objs
+          
         elsif object.kind_of?( TECSModel::TmJoinBar )
         # elsif object.kind_of?( TECSModel::TmCell ) ||
 #         if object.kind_of?( TECSModel::TmCell ) ||

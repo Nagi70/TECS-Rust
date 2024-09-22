@@ -1,0 +1,3 @@
+/* apply CppIfGenCelltypePlugin to celltype 'tTask' (celltype of cell 'Task3') */
+generate( ItronrsGenPlugin, ::tTask, "lib" ); 
+  
