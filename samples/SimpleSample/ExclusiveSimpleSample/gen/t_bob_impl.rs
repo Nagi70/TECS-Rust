@@ -1,9 +1,9 @@
 use spin::Mutex;
-use crate::{t_bob::*, s_hello::*};
+use crate::{t_bob::*, s_hello3::*, s_hello2::*, s_hello::*};
 
-impl SHello for EBob1ForTBob<'_>{
+impl SHello2 for EBob1ForTBob<'_>{
 
-	fn hello(&'static self) {
+	fn hello2(&'static self) {
 		let (c_carol, id, var, _mg) = self.cell.get_cell_ref();
 
 	}

@@ -16,7 +16,9 @@
 
 /* entry port descriptor referenced by call port (differ from actual definition) #_CPEPD_# */
 
+
 /* call port array #_CPA_# */
+
 
 /* array of attr/var #_AVAI_# */
 /* cell INIB #_INIB_# */
@@ -25,7 +27,13 @@ tCarol_INIB tCarol_INIB_tab[] = {
     {
         /* entry port #_EP_# */ 
         /* attribute(RO) */ 
-        0,                                       /* id */
+        1,                                       /* id */
+    },
+    /* cell: tCarol_CB_tab[1]:  Carol2 id=2 */
+    {
+        /* entry port #_EP_# */ 
+        /* attribute(RO) */ 
+        2,                                       /* id */
     },
 };
 
@@ -38,7 +46,15 @@ struct tag_tCarol_CB tCarol_CB_tab[] = {
         /* var */ 
         0,                                       /* count */
     },
+    /* cell: tCarol_CB_tab[1]:  Carol2 id=2 */
+    {
+        &tCarol_INIB_tab[1],                     /* _inib */
+        /* entry port #_EP_# */ 
+        /* var */ 
+        0,                                       /* count */
+    },
 };
 
 /* entry port descriptor #_EPD_# */
+/* eCarol : omitted by entry port optimize */
 /* eCarol : omitted by entry port optimize */

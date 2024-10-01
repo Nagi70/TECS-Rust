@@ -13,10 +13,10 @@
  * count            int32_t          VAR_count       
  *
  * call port function #_TCPF_#
- * call port: cBob signature: sHello context:task
- *   void           cBob_hello( );
- * call port: cDeb signature: sHello context:task
- *   void           cDeb_hello( );
+ * call port: cBob signature: sHello2 context:task
+ *   void           cBob_hello2( );
+ * call port: cBob2 signature: sHello2 context:task
+ *   void           cBob2_hello2( );
  *
  * #[</PREAMBLE>]# */
 

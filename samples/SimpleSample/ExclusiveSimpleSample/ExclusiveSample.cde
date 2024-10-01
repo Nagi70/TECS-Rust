@@ -1,0 +1,519 @@
+__tool_info__ ("tecsgen") {
+    "tecscde_version"     : "0.5.1.0",
+    "cde_format_version"  : "0.5.0.0",
+    "save_date"           : "2024-10-01T18:25:41+09:00",
+    "base_dir" : [
+        "/home/yosshy/tecsgen-V1.9.0-Beta5/tecsgen/samples/SimpleSample/ExclusiveSimpleSample"
+    ],
+    "define_macro" : [
+
+    ],
+   "import_path" : [
+        "."
+    ],
+    "direct_import" : [
+        "ExclusiveSample.cdl"
+    ]
+}
+
+
+/*************************************************
+ *         TOOL INFORMATION FOR TECSCDE          *
+ *     This  information is used by tecscde      *
+ *  please don't touch if you are not familiar   *
+ ************************************************/
+__tool_info__ ("tecscde") {
+    "paper" : {
+       "type" : "paper",
+       "size" :  "A3",
+       "orientation" :  "LANDSCAPE"
+    },
+    "cell_list" : [
+        {       /** cell_list[ 0 ] **/
+            "type"     : "cell_location",
+            "name"     : "Task1",
+            "location" : [ 10.0, 10.0, 25.0, 15.0 ],
+            "region"   : "::",
+            "port_location" : [
+                {
+                    "type"      : "port_location",
+                    "port_name" : "cTaskbody",
+                    "edge"      : "EDGE_BOTTOM",
+                    "offset"    : 4
+                }
+            ]
+        },
+        {       /** cell_list[ 1 ] **/
+            "type"     : "cell_location",
+            "name"     : "Task2",
+            "location" : [ 65.0, 10.0, 25.0, 15.0 ],
+            "region"   : "::",
+            "port_location" : [
+                {
+                    "type"      : "port_location",
+                    "port_name" : "cTaskbody",
+                    "edge"      : "EDGE_BOTTOM",
+                    "offset"    : 4
+                }
+            ]
+        },
+        {       /** cell_list[ 2 ] **/
+            "type"     : "cell_location",
+            "name"     : "Task3",
+            "location" : [ 120.0, 10.0, 25.0, 15.0 ],
+            "region"   : "::",
+            "port_location" : [
+                {
+                    "type"      : "port_location",
+                    "port_name" : "cTaskbody",
+                    "edge"      : "EDGE_BOTTOM",
+                    "offset"    : 4
+                }
+            ]
+        },
+        {       /** cell_list[ 3 ] **/
+            "type"     : "cell_location",
+            "name"     : "Taskbody1",
+            "location" : [ 10.0, 35.0, 25.0, 15.0 ],
+            "region"   : "::",
+            "port_location" : [
+                {
+                    "type"      : "port_location",
+                    "port_name" : "cPerson",
+                    "edge"      : "EDGE_BOTTOM",
+                    "offset"    : 4
+                },
+                {
+                    "type"      : "port_location",
+                    "port_name" : "eTaskbody",
+                    "edge"      : "EDGE_TOP",
+                    "offset"    : 4
+                }
+            ]
+        },
+        {       /** cell_list[ 4 ] **/
+            "type"     : "cell_location",
+            "name"     : "Taskbody2",
+            "location" : [ 65.0, 35.0, 25.0, 15.0 ],
+            "region"   : "::",
+            "port_location" : [
+                {
+                    "type"      : "port_location",
+                    "port_name" : "cPerson",
+                    "edge"      : "EDGE_BOTTOM",
+                    "offset"    : 4
+                },
+                {
+                    "type"      : "port_location",
+                    "port_name" : "eTaskbody",
+                    "edge"      : "EDGE_TOP",
+                    "offset"    : 4
+                }
+            ]
+        },
+        {       /** cell_list[ 5 ] **/
+            "type"     : "cell_location",
+            "name"     : "Taskbody3",
+            "location" : [ 120.0, 35.0, 25.0, 15.0 ],
+            "region"   : "::",
+            "port_location" : [
+                {
+                    "type"      : "port_location",
+                    "port_name" : "cPerson",
+                    "edge"      : "EDGE_BOTTOM",
+                    "offset"    : 4
+                },
+                {
+                    "type"      : "port_location",
+                    "port_name" : "eTaskbody",
+                    "edge"      : "EDGE_TOP",
+                    "offset"    : 4
+                }
+            ]
+        },
+        {       /** cell_list[ 6 ] **/
+            "type"     : "cell_location",
+            "name"     : "Alice",
+            "location" : [ 38.0, 64.0, 25.0, 15.0 ],
+            "region"   : "::",
+            "port_location" : [
+                {
+                    "type"      : "port_location",
+                    "port_name" : "cBob",
+                    "edge"      : "EDGE_BOTTOM",
+                    "offset"    : 4
+                },
+                {
+                    "type"      : "port_location",
+                    "port_name" : "cBob2",
+                    "edge"      : "EDGE_BOTTOM",
+                    "offset"    : 8
+                },
+                {
+                    "type"      : "port_location",
+                    "port_name" : "eAlice1",
+                    "edge"      : "EDGE_TOP",
+                    "offset"    : 4
+                },
+                {
+                    "type"      : "port_location",
+                    "port_name" : "eAlice2",
+                    "edge"      : "EDGE_TOP",
+                    "offset"    : 19.0
+                }
+            ]
+        },
+        {       /** cell_list[ 7 ] **/
+            "type"     : "cell_location",
+            "name"     : "Bob",
+            "location" : [ 38.0, 95.0, 25.0, 15.0 ],
+            "region"   : "::",
+            "port_location" : [
+                {
+                    "type"      : "port_location",
+                    "port_name" : "cCarol",
+                    "edge"      : "EDGE_BOTTOM",
+                    "offset"    : 4
+                },
+                {
+                    "type"      : "port_location",
+                    "port_name" : "eBob1",
+                    "edge"      : "EDGE_TOP",
+                    "offset"    : 4
+                },
+                {
+                    "type"      : "port_location",
+                    "port_name" : "eBob2",
+                    "edge"      : "EDGE_TOP",
+                    "offset"    : 19.0
+                }
+            ]
+        },
+        {       /** cell_list[ 8 ] **/
+            "type"     : "cell_location",
+            "name"     : "Bob2",
+            "location" : [ 88.0, 95.0, 25.0, 15.0 ],
+            "region"   : "::",
+            "port_location" : [
+                {
+                    "type"      : "port_location",
+                    "port_name" : "cCarol",
+                    "edge"      : "EDGE_BOTTOM",
+                    "offset"    : 4
+                },
+                {
+                    "type"      : "port_location",
+                    "port_name" : "eBob1",
+                    "edge"      : "EDGE_TOP",
+                    "offset"    : 4.0
+                },
+                {
+                    "type"      : "port_location",
+                    "port_name" : "eBob2",
+                    "edge"      : "EDGE_TOP",
+                    "offset"    : 21.0
+                }
+            ]
+        },
+        {       /** cell_list[ 9 ] **/
+            "type"     : "cell_location",
+            "name"     : "Carol",
+            "location" : [ 37.0, 129.0, 25.0, 15.0 ],
+            "region"   : "::",
+            "port_location" : [
+                {
+                    "type"      : "port_location",
+                    "port_name" : "eCarol",
+                    "edge"      : "EDGE_TOP",
+                    "offset"    : 5.0
+                }
+            ]
+        },
+        {       /** cell_list[ 10 ] **/
+            "type"     : "cell_location",
+            "name"     : "Carol2",
+            "location" : [ 88.0, 129.0, 25.0, 15.0 ],
+            "region"   : "::",
+            "port_location" : [
+                {
+                    "type"      : "port_location",
+                    "port_name" : "eCarol",
+                    "edge"      : "EDGE_TOP",
+                    "offset"    : 4
+                }
+            ]
+        }
+    ],
+    "join_list" : [
+        {       /** join_list[ 0 ] **/
+            "type"        : "join_location",
+            "call_cell"   : "Task1",
+            "call_region" : "::",
+            "call_port"   : "cTaskbody",
+            "entry_cell"  : "Taskbody1",
+            "entry_region": "::",
+            "entry_port"  : "eTaskbody",
+            "bar_list"    : [
+                {
+                     "type"     : "VBar",
+                     "position" : 35.0
+                },                {
+                     "type"     : "HBar",
+                     "position" : 14.0
+                },                {
+                     "type"     : "VBar",
+                     "position" : 25.0
+                },                {
+                     "type"     : "HBar",
+                     "position" : 14.0
+                },                {
+                     "type"     : "VBar",
+                     "position" : 35.0
+                }
+            ]
+        },
+        {       /** join_list[ 1 ] **/
+            "type"        : "join_location",
+            "call_cell"   : "Task2",
+            "call_region" : "::",
+            "call_port"   : "cTaskbody",
+            "entry_cell"  : "Taskbody2",
+            "entry_region": "::",
+            "entry_port"  : "eTaskbody",
+            "bar_list"    : [
+                {
+                     "type"     : "VBar",
+                     "position" : 35.0
+                },                {
+                     "type"     : "HBar",
+                     "position" : 69.0
+                },                {
+                     "type"     : "VBar",
+                     "position" : 25.0
+                },                {
+                     "type"     : "HBar",
+                     "position" : 69.0
+                },                {
+                     "type"     : "VBar",
+                     "position" : 35.0
+                }
+            ]
+        },
+        {       /** join_list[ 2 ] **/
+            "type"        : "join_location",
+            "call_cell"   : "Task3",
+            "call_region" : "::",
+            "call_port"   : "cTaskbody",
+            "entry_cell"  : "Taskbody3",
+            "entry_region": "::",
+            "entry_port"  : "eTaskbody",
+            "bar_list"    : [
+                {
+                     "type"     : "VBar",
+                     "position" : 35.0
+                },                {
+                     "type"     : "HBar",
+                     "position" : 124.0
+                },                {
+                     "type"     : "VBar",
+                     "position" : 25.0
+                },                {
+                     "type"     : "HBar",
+                     "position" : 124.0
+                },                {
+                     "type"     : "VBar",
+                     "position" : 35.0
+                }
+            ]
+        },
+        {       /** join_list[ 3 ] **/
+            "type"        : "join_location",
+            "call_cell"   : "Taskbody1",
+            "call_region" : "::",
+            "call_port"   : "cPerson",
+            "entry_cell"  : "Alice",
+            "entry_region": "::",
+            "entry_port"  : "eAlice1",
+            "bar_list"    : [
+                {
+                     "type"     : "VBar",
+                     "position" : 56.0
+                },                {
+                     "type"     : "HBar",
+                     "position" : 33.0
+                },                {
+                     "type"     : "VBar",
+                     "position" : 56.0
+                },                {
+                     "type"     : "HBar",
+                     "position" : 42.0
+                },                {
+                     "type"     : "VBar",
+                     "position" : 64.0
+                }
+            ]
+        },
+        {       /** join_list[ 4 ] **/
+            "type"        : "join_location",
+            "call_cell"   : "Taskbody2",
+            "call_region" : "::",
+            "call_port"   : "cPerson",
+            "entry_cell"  : "Alice",
+            "entry_region": "::",
+            "entry_port"  : "eAlice2",
+            "bar_list"    : [
+                {
+                     "type"     : "VBar",
+                     "position" : 56.0
+                },                {
+                     "type"     : "HBar",
+                     "position" : 57.0
+                },                {
+                     "type"     : "VBar",
+                     "position" : 56.0
+                },                {
+                     "type"     : "HBar",
+                     "position" : 57.0
+                },                {
+                     "type"     : "VBar",
+                     "position" : 64.0
+                }
+            ]
+        },
+        {       /** join_list[ 5 ] **/
+            "type"        : "join_location",
+            "call_cell"   : "Taskbody3",
+            "call_region" : "::",
+            "call_port"   : "cPerson",
+            "entry_cell"  : "Bob2",
+            "entry_region": "::",
+            "entry_port"  : "eBob2",
+            "bar_list"    : [
+                {
+                     "type"     : "VBar",
+                     "position" : 60.0
+                },                {
+                     "type"     : "HBar",
+                     "position" : 124.0
+                },                {
+                     "type"     : "VBar",
+                     "position" : 85.0
+                },                {
+                     "type"     : "HBar",
+                     "position" : 109.0
+                },                {
+                     "type"     : "VBar",
+                     "position" : 95.0
+                }
+            ]
+        },
+        {       /** join_list[ 6 ] **/
+            "type"        : "join_location",
+            "call_cell"   : "Alice",
+            "call_region" : "::",
+            "call_port"   : "cBob",
+            "entry_cell"  : "Bob",
+            "entry_region": "::",
+            "entry_port"  : "eBob1",
+            "bar_list"    : [
+                {
+                     "type"     : "VBar",
+                     "position" : 89.0
+                },                {
+                     "type"     : "HBar",
+                     "position" : 42.0
+                },                {
+                     "type"     : "VBar",
+                     "position" : 85.0
+                },                {
+                     "type"     : "HBar",
+                     "position" : 42.0
+                },                {
+                     "type"     : "VBar",
+                     "position" : 95.0
+                }
+            ]
+        },
+        {       /** join_list[ 7 ] **/
+            "type"        : "join_location",
+            "call_cell"   : "Alice",
+            "call_region" : "::",
+            "call_port"   : "cBob2",
+            "entry_cell"  : "Bob2",
+            "entry_region": "::",
+            "entry_port"  : "eBob1",
+            "bar_list"    : [
+                {
+                     "type"     : "VBar",
+                     "position" : 85.0
+                },                {
+                     "type"     : "HBar",
+                     "position" : 92.0
+                },                {
+                     "type"     : "VBar",
+                     "position" : 89.0
+                },                {
+                     "type"     : "HBar",
+                     "position" : 92.0
+                },                {
+                     "type"     : "VBar",
+                     "position" : 95.0
+                }
+            ]
+        },
+        {       /** join_list[ 8 ] **/
+            "type"        : "join_location",
+            "call_cell"   : "Bob",
+            "call_region" : "::",
+            "call_port"   : "cCarol",
+            "entry_cell"  : "Carol",
+            "entry_region": "::",
+            "entry_port"  : "eCarol",
+            "bar_list"    : [
+                {
+                     "type"     : "VBar",
+                     "position" : 120.0
+                },                {
+                     "type"     : "HBar",
+                     "position" : 42.0
+                },                {
+                     "type"     : "VBar",
+                     "position" : 119.0
+                },                {
+                     "type"     : "HBar",
+                     "position" : 42.0
+                },                {
+                     "type"     : "VBar",
+                     "position" : 129.0
+                }
+            ]
+        },
+        {       /** join_list[ 9 ] **/
+            "type"        : "join_location",
+            "call_cell"   : "Bob2",
+            "call_region" : "::",
+            "call_port"   : "cCarol",
+            "entry_cell"  : "Carol2",
+            "entry_region": "::",
+            "entry_port"  : "eCarol",
+            "bar_list"    : [
+                {
+                     "type"     : "VBar",
+                     "position" : 120.0
+                },                {
+                     "type"     : "HBar",
+                     "position" : 92.0
+                },                {
+                     "type"     : "VBar",
+                     "position" : 119.0
+                },                {
+                     "type"     : "HBar",
+                     "position" : 92.0
+                },                {
+                     "type"     : "VBar",
+                     "position" : 129.0
+                }
+            ]
+        }
+    ]
+}

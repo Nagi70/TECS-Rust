@@ -19,7 +19,7 @@ extern struct tag_sHello_VDES Alice_eAlice1_des;
 
 extern struct tag_sHello_VDES Alice_eAlice2_des;
 
-extern struct tag_sHello_VDES Bob_eBob2_des;
+extern struct tag_sHello_VDES Bob2_eBob2_des;
 
 /* call port array #_CPA_# */
 
@@ -43,7 +43,7 @@ tTaskbody_INIB tTaskbody_INIB_tab[] = {
     /* cell: tTaskbody_CB_tab[2]:  Taskbody3 id=3 */
     {
         /* call port (INIB) #_CP_# */ 
-        &Bob_eBob2_des,                          /* cPerson #_CCP1_# */
+        &Bob2_eBob2_des,                         /* cPerson #_CCP1_# */
         /* entry port #_EP_# */ 
     },
 };

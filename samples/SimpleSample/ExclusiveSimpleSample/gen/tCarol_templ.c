@@ -25,22 +25,22 @@
 /* entry port function #_TEPF_# */
 /* #[<ENTRY_PORT>]# eCarol
  * entry port: eCarol
- * signature:  sHello
+ * signature:  sHello3
  * context:    task
  * #[</ENTRY_PORT>]# */
 
-/* #[<ENTRY_FUNC>]# eCarol_hello
- * name:         eCarol_hello
- * global_name:  tCarol_eCarol_hello
+/* #[<ENTRY_FUNC>]# eCarol_hello3
+ * name:         eCarol_hello3
+ * global_name:  tCarol_eCarol_hello3
  * oneway:       false
  * #[</ENTRY_FUNC>]# */
 void
-eCarol_hello(CELLIDX idx)
+eCarol_hello3(CELLIDX idx)
 {
 	CELLCB	*p_cellcb = GET_CELLCB(idx);
 
 	/* Put statements here #_TEFB_# */
-#warning "'eCarol_hello' needs to be edited."   /* delete this line after edit */
+#warning "'eCarol_hello3' needs to be edited."   /* delete this line after edit */
 
 }
 

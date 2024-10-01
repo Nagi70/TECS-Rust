@@ -32,17 +32,31 @@ const struct tag_sHello_VMT tBob_eBob2_MT_ = {
 };
 
 /* entry port descriptor referenced by call port (differ from actual definition) #_CPEPD_# */
+extern struct tag_sHello3_VDES Carol_eCarol_des;
+
+extern struct tag_sHello3_VDES Carol2_eCarol_des;
 
 /* call port array #_CPA_# */
+
 
 /* array of attr/var #_AVAI_# */
 /* cell INIB #_INIB_# */
 tBob_INIB tBob_INIB_tab[] = {
     /* cell: tBob_CB_tab[0]:  Bob id=1 */
     {
+        /* call port (INIB) #_CP_# */ 
+        &tCarol_CB_tab[0],                       /* cCarol #_CCP2_# */
         /* entry port #_EP_# */ 
         /* attribute(RO) */ 
-        0,                                       /* id */
+        1,                                       /* id */
+    },
+    /* cell: tBob_CB_tab[1]:  Bob2 id=2 */
+    {
+        /* call port (INIB) #_CP_# */ 
+        &tCarol_CB_tab[1],                       /* cCarol #_CCP2_# */
+        /* entry port #_EP_# */ 
+        /* attribute(RO) */ 
+        2,                                       /* id */
     },
 };
 
@@ -55,6 +69,13 @@ struct tag_tBob_CB tBob_CB_tab[] = {
         /* var */ 
         0,                                       /* count */
     },
+    /* cell: tBob_CB_tab[1]:  Bob2 id=2 */
+    {
+        &tBob_INIB_tab[1],                       /* _inib */
+        /* entry port #_EP_# */ 
+        /* var */ 
+        0,                                       /* count */
+    },
 };
 
 /* entry port descriptor #_EPD_# */
@@ -63,4 +84,10 @@ extern const struct tag_tBob_eBob2_DES Bob_eBob2_des;
 const struct tag_tBob_eBob2_DES Bob_eBob2_des = {
     &tBob_eBob2_MT_,
     &tBob_CB_tab[0],      /* CB 3 */
+};
+/* eBob1 : omitted by entry port optimize */
+extern const struct tag_tBob_eBob2_DES Bob2_eBob2_des;
+const struct tag_tBob_eBob2_DES Bob2_eBob2_des = {
+    &tBob_eBob2_MT_,
+    &tBob_CB_tab[1],      /* CB 3 */
 };

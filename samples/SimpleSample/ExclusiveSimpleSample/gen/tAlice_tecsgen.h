@@ -21,6 +21,7 @@
 #include "global_tecsgen.h"
 
 /* signature header #_ISH_# */
+#include "sHello2_tecsgen.h"
 #include "sHello_tecsgen.h"
 
 #ifndef TOPPERS_MACRO_ONLY
@@ -65,7 +66,6 @@ void         tAlice_eAlice2_hello(tAlice_IDX idx);
 #define TOPPERS_CB_TYPE_ONLY
 #endif  /* TOPPERS_CB_TYPE_ONLY */
 #include "tBob_tecsgen.h"
-#include "tDeb_tecsgen.h"
 #ifdef  tAlice_CB_TYPE_ONLY
 #undef TOPPERS_CB_TYPE_ONLY
 #endif /* tAlice_CB_TYPE_ONLY */
@@ -95,19 +95,19 @@ void         tAlice_eAlice2_hello(tAlice_IDX idx);
 
 #ifndef TECSFLOW
  /* call port function macro #_CPM_# */
-#define tAlice_cBob_hello( p_that ) \
-	  tBob_eBob1_hello( \
+#define tAlice_cBob_hello2( p_that ) \
+	  tBob_eBob1_hello2( \
 	   &tBob_CB_tab[0] )
-#define tAlice_cDeb_hello( p_that ) \
-	  tDeb_eDeb_hello( \
-	   &tDeb_CB_tab[0] )
+#define tAlice_cBob2_hello2( p_that ) \
+	  tBob_eBob1_hello2( \
+	   &tBob_CB_tab[1] )
 
 #else  /* TECSFLOW */
-#define tAlice_cBob_hello( p_that ) \
-	  (p_that)->cBob.hello__T( \
+#define tAlice_cBob_hello2( p_that ) \
+	  (p_that)->cBob.hello2__T( \
  )
-#define tAlice_cDeb_hello( p_that ) \
-	  (p_that)->cDeb.hello__T( \
+#define tAlice_cBob2_hello2( p_that ) \
+	  (p_that)->cBob2.hello2__T( \
  )
 
 #endif /* TECSFLOW */
@@ -158,10 +158,10 @@ void           tAlice_eAlice2_hello_skel( const struct tag_sHello_VDES *epd);
 #define VAR_count            tAlice_VAR_count( p_cellcb )
 
 /* call port function macro (abbrev) #_CPMA_# */
-#define cBob_hello( ) \
-          ((void)p_cellcb, tAlice_cBob_hello( p_cellcb ))
-#define cDeb_hello( ) \
-          ((void)p_cellcb, tAlice_cDeb_hello( p_cellcb ))
+#define cBob_hello2( ) \
+          ((void)p_cellcb, tAlice_cBob_hello2( p_cellcb ))
+#define cBob2_hello2( ) \
+          ((void)p_cellcb, tAlice_cBob2_hello2( p_cellcb ))
 
 
 

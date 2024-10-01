@@ -31,7 +31,7 @@ PRE_TECSGEN_TARGET =
 # Post-tecsgen target
 POST_TECSGEN_TARGET =
 
-RUST_SRCS = $(SRC_DIR)/t_alice_impl.rs $(SRC_DIR)/t_bob_impl.rs $(SRC_DIR)/t_taskbody_impl.rs
+RUST_SRCS = $(SRC_DIR)/t_taskbody_impl.rs $(SRC_DIR)/t_alice_impl.rs $(SRC_DIR)/t_bob_impl.rs $(SRC_DIR)/t_carol_impl.rs
 
 allall: tecs
 	make all     # in order to include generated Makefile.tecsgen & Makefile.depend

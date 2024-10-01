@@ -21,7 +21,7 @@
 #include "global_tecsgen.h"
 
 /* signature header #_ISH_# */
-#include "sHello_tecsgen.h"
+#include "sHello3_tecsgen.h"
 
 #ifndef TOPPERS_MACRO_ONLY
 
@@ -48,8 +48,8 @@ extern tCarol_CB  tCarol_CB_tab[];
 typedef struct tag_tCarol_CB *tCarol_IDX;
 
 /* prototype declaration of entry port function #_EPP_# */
-/* sHello */
-void         tCarol_eCarol_hello(tCarol_IDX idx);
+/* sHello3 */
+void         tCarol_eCarol_hello3(tCarol_IDX idx);
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
@@ -58,7 +58,7 @@ void         tCarol_eCarol_hello(tCarol_IDX idx);
 #ifndef TOPPERS_CB_TYPE_ONLY
 
 #define tCarol_ID_BASE              (1)  /* ID Base  #_NIDB_# */
-#define tCarol_N_CELL               (1)  /*  number of cells  #_NCEL_# */
+#define tCarol_N_CELL               (2)  /*  number of cells  #_NCEL_# */
 
 /* IDX validation macro #_CVI_# */
 #define tCarol_VALID_IDX(IDX) (1)
@@ -128,7 +128,7 @@ extern "C" {
 
 
 /* entry port function macro (abbrev) #_EPM_# */
-#define eCarol_hello     tCarol_eCarol_hello
+#define eCarol_hello3    tCarol_eCarol_hello3
 
 /* iteration code (FOREACH_CELL) #_FEC_# */
 #define FOREACH_CELL(i,p_cb)   \

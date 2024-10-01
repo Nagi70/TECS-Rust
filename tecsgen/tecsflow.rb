@@ -292,6 +292,7 @@ class Cell
     }
   end
 
+  # TODO: 呼び口配列や受け口配列に対応していない
   def create_path_item_hash indent_level, no_caller_cell, call_port_name, call_subsc, callee_cell, entry_port_name, callee_subsc, func_name
 
     path_item = {
@@ -372,6 +373,29 @@ class Cell
     end
   end
 
+  def extract_printed_func_json func_nsp
+    cell_name = func_nsp.to_s.split(".")[0]
+    entry_port_name = func_nsp.to_s.split(".")[1]
+    entry_func_name = func_nsp.to_s.split(".")[2]
+
+    results = []
+    $flow_json_hash.each do |cell, flow|
+      flow[:Accessed].each do |accessed|
+        accessed[:Path].each_with_index do |path, i|
+          if path[:Calleeport].to_s == entry_port_name && path[:Function].to_s == entry_func_name then
+            accessed[:Path][i+1..-1].each do |path|
+              break if accessed[:Path][i+1][:CellName] != cell_name.to_sym
+              results << path
+            end
+          end
+        end
+      end
+    end
+
+    return results
+
+  end
+
   def print_entry_func_flow entry_port_name, func_name, indent_level, parent_cell
     func_nsp = get_function_nsp entry_port_name, func_name, parent_cell
     # print "\nentry:", func_nsp, "\n"
@@ -382,6 +406,29 @@ class Cell
       # print_indent indent_level
       # print func_nsp
       print ": printed\n"
+      # TODO: printed のときに json に上手く出力できるようにする
+      # print "func_nsp: ", func_nsp, "\n"
+      # print "self.get_name: ", self.get_name, "\n"
+      printed_func_json = extract_printed_func_json func_nsp
+      # print "$flow_json_hash[#{self.get_name.to_s}][:Accessed][:Path]: ", $flow_json_hash[self.get_name.to_s][:Accessed][:Path], "\n"
+      # $flow_json_hash[self.get_name.to_s][:Accessed][:Path] << Marshal.load(Marshal.dump(printed_func_json))
+      # print "result: ", result, "\n"
+      # print "printed_func_json: ", printed_func_json, "\n"
+
+      current_cell = self
+      printed_func_json.each do |path|
+        calleeport_join = current_cell.get_join_list.get_item(path[:Callport].to_sym)
+        if calleeport_join.get_port_name.to_s != path[:Calleeport].to_s then
+          puts "Printed function path json is not generated successfully."
+          break
+        end
+        current_cell = calleeport_join.get_cell
+
+        # TODO: 呼び口配列や受け口配列に対応していない
+        create_path_item_hash indent_level, false, path[:Callport], nil, current_cell, path[:Calleeport], nil, path[:Function]
+        
+      end
+
       return
     end
     @@printed_func_nsp_list[ func_nsp ] = true

@@ -35,7 +35,7 @@ pub static ETASKBODYFORTASKBODY2: ETaskbodyForTTaskbody = ETaskbodyForTTaskbody 
 
 #[link_section = ".rodata"]
 pub static TASKBODY3: TTaskbody = TTaskbody {
-	c_person: &EBOB2FORBOB,
+	c_person: &EBOB2FORBOB2,
 };
 
 #[link_section = ".rodata"]

@@ -21,6 +21,8 @@
 #include "global_tecsgen.h"
 
 /* signature header #_ISH_# */
+#include "sHello3_tecsgen.h"
+#include "sHello2_tecsgen.h"
 #include "sHello_tecsgen.h"
 
 #ifndef TOPPERS_MACRO_ONLY
@@ -31,6 +33,7 @@ extern "C" {
 /* cell INIB type definition #_CIP_# */
 typedef const struct tag_tBob_INIB {
     /* call port #_TCP_# */
+    struct tag_tCarol_CB * const cCarol;  /* TCP_4 */
     /* call port #_NEP_# */ 
     /* attribute(RO) #_ATO_# */ 
     int32_t        id;
@@ -50,8 +53,8 @@ extern tBob_CB  tBob_CB_tab[];
 typedef struct tag_tBob_CB *tBob_IDX;
 
 /* prototype declaration of entry port function #_EPP_# */
-/* sHello */
-void         tBob_eBob1_hello(tBob_IDX idx);
+/* sHello2 */
+void         tBob_eBob1_hello2(tBob_IDX idx);
 /* sHello */
 void         tBob_eBob2_hello(tBob_IDX idx);
 #ifdef __cplusplus
@@ -71,7 +74,7 @@ void         tBob_eBob2_hello(tBob_IDX idx);
 #ifndef TOPPERS_CB_TYPE_ONLY
 
 #define tBob_ID_BASE                (1)  /* ID Base  #_NIDB_# */
-#define tBob_N_CELL                 (1)  /*  number of cells  #_NCEL_# */
+#define tBob_N_CELL                 (2)  /*  number of cells  #_NCEL_# */
 
 /* IDX validation macro #_CVI_# */
 #define tBob_VALID_IDX(IDX) (1)
@@ -94,13 +97,13 @@ void         tBob_eBob2_hello(tBob_IDX idx);
 
 #ifndef TECSFLOW
  /* call port function macro #_CPM_# */
-#define tBob_cCarol_hello( p_that ) \
-	  tCarol_eCarol_hello( \
-	   &tCarol_CB_tab[0] )
+#define tBob_cCarol_hello3( p_that ) \
+	  tCarol_eCarol_hello3( \
+	   (p_that)->_inib->cCarol )
 
 #else  /* TECSFLOW */
-#define tBob_cCarol_hello( p_that ) \
-	  (p_that)->cCarol.hello__T( \
+#define tBob_cCarol_hello3( p_that ) \
+	  (p_that)->cCarol.hello3__T( \
  )
 
 #endif /* TECSFLOW */
@@ -149,14 +152,14 @@ void           tBob_eBob2_hello_skel( const struct tag_sHello_VDES *epd);
 #define VAR_count            tBob_VAR_count( p_cellcb )
 
 /* call port function macro (abbrev) #_CPMA_# */
-#define cCarol_hello( ) \
-          ((void)p_cellcb, tBob_cCarol_hello( p_cellcb ))
+#define cCarol_hello3( ) \
+          ((void)p_cellcb, tBob_cCarol_hello3( p_cellcb ))
 
 
 
 
 /* entry port function macro (abbrev) #_EPM_# */
-#define eBob1_hello      tBob_eBob1_hello
+#define eBob1_hello2     tBob_eBob1_hello2
 #define eBob2_hello      tBob_eBob2_hello
 
 /* iteration code (FOREACH_CELL) #_FEC_# */

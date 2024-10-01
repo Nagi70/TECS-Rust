@@ -3,15 +3,15 @@ use crate::tecs_mutex::*;
 use core::num::NonZeroI32;
 use crate::kernel_cfg::*;
 use spin::Mutex;
-use crate::{s_hello::*, t_bob::*, t_deb::*};
+use crate::{s_hello2::*, t_bob::*};
 
 pub struct TAlice<'a, T, U>
 where
-	T: SHello,
-	U: SHello,
+	T: SHello2,
+	U: SHello2,
 {
 	c_bob: &'a T,
-	c_deb: &'a U,
+	c_bob2: &'a U,
 	id: i32,
 	variable SyncTAliceVar,
 	mutex_ref: &'a TECSMutexRef<'a>,
@@ -28,11 +28,11 @@ pub struct SyncTAliceVar{
 unsafe impl Sync for SyncTAliceVar {}
 
 pub struct EAlice1ForTAlice<'a>{
-	pub cell: &'a TAlice<'a, EBob1ForTBob<'a>, EDebForTDeb<'a>>,
+	pub cell: &'a TAlice<'a, EBob1ForTBob<'a>, EBob1ForTBob<'a>>,
 }
 
 pub struct EAlice2ForTAlice<'a>{
-	pub cell: &'a TAlice<'a, EBob1ForTBob<'a>, EDebForTDeb<'a>>,
+	pub cell: &'a TAlice<'a, EBob1ForTBob<'a>, EBob1ForTBob<'a>>,
 }
 
 pub struct MutexGuardForTAlice<'a>{
@@ -40,9 +40,9 @@ pub struct MutexGuardForTAlice<'a>{
 }
 
 #[link_section = ".rodata"]
-pub static ALICE: TAlice<EBob1ForTBob, EDebForTDeb> = TAlice {
+pub static ALICE: TAlice<EBob1ForTBob, EBob1ForTBob> = TAlice {
 	c_bob: &EBOB1FORBOB,
-	c_deb: &EDEBFORDEB,
+	c_bob2: &EBOB1FORBOB2,
 	id: 0,
 	variable: &ALICEVAR,
 	mutex_ref: &ALICE_MUTEX_REF,
@@ -75,12 +75,12 @@ impl Drop for MutexGuardForTAlice {
 	}
 }
 
-impl<T: SHello, U: SHello> TAlice<'_, T, U> {
+impl<T: SHello2, U: SHello2> TAlice<'_, T, U> {
 	pub fn get_cell_ref(&'static self) -> (&T, &U, &i32, &mut TAliceVar, MutexGuardForTAlice) {
 		self.mutex_ref.lock();
 		(
 			self.c_bob,
-			self.c_deb,
+			self.c_bob2,
 			&self.id,
 			unsafe{&mut *self.variable.unsafe_var.get()},
 			MutexGuardForTAlice{

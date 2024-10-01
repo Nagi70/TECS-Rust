@@ -13,8 +13,8 @@
  * count            int32_t          VAR_count       
  *
  * call port function #_TCPF_#
- * call port: cCarol signature: sHello context:task
- *   void           cCarol_hello( );
+ * call port: cCarol signature: sHello3 context:task
+ *   void           cCarol_hello3( );
  *
  * #[</PREAMBLE>]# */
 
@@ -29,22 +29,22 @@
 /* entry port function #_TEPF_# */
 /* #[<ENTRY_PORT>]# eBob1
  * entry port: eBob1
- * signature:  sHello
+ * signature:  sHello2
  * context:    task
  * #[</ENTRY_PORT>]# */
 
-/* #[<ENTRY_FUNC>]# eBob1_hello
- * name:         eBob1_hello
- * global_name:  tBob_eBob1_hello
+/* #[<ENTRY_FUNC>]# eBob1_hello2
+ * name:         eBob1_hello2
+ * global_name:  tBob_eBob1_hello2
  * oneway:       false
  * #[</ENTRY_FUNC>]# */
 void
-eBob1_hello(CELLIDX idx)
+eBob1_hello2(CELLIDX idx)
 {
 	CELLCB	*p_cellcb = GET_CELLCB(idx);
 
 	/* Put statements here #_TEFB_# */
-#warning "'eBob1_hello' needs to be edited."   /* delete this line after edit */
+#warning "'eBob1_hello2' needs to be edited."   /* delete this line after edit */
 
 }
 

@@ -2,6 +2,15 @@ signature sHello {
     void hello(void);
 };
 
+signature sHello2 {
+    void hello2(void);
+};
+
+signature sHello3 {
+    void hello3(void);
+};
+
+
 signature sTaskbody {
     void main(void);
 };
@@ -22,8 +31,8 @@ celltype tTaskbody {
 
 [generate(ItronrsGenPlugin,"lib")]
 celltype tAlice {
-    call sHello cBob;
-    call sHello cDeb;
+    call sHello2 cBob;
+    call sHello2 cBob2;
     entry sHello eAlice1;
     entry sHello eAlice2;
     attr{
@@ -37,8 +46,8 @@ celltype tAlice {
 
 [generate(ItronrsGenPlugin,"lib")]
 celltype tBob {
-    call sHello cCarol;
-    entry sHello eBob1;
+    call sHello3 cCarol;
+    entry sHello2 eBob1;
     entry sHello eBob2;
     attr{
         int32_t id;
@@ -51,19 +60,7 @@ celltype tBob {
 
 [generate(ItronrsGenPlugin,"lib")]
 celltype tCarol {
-    entry sHello eCarol;
-    attr{
-        int32_t id;
-    };
-
-    var{
-        int32_t count = 0;
-    };
-};
-
-[generate(ItronrsGenPlugin,"lib")]
-celltype tDeb {
-    entry sHello eDeb;
+    entry sHello3 eCarol;
     attr{
         int32_t id;
     };
@@ -100,24 +97,29 @@ cell tTaskbody Taskbody2 {
 };
 
 cell tTaskbody Taskbody3 {
-    cPerson = Bob.eBob2;
+    cPerson = Bob2.eBob2;
 };
 
 cell tAlice Alice {
     cBob = Bob.eBob1;
-    cDeb = Deb.eDeb;
+    cBob2 = Bob2.eBob1;
     id = 0;
 };
 
 cell tBob Bob {
     cCarol = Carol.eCarol;
-    id = 0;
+    id = 1;
+};
+
+cell tBob Bob2 {
+    cCarol = Carol2.eCarol;
+    id = 2;
 };
 
 cell tCarol Carol {
-    id = 0;
+    id = 1;
 };
 
-cell tDeb Deb {
-    id = 0;
+cell tCarol Carol2 {
+    id = 2;
 };
