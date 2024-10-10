@@ -271,6 +271,11 @@ Structure of Palette Window
                 call_port = accessed["Callport"]
                 callee_port = accessed["Calleeport"]
                 accessed["Path"].each do |path|
+                  @view.drawCellRectDirect current_tmcell, flow_flag = true
+                  if current_tmcell.get_celltype.is_active?
+                    @view.drawActiveCellInnerRectDirect current_tmcell, flow_flag = true
+                  end
+                  # @view.drawCell current_tmcell, flow_flag = true
                   # 同じ名前の呼び口があるかもしれないので確認機構が必要かも
                   cport = current_tmcell.get_cports[call_port.to_sym]
                   break if cport == nil
@@ -278,6 +283,9 @@ Structure of Palette Window
                   eport = join.get_eport
                   break if eport.get_name.to_s != callee_port
                   @view.drawJoin join, flow_flag = true
+                  @view.draw_entry_port_triangle eport, flow_flag = true
+                  @view.draw_port_name cport, flow_flag = true
+                  @view.draw_port_name eport, flow_flag = true
                   # 接続されている次のセルを取得する
                   break if eport.get_cell.get_name.to_s != path["CellName"] || eport.get_cell.get_celltype.get_name.to_s != path["Celltype"]
                   current_tmcell = eport.get_cell
@@ -288,7 +296,12 @@ Structure of Palette Window
                 # JSON の記述形式では最後のセルから自分のセルにつながる部分はないため、最後のセルにつながる join は個別で出力する
                 cports = current_tmcell.get_cports[call_port.to_sym]
                 join = cports.get_join
+                # @view.drawCell current_tmcell, flow_flag = true
+                @view.drawCellRectDirect current_tmcell, flow_flag = true
                 @view.drawJoin join, flow_flag = true
+                @view.draw_entry_port_triangle join.get_eport, flow_flag = true
+                @view.draw_port_name cports, flow_flag = true
+                @view.draw_port_name join.get_eport, flow_flag = true
 
               end
             end

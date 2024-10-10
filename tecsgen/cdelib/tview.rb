@@ -357,7 +357,7 @@ module TECSCDE
       #----- draw joins -----#
       # draw linew before draw texts (if other colors are used, it is better to lay texts upper side)
       @model.get_join_list.each{  |join|
-        drawJoin join, flow_flag = false
+        drawJoin join
       }
 
       refresh_canvas
@@ -451,7 +451,7 @@ module TECSCDE
 
     #------ Draw Contents on CANVAS  ------#
 
-    def drawCell cell
+    def drawCell cell, flow_flag = false
       #----- calc position in dot -----#
       x, y, w, h = cell.get_geometry
       x1 = mm2dot x
@@ -479,6 +479,10 @@ module TECSCDE
         @cairo_context_target.set_source_color @@colors[ Color_editable ]
       end
 
+      if flow_flag
+        @cairo_context_target.set_source_color @@colors[ Color_flow ]
+      end
+
       #----- draw cell rect -----#
 #      @drawTarget.draw_rectangle( @canvasGc, false, x1, y1, w1, h1 )
 #      @cairo_context_target.rectangle(x1, y1, w1, h1)
@@ -486,13 +490,8 @@ module TECSCDE
       @cairo_context_target.set_line_width(1)
       @cairo_context_target.stroke
 
-      gap = mm2dot GapActive
-      gap = 2 if gap < 2  # if less than 2 dots, let gap 2 dots
       if cell.get_celltype && cell.get_celltype.is_active? then
-#        @drawTarget.draw_rectangle( @canvasGc, false, x1 + gap, y1 + gap, w1 - 2 * gap, h1 - 2 * gap )
-        @cairo_context_target.rectangle(x1 + gap + 0.5, y1 + gap + 0.5, w1 - 2 * gap, h1 - 2 * gap)
-        @cairo_context_target.set_line_width(1)
-        @cairo_context_target.stroke
+        drawActiveCellInnerRectDirect cell
       end
 
       #----- draw entry ports triangle -----#
@@ -576,12 +575,17 @@ module TECSCDE
       @cairo_context_target.set_source_color @@colors[ color_name ]
     end
 
-    def draw_entry_port_triangle( eport )
+    def draw_entry_port_triangle( eport, flow_flag = false )
       triangle_1_2 = mm2dot Triangle_Len / 2
       triangle_hi  = mm2dot Triangle_Height
       x1, y1 = eport.get_position
       xe = mm2dot x1
       ye = mm2dot y1
+
+      if flow_flag
+        @cairo_context_target.set_source_color @@colors[ Color_flow ]
+      end
+
       case eport.get_edge_side
       when TECSModel::EDGE_TOP
         points = [[xe-triangle_1_2, ye], [xe+triangle_1_2, ye], [xe, ye+triangle_hi]]
@@ -598,10 +602,15 @@ module TECSCDE
       @cairo_context_target.fill
     end
 
-    def draw_port_name( port )
+    def draw_port_name( port, flow_flag = false )
       x1, y1 = port.get_position
       xp = mm2dot x1
       yp = mm2dot y1
+
+      if flow_flag
+        @cairo_context_target.set_source_color @@colors[ Color_flow ]
+      end
+
       case port.get_edge_side
       when TECSModel::EDGE_TOP
         alignment = ALIGN_LEFT
@@ -647,19 +656,56 @@ module TECSCDE
       }
     end
 
+    def drawActiveCellInnerRectDirect cell, flow_flag = false
+      #----- calc position in dot -----#
+      x, y, w, h = cell.get_geometry
+      x1 = mm2dot x
+      y1 = mm2dot y
+      x2 = mm2dot( x + w )
+      y2 = mm2dot( y + h )
+      w1 = mm2dot( w )
+      h1 = mm2dot( h )
+
+      #----- setup color -----#
+      if ! cell.is_editable?
+        #@canvasGc.set_foreground @@colors[ Color_uneditable ]
+        @cairo_context_target.set_source_color @@colors[ Color_uneditable ]
+      else
+        #@canvasGc.set_foreground @@colors[ Color_editable ]
+        @cairo_context_target.set_source_color @@colors[ Color_editable ]
+      end
+        
+      if flow_flag
+        @cairo_context_target.set_source_color @@colors[ Color_flow ]
+      end
+
+      gap = mm2dot GapActive
+      gap = 2 if gap < 2  # if less than 2 dots, let gap 2 dots
+
+      #@drawTarget.draw_rectangle( @canvasGc, false, x1 + gap, y1 + gap, w1 - 2 * gap, h1 - 2 * gap )
+      @cairo_context_target.rectangle(x1 + gap + 0.5, y1 + gap + 0.5, w1 - 2 * gap, h1 - 2 * gap)
+      @cairo_context_target.set_line_width(1)
+      @cairo_context_target.stroke
+
+    end
+
     #=== TView#drawCellRectDirect
     # directly draw on Window hilited cell rect
-    def drawCellRectDirect cell
+    def drawCellRectDirect cell, flow_flag = false
       drawTargetDirect
 
       #----- set line width -----#
-      canvasGC_set_line_width 2
-      # @cairo_context_target.set_line_width(2)
+      # canvasGC_set_line_width 2
+      @cairo_context_target.set_line_width(2)
 
       #----- if uneditable change color ------#
       if ! cell.is_editable?
-        @canvasGc.set_foreground( @@colors[ Color_uneditable ] )
-        # @cairo_context_target.set_source_color( @@colors[ Color_uneditable ] )
+        # @canvasGc.set_foreground( @@colors[ Color_uneditable ] )
+        @cairo_context_target.set_source_color( @@colors[ Color_uneditable ] )
+      end
+
+      if flow_flag
+        @cairo_context_target.set_source_color( @@colors[ Color_flow ] )
       end
 
       #----- calc position in dot -----#
@@ -670,9 +716,9 @@ module TECSCDE
       h1 = mm2dot( h )
       
       #----- draw cell rect -----#
-      @gdkWindow.draw_rectangle( @canvasGc, false, x1, y1, w1, h1 )
-      # @cairo_context_target.rectangle(x1, y1, w1, h1)
-      # @cairo_context_target.stroke
+      # @gdkWindow.draw_rectangle( @canvasGc, false, x1, y1, w1, h1 )
+      @cairo_context_target.rectangle(x1, y1, w1, h1)
+      @cairo_context_target.stroke
 
       #----- reset GC, line width -----#
       canvasGC_reset
@@ -717,7 +763,7 @@ module TECSCDE
       drawTargetReset
     end
 
-    def drawJoin join, flow_flag
+    def drawJoin join, flow_flag = false
       cport, eport, bars = join.get_ports_bars
       x, y = cport.get_position
       xm = mm2dot( x ) + 0.5
