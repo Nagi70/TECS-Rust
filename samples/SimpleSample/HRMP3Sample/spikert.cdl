@@ -1,0 +1,97 @@
+import(<kernel_rs.cdl>);
+
+typedef int_t   PupDirectionT;
+typedef int_t   PbioPortIdT;
+typedef int_t   PbioErrorT;
+typedef int_t   Option_Ref_a_mut__PupMotorT__;
+typedef int_t   Option_Ref_a_mut__PupUltrasonicSensorT__;
+typedef int_t   bool;
+
+signature sMotor {
+    void set_motor_ref( void );
+    void setup( [in] PbioDirectionT positive_direction, [in] bool reset_count );
+    void set_speed( [in] int32_t speed );
+    void stop( void );
+};
+
+signature sSensor {
+    void set_device_ref( void );
+    void get_distance( [out] int32_t* distance );
+    void light_on( void );
+    void light_set( [in] int32_t bv1, [in] int32_t bv2, [in] int32_t bv3, [in] int32_t bv4 );
+    void light_off( void );
+};
+
+signature sPowerdownM{
+    void powerdown( [in] Option_Ref_a_mut__PupMotorT__ motor );
+};
+
+signature sPowerdownS{
+    void powerdown( [in] Option_Ref_a_mut__PupUltrasonicSensorT__ ult );
+};
+
+[generate (RustGenPlugin, "lib")]
+celltype tMotor {
+    call sPowerdownM cPowerdown;
+    [inline] entry sMotor eMotor;
+    attr {
+        PbioPortIdT port = C_EXP("PbioPortIdT::PBIO_PORT_ID_$port$");
+    };
+    var {
+       Option_Ref_a_mut__PupMotorT__ motor = C_EXP("None");
+    };
+};
+
+[generate (RustGenPlugin, "lib")]
+celltype tSensor {
+    call sPowerdownS cPowerdown;
+    [inline] entry sSensor eSensor;
+    attr{
+        PbioPortIdT port = C_EXP("PbioPortIdT::PBIO_PORT_ID_$port$");
+    };
+    var {
+        // RS_EXPもしくは，両方，もしくは別の表現，NONTECS_EXPみたいな
+        Option_Ref_a_mut__PupUltrasonicSensorT__ ult = C_EXP("None");
+    };
+};
+
+[generate (RustGenPlugin, "lib")]
+celltype tTaskbody {
+    [inline] entry sTaskBody eTaskbody;
+    call sSensor cSensor;
+    call sMotor cMotor;
+};
+
+[generate (RustGenPlugin, "lib")]
+celltype tPowerdown {
+    [inline] entry sPowerdownM ePowerdownM;
+    [inline] entry sPowerdownS ePowerdownS;
+};
+
+cell tMotor Motor {
+    cPowerdown = Powerdown.ePowerdownM;
+    port = C_EXP("PbioPortIdT::PBIO_PORT_ID_A");
+};
+
+cell tSensor Sensor {
+    cPowerdown = Powerdown.ePowerdownS;
+    port = C_EXP("PbioPortIdT::PBIO_PORT_ID_B");
+};
+
+cell tTaskbody Taskbody {
+    cMotor = Motor.eMotor;
+    cSensor = Sensor.eSensor;
+};
+
+cell tPowerdown Powerdown{
+};
+
+[generate( ItronrsGenPlugin, "lib")]
+cell tTaskRs Task{
+    cTaskBody = Taskbody.eTaskbody;
+    id = C_EXP("TASK1");
+	taskRef = C_EXP("unsafe{TaskRef::from_raw_nonnull(NonZeroI32::new(TASK1).unwrap())}");
+    attribute = C_EXP("TA_ACT");
+    stackSize = 4096;
+    priority = 7;
+};
