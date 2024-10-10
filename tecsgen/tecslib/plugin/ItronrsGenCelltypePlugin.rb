@@ -124,7 +124,7 @@ class ItronrsGenCelltypePlugin < RustGenCelltypePlugin
     # セル構造体の変数フィールドの定義を生成
     def gen_rust_cell_structure_variable file, celltype
         if celltype.get_var_list.length != 0 then
-            file.print "\tvariable Sync#{get_rust_celltype_name(celltype)}Var"
+            file.print "\tvariable: Sync#{get_rust_celltype_name(celltype)}Var"
             celltype.get_var_list.each{ |var|
                 var_type_name = var.get_type.get_type_str
                 if check_lifetime_annotation(var_type_name) then

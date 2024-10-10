@@ -233,12 +233,19 @@ Structure of Palette Window
             @sub_mode = :SM_EDIT_CELL_NAME
           end
         elsif object.kind_of?( TECSModel::TmCell )
-          json_file_path = File.join($gen, "tecsflow.json")
-          if File.exist?(json_file_path)
+          puts "#{$gen}/../#{$target}.cdl"
+          puts "cdl true" if File.exist?($gen + "/../#{$target}.cdl")
+          if File.exist?($gen + "/tecsflow.json") && File.exist?($gen + "/../#{$target}.cdl")
             puts "object: #{object.get_name}"
 
-            require 'json'
-            json_data = JSON.parse(File.read(json_file_path))
+            cdl_time = File.mtime($gen + "/../#{$target}.cdl")
+            json_time = File.mtime($gen + "/tecsflow.json")
+
+            json_data = nil
+            if cdl_time < json_time
+              require 'json'
+              json_data = JSON.parse(File.read($gen + "/tecsflow.json"))
+            end
 
             object_json = nil
 
@@ -289,7 +296,7 @@ Structure of Palette Window
             @view.refresh_canvas
 
           else
-            puts "#{json_file_path} does not exist."
+            puts "tecsflow.json does not exist."
           end
           @sub_mode = :SM_MOVING_CELL_BAR
           # p "FOUND Cell or Bar"

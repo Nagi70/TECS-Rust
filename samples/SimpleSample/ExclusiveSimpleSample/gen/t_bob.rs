@@ -12,7 +12,7 @@ where
 	c_carol: &'a T,
 	id: i32,
 	variable SyncTBobVar,
-	mutex_ref: &'a TECSMutexRef<'a>,
+	mutex_ref: &'a (dyn LockableForMutex + Sync + Send),
 }
 
 pub struct TBobVar{
@@ -34,7 +34,7 @@ pub struct EBob2ForTBob<'a>{
 }
 
 pub struct MutexGuardForTBob<'a>{
-	mutex_ref: &'a TECSMutexRef<'a>,
+	mutex_ref: &'a (dyn LockableForMutex + Sync + Send),
 }
 
 #[link_section = ".rodata"]
@@ -42,18 +42,13 @@ pub static BOB: TBob<ECarolForTCarol> = TBob {
 	c_carol: &ECAROLFORCAROL,
 	id: 1,
 	variable: &BOBVAR,
-	mutex_ref: &BOB_MUTEX_REF,
+	mutex_ref: &DUMMY_MUTEX_REF,
 };
 
 pub static BOBVAR: SyncTBobVar = SyncTBobVar {
 	unsafe_var: UnsafeCell::new(TBobVar {
 		count: 0,
 	}),
-};
-
-#[link_section = ".rodata"]
-pub static BOB_MUTEX_REF: TECSMutexRef = TECSMutexRef{
-	inner: unsafe{MutexRef::from_raw_nonnull(NonZero::new(TECS_RUST_MUTEX_2).unwrap())},
 };
 
 #[link_section = ".rodata"]
@@ -82,7 +77,7 @@ pub static BOB2VAR: SyncTBobVar = SyncTBobVar {
 
 #[link_section = ".rodata"]
 pub static BOB2_MUTEX_REF: TECSMutexRef = TECSMutexRef{
-	inner: unsafe{MutexRef::from_raw_nonnull(NonZero::new(TECS_RUST_MUTEX_3).unwrap())},
+	inner: unsafe{MutexRef::from_raw_nonnull(NonZero::new(TECS_RUST_MUTEX_2).unwrap())},
 };
 
 #[link_section = ".rodata"]
