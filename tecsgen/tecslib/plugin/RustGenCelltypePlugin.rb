@@ -651,7 +651,7 @@ class RustGenCelltypePlugin < CelltypePlugin
         celltype.get_port_list.each{ |port|
             if port.get_port_type == :CALL then
                 callee_port_name = camel_case(snake_case(cell.get_join_list.get_item(port.get_name).get_port_name.to_s))
-                callee_cell_name = cell.get_join_list.get_item(port.get_name).get_cell_name.to_s
+                callee_cell_name = cell.get_join_list.get_item(port.get_name).get_cell.get_global_name.to_s
                 file.print "\t#{snake_case(port.get_name.to_s)}: &#{callee_port_name.upcase}FOR#{callee_cell_name.upcase},\n"
             end
         }

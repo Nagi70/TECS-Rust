@@ -333,7 +333,8 @@ class Region < Namespace
                       @name, @class_type.get_name, class_type.get_name )
         end
       else
-        @class_type = ClassType.new( self, class_type.get_name, :root, @node_root )
+        # @class_type = ClassType.new( self, class_type.get_name, :root, @node_root )
+        @class_type = ClassType.new( self, class_type.get_name, :global, @node_root )
         @class_type.create_class_plugin
       end
     elsif @class_type == nil then

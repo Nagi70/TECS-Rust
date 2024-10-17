@@ -44,7 +44,8 @@ require_tecsgen_lib "lib/GenAttMod.rb"
 # 各メソッドの役割りは、ClassPlugin.rb を参照のこと
 # HRPカーネル用ドメインプラグイン
 class FMPPlugin < ClassPlugin
-#@class1::String: クラス名
+#@class1::String: 処理単位のクラス名
+#@class2::String: 非処理単位のクラス名
   include GenAttMod
 
   @@class_info = nil
@@ -74,13 +75,27 @@ class FMPPlugin < ClassPlugin
     @name   = name
     @region = region
     @name   = name      # FMP
+    puts "FMPPlugin: initialize: region=#{@region.get_name}, name=#{@name}, option=#{option}"
     # @class1 = option1.to_sym
-    # @class1 = option2.to_sym
+    # @class2 = option2.to_sym
     @class1 = option.to_sym
+    @class2 = option.to_sym
     attr1 = @@class_info[ @class1 ]
     if attr1 == nil then
       cdl_error( "FMP9999 $1 is not acceptable class in TECS", @class1.to_s )
       return
+    end
+    attr2 = @@class_info[ @class2 ]
+    if attr2 == nil then
+      cdl_error( "FMP9999 $1 is not acceptable class in TECS", @class2.to_s )
+      return
+    end
+    if attr1[:locality] != "global" && attr2[:locality] != "global" && attr1[:processorID] != attr2[:processorID] then
+      cdl_error( "FMP9999 processor ID mismatch between $1 & $2", @class1.to_s, @class2.to_s )
+    elsif attr1[:locality]  == "global" && attr2[:locality]  != "global" then
+      cdl_error( "HRMP9999 class for processing unit is global but class for non-processing unit is not global" )
+    elsif attr1[:locality]  != "only" && attr2[:locality]  == "only" then
+      cdl_error( "HRMP9999 class for processing unit '$1' is wider than class for non-processing unit '$2'", @class1.to_s, @class2.to_s )
     end
  end
 
@@ -166,7 +181,6 @@ class FMPPlugin < ClassPlugin
           attr[ :class_name ] = cls[ :class_name_in_kernel ]
         end
       }
-      @@class_info[ :root ] = {:processorID=>0, :class_name=>"root", :locality=>"root"}
     end
   end
 
@@ -180,10 +194,10 @@ class FMPPlugin < ClassPlugin
     end
   end
   def get_NPU_kernel_class
-    if @@class_info[ @class1 ] then
-      @@class_info[ @class1 ][ :class_name ]
+    if @@class_info[ @class2 ] then
+      @@class_info[ @class2 ][ :class_name ]
     else
-      @class1.to_s
+      @class2.to_s
     end
   end
 
@@ -191,7 +205,7 @@ class FMPPlugin < ClassPlugin
     @@class_info[ @class1 ]
   end
   def get_NPU_attr
-    @@class_info[ @class1 ]
+    @@class_info[ @class2 ]
   end
   
   def self.gen_post_code file

@@ -90,7 +90,7 @@ cell tPowerdown Powerdown{
 cell tTaskRs Task{
     cTaskBody = Taskbody.eTaskbody;
     id = C_EXP("TASK1");
-	taskRef = C_EXP("unsafe{TaskRef::from_raw_nonnull(NonZeroI32::new(TASK1).unwrap())}");
+	task_ref = C_EXP("unsafe{TaskRef::from_raw_nonnull(NonZeroI32::new(TASK1).unwrap())}");
     attribute = C_EXP("TA_ACT");
     stackSize = 4096;
     priority = 7;

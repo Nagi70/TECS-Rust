@@ -1,12 +1,13 @@
 /*
- *  TOPPERS/ASP Kernel
+ *  TOPPERS/FMP Kernel
  *      Toyohashi Open Platform for Embedded Real-Time Systems/
- *      Advanced Standard Profile Kernel
+ *      Multi-Processor
  * 
  *  Copyright (C) 2015,2016 by Ushio Laboratory
  *              Graduate School of Engineering Science, Osaka Univ., JAPAN
- *  Copyright (C) 2015-2020 by Embedded and Real-Time Systems Laboratory
+ *  Copyright (C) 2015-2018 by Embedded and Real-Time Systems Laboratory
  *              Graduate School of Information Science, Nagoya Univ., JAPAN
+ *  Copyright (C) 2019 by TOPPERS Project
  * 
  *  上記著作権者は，以下の(1)〜(4)の条件を満たす場合に限り，本ソフトウェ
  *  ア（本ソフトウェアを改変したものを含む．以下同じ）を使用・複製・改
@@ -37,11 +38,11 @@
  *  アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
  *  の責任を負わない．
  * 
- *  $Id: kernel.cdl 1437 2020-05-20 12:12:16Z ertl-hiro $
+ *  $Id: kernel.cdl 285 2018-03-21 02:55:49Z ertl-hiro $
  */
 
 /*
- *		TOPPERS/ASPカーネルオブジェクト コンポーネント記述ファイル
+ *		TOPPERS/FMPカーネルオブジェクト コンポーネント記述ファイル
  */
 
 /*
@@ -50,58 +51,15 @@
 import_C("tecs_kernel.h");
 
 typedef	int_t	TaskRef;
-typedef	int_t	MutexRef;
-
-
-/*
- *  タスク本体のシグニチャ
- */
-signature sTaskBody {
-	void	main(void);
-};
-
-/*
- *  タスク操作のシグニチャ（タスクコンテキスト用）
- */
-signature sTask {
-	ER		activate(void);
-	ER_UINT	cancelActivate(void);
-	ER		getTaskState([out] STAT *p_tskstat);
-	ER		changePriority([in] PRI priority);
-	ER		getPriority([out] PRI *p_priority);
-	ER		refer([out] T_RTSK *pk_taskStatus);
-
-	ER		wakeup(void);
-	ER_UINT	cancelWakeup(void);
-	ER		releaseWait(void);
-	ER		suspend(void);
-	ER		resume(void);
-
-	ER		raiseTerminate(void);
-	ER		terminate(void);
-};
-
-/*
- *  タスク操作のシグニチャ（非タスクコンテキスト用）
- */
-[context("non-task")]
-signature siTask {
-	ER		activate(void);
-	ER		wakeup(void);
-	ER		releaseWait(void);
-};
-
-/*
- *  タイムイベント通知を受け取るためのシグネチャ
- */
-[context("non-task")]
-signature siNotificationHandler {
-};
+//typedef	int_t	MutexRef;
 
 /*
  *  タスクのセルタイプ
+ *
+ *  タスクはいずれかの保護ドメインに所属させなければならない．
  */
-[active]
+//[active, generate(FMPObjectPlugin, "TASK"), idx_is_id]
+[active, generate(FMPObjectPlugin, "TASK")]
 celltype tTaskRs {
 	[inline] entry	sTask	eTask;
 	[inline] entry	siTask	eiTask;
@@ -111,62 +69,17 @@ celltype tTaskRs {
 	[inline] entry	siNotificationHandler	eiWakeUpNotificationHandler;
 
 	attr {
-		[omit]ID		id = C_EXP("TSKID_$id$");
-		//TaskRef			task = C_EXP("TSKID_$id$_REF");
+		[omit]ID				id = C_EXP("TSKID_$id$");
 		TaskRef			task_ref = C_EXP("unsafe{TaskRef::from_raw_nonnull(NonZeroI32::new(TSKID_$id$).unwrap())}");
 		[omit] ATR		attribute = C_EXP("TA_NULL");
 		[omit] PRI		priority;
 		[omit] size_t	stackSize;
+		[omit] size_t	systemStackSize = 0;
+						/* 0を，未定義を示す値として使っている */
 	};
 
-	factory {
-		write("tecsgen.cfg",
-				"CRE_TSK(%s, { %s, 0, tTask_start, %s, %s, NULL });",
-									id, attribute, priority, stackSize);
-		//write("kernel_obj_ref.rs", 
-		//		"static %s_REF:TaskRef = unsafe{TaskRef::from_raw_nonnull(NonZeroI32::new(%s).unwrap())};",
-		//							id, id);
-
-	};
 	FACTORY {
 		write("tecsgen.cfg", "#include \"$ct$_tecsgen.h\"");
-		write("$ct$_factory.h", "#include \"kernel_cfg.h\"");
-		//write("lib.rs", "mod kernel_cfg;");
-		//write("lib.rs", "mod kernel_obj_ref;");
-		//write("kernel_obj_ref.rs", "use crate::kernel_cfg::*;");
-	};
-};
-
-/*
- *  ミューテックス操作のシグニチャ（タスクコンテキスト用）
- */
-signature sMutex {
-	ER		lock(void);  // lock
-	ER		lockPolling(void);  // try_lock
-	ER		lockTimeout([in] TMO timeout);  // lock_timeout
-	ER		unlock(void);  // unlock
-	ER		initialize(void);  // initialize
-	ER		refer([out] T_RMTX *pk_mutexStatus);  // ref_mtx
-};
-
-/*
- *  ミューテックスのセルタイプ
- */
-celltype tMutexRs {
-	[inline] entry	sMutex	eMutex;
-
-	attr {
-		[omit] ID		id = C_EXP("MTXID_$id$");
-		[omit] ATR		attribute = C_EXP("TA_NULL");
-		[omit] PRI		ceilingPriority;
-		MutexRef		muteRef = C_EXP("unsafe{MutexRef::from_raw_nonnull(NonZeroI32::new(MTXID_$id$).unwrap())}");
-	};
-
-	factory {
-		write("tecsgen.cfg", "CRE_MTX(%s, { %s, %s });",
-								id, attribute, ceilingPriority);
-	};
-	FACTORY {
 		write("$ct$_factory.h", "#include \"kernel_cfg.h\"");
 	};
 };
