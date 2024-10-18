@@ -22,6 +22,7 @@ region rProcessor1Symmetric{
         task_ref = C_EXP("unsafe{TaskRef::from_raw_nonnull(NonZeroI32::new(TSKID_1_1).unwrap())}");
         priority = C_EXP("MID_PRIORITY");
         stackSize = C_EXP("STACK_SIZE");
+        attribute = C_EXP("TA_ACT");
     };
 
     [generate (RustGenPlugin, "lib")]
@@ -41,6 +42,7 @@ region rProcessor2Symmetric{
         task_ref = C_EXP("unsafe{TaskRef::from_raw_nonnull(NonZeroI32::new(TSKID_2_1).unwrap())}");
         priority = C_EXP("MID_PRIORITY");
         stackSize = C_EXP("STACK_SIZE");
+        attribute = C_EXP("TA_ACT");
     };
 
     [generate (RustGenPlugin, "lib")]
