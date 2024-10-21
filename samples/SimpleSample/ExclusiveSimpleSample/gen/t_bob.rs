@@ -11,7 +11,7 @@ where
 {
 	c_carol: &'a T,
 	id: i32,
-	variable SyncTBobVar,
+	variable: SyncTBobVar,
 	mutex_ref: &'a (dyn LockableForMutex + Sync + Send),
 }
 

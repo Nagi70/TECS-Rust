@@ -13,7 +13,7 @@ where
 	c_bob: &'a T,
 	c_bob2: &'a U,
 	id: i32,
-	variable SyncTAliceVar,
+	variable: SyncTAliceVar,
 	mutex_ref: &'a TECSMutexRef<'a>,
 }
 

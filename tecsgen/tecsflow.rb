@@ -1104,7 +1104,7 @@ module TECSFlow
     cell_list.each do |cell|
       cell.get_celltype.get_port_list.each do |port|
         next if port.get_port_type == :ENTRY
-        callee_cell_name = cell.get_join_list.get_item(port.get_name).get_cell_name.to_s
+        callee_cell_name = cell.get_join_list.get_item(port.get_name).get_cell.get_name.to_s
 
         # 呼び先のセルがアクセスされるアクティブセルの数をカウント
         callee_cell_count = 0
@@ -1129,14 +1129,31 @@ module TECSFlow
       end
     end
 
+    # 排他制御がかかっているセルのみを抽出
     exclusive_control_cells = accessed_cell_hash.select{ |k, v| v["ExclusiveControl"] == true }
 
     graph = Graph.new
 
-    exclusive_control_cells.each do |cell_k, task_v|
-      task_v.each do |tsk_k, tsk_v|
-        next if tsk_k == "ExclusiveControl"
-        graph.add_edge(cell_k, tsk_k) if tsk_v
+    # exclusive_control_cells.each do |cell_k, task_v|
+    #   task_v.each do |tsk_k, tsk_v|
+    #     next if tsk_k == "ExclusiveControl"
+    #     graph.add_edge(cell_k, tsk_k) if tsk_v
+    #   end
+    # end
+
+    exclusive_control_cells.each do |cell_name, activetask_v|
+      json_list.each do |entry|
+        #TODO: 同じ名前のセルが存在する場合、正しいセルかどうかを判定する機能を実装する必要がある
+        next if entry[:Cell].to_s != cell_name.to_s
+        entry[:Accessed].each do |task|
+          current_cell_name = task[:ActiveCell].to_s
+          task[:Path].each do |path|
+            next if exclusive_control_cells[path[:CellName].to_s] == nil
+            graph.add_edge(current_cell_name, path[:CellName].to_s)
+            current_cell_name = path[:CellName].to_s
+          end
+          graph.add_edge(current_cell_name, cell_name)
+        end
       end
     end
 

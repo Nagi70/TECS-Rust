@@ -6,7 +6,7 @@ use spin::Mutex;
 pub struct TCarol<'a>
 {
 	id: i32,
-	variable SyncTCarolVar,
+	variable: SyncTCarolVar,
 }
 
 pub struct TCarolVar{
