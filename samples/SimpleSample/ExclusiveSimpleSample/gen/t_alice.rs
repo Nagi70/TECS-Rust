@@ -35,7 +35,7 @@ pub struct EAlice2ForTAlice<'a>{
 	pub cell: &'a TAlice<'a, EBob1ForTBob<'a>, EBob1ForTBob<'a>>,
 }
 
-pub struct MutexGuardForTAlice<'a>{
+pub struct LockGuardForTAlice<'a>{
 	mutex_ref: &'a TECSMutexRef<'a>,
 }
 
@@ -69,21 +69,21 @@ pub static EALICE2FORALICE: EAlice2ForTAlice = EAlice2ForTAlice {
 	cell: &ALICE,
 };
 
-impl Drop for MutexGuardForTAlice {
+impl Drop for LockGuardForTAlice {
 	fn drop(&mut self){
 		self.mutex_ref.unlock();
 	}
 }
 
 impl<T: SHello2, U: SHello2> TAlice<'_, T, U> {
-	pub fn get_cell_ref(&'static self) -> (&T, &U, &i32, &mut TAliceVar, MutexGuardForTAlice) {
+	pub fn get_cell_ref(&'static self) -> (&T, &U, &i32, &mut TAliceVar, LockGuardForTAlice) {
 		self.mutex_ref.lock();
 		(
 			self.c_bob,
 			self.c_bob2,
 			&self.id,
 			unsafe{&mut *self.variable.unsafe_var.get()},
-			MutexGuardForTAlice{
+			LockGuardForTAlice{
 				mutex_ref: self.mutex_ref,
 			}
 		)

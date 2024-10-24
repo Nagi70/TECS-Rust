@@ -207,7 +207,7 @@ class ItronrsGenCelltypePlugin < RustGenCelltypePlugin
 
         return if result == "dummy"
 
-        file.print "pub struct MutexGuardFor#{get_rust_celltype_name(celltype)}<'a>{\n"
+        file.print "pub struct LockGuardFor#{get_rust_celltype_name(celltype)}<'a>{\n"
 
         if result == "dyn" then
             file.print "\tmutex_ref: &'a (dyn LockableForMutex + Sync + Send),\n"
@@ -417,11 +417,11 @@ class ItronrsGenCelltypePlugin < RustGenCelltypePlugin
                 if celltype.get_var_list.length != 0 then
                     result = check_gen_dyn_for_mutex_ref celltype
                     if result == "dummy" then
-                        return_tuple_type_list.push("&TECSDummyMutexGuard")
-                        return_tuple_list.push("&DUMMY_MUTEX_GUARD")
+                        return_tuple_type_list.push("&TECSDummyLockGuard")
+                        return_tuple_list.push("&DUMMY_LOCK_GUARD")
                     else
-                        return_tuple_type_list.push("MutexGuardFor#{get_rust_celltype_name(celltype)}")
-                        return_tuple_list.push("MutexGuardFor#{get_rust_celltype_name(celltype)}{\n\t\t\t\tmutex_ref: self.mutex_ref,\n\t\t\t}")
+                        return_tuple_type_list.push("LockGuardFor#{get_rust_celltype_name(celltype)}")
+                        return_tuple_list.push("LockGuardFor#{get_rust_celltype_name(celltype)}{\n\t\t\t\tmutex_ref: self.mutex_ref,\n\t\t\t}")
                     end
                 end
 
@@ -561,7 +561,7 @@ class ItronrsGenCelltypePlugin < RustGenCelltypePlugin
                 break
             end
         }
-        file.print " Drop for MutexGuardFor#{get_rust_celltype_name(celltype)}"
+        file.print " Drop for LockGuardFor#{get_rust_celltype_name(celltype)}"
         celltype.get_var_list.each{ |var|
             var_type_name = var.get_type.get_type_str
             if check_lifetime_annotation(var_type_name) then
@@ -675,7 +675,7 @@ use itron::mutex::{MutexRef, LockError, UnlockError};
 use crate::print;
 use crate::print::*;
 
-pub type TECSDummyMutexGuard = u32;
+pub type TECSDummyLockGuard = u32;
 
 pub trait LockableForMutex {
     fn lock(&self);
@@ -690,7 +690,7 @@ pub struct TECSDummyMutexRef{
 }
 
 #[link_section = ".rodata"]
-pub static DUMMY_MUTEX_GUARD: TECSDummyMutexGuard = 0;
+pub static DUMMY_MUTEX_GUARD: TECSDummyLockGuard = 0;
 
 impl LockableForMutex for TECSMutexRef<'_>{
     #[inline]
