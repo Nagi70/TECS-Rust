@@ -1,0 +1,69 @@
+signature sHello {
+    void hello(void);
+};
+
+signature sTaskbody {
+    void main(void);
+};
+
+[active]
+celltype tTask{
+    call sTaskbody cTaskbody;
+    attr {
+        int32_t id;
+    };
+};
+
+[generate(ItronrsGenPlugin,"lib")]
+celltype tTaskbody {
+    call sHello cPerson1;
+    call sHello cPerson2;
+    entry sTaskbody eTaskbody;
+};
+
+[generate(ItronrsGenPlugin,"lib")]
+celltype tAlice {
+    call sHello cPerson;
+    entry sHello eAlice1;
+    entry sHello eAlice2;
+    entry sHello eAlice3;
+    attr{
+        int32_t id;
+    };
+
+    var{
+        int32_t count = 0;
+    };
+};
+
+[generate(ItronrsGenPlugin,"lib")]
+cell tTask Task1 {
+    cTaskbody = Taskbody1.eTaskbody;
+    id = 0;
+};
+
+[generate(ItronrsGenPlugin,"lib")]
+cell tTask Task2 {
+    cTaskbody = Taskbody2.eTaskbody;
+    id = 0;
+};
+
+cell tTaskbody Taskbody1 {
+    cPerson1 = Alice1.eAlice1;
+    cPerson2 = Alice2.eAlice1;
+};
+
+cell tTaskbody Taskbody2 {
+    cPerson1 = Alice1.eAlice2;
+    cPerson2 = Alice2.eAlice2;
+};
+
+cell tAlice Alice1 {
+    cPerson = Alice2.eAlice3;
+    id = 0;
+};
+
+cell tAlice Alice2 {
+    cPerson = Alice1.eAlice3;
+    id = 0;
+};

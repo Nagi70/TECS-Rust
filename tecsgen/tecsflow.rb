@@ -1129,6 +1129,8 @@ module TECSFlow
       end
     end
 
+    puts "accessed_cell_hash: #{accessed_cell_hash}"
+
     # 排他制御がかかっているセルのみを抽出
     exclusive_control_cells = accessed_cell_hash.select{ |k, v| v["ExclusiveControl"] == true }
 

@@ -636,7 +636,7 @@ class ItronrsGenCelltypePlugin < RustGenCelltypePlugin
                         }
                         if celltype.get_var_list.length != 0 then
                             tuple_name_list.push "var"
-                            tuple_name_list.push "_mg"
+                            tuple_name_list.push "_lg"
                         end
 
                         if tuple_name_list.length != 1 then
