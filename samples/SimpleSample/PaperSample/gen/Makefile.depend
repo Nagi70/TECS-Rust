@@ -1,0 +1,30 @@
+# Celltype: tTaskRs  #_MDEP_#
+$(_TECS_OBJ_DIR)tTaskRs_tecsgen.o : tTaskRs_tecsgen.c $(GEN_DIR)/global_tecsgen.h $(GEN_DIR)/sTaskBody_tecsgen.h $(GEN_DIR)/sTask_tecsgen.h $(GEN_DIR)/siTask_tecsgen.h $(GEN_DIR)/tTaskRs_factory.h $(GEN_DIR)/tTaskRs_tecsgen.h tTaskRs_inline.h
+$(_TECS_OBJ_DIR)tTaskRs_templ.o : tTaskRs_templ.c $(GEN_DIR)/global_tecsgen.h $(GEN_DIR)/sTaskBody_tecsgen.h $(GEN_DIR)/sTask_tecsgen.h $(GEN_DIR)/siTask_tecsgen.h $(GEN_DIR)/tTaskRs_factory.h $(GEN_DIR)/tTaskRs_tecsgen.h tTaskRs_inline.h
+$(_TECS_OBJ_DIR)tTaskRs.o : tTaskRs.c $(GEN_DIR)/global_tecsgen.h $(GEN_DIR)/sTaskBody_tecsgen.h $(GEN_DIR)/sTask_tecsgen.h $(GEN_DIR)/siTask_tecsgen.h $(GEN_DIR)/tTaskRs_factory.h $(GEN_DIR)/tTaskRs_tecsgen.h tTaskRs_inline.h
+
+# Celltype: tTaskbody1  #_MDEP_#
+$(_TECS_OBJ_DIR)tTaskbody1_tecsgen.o : tTaskbody1_tecsgen.c  $(GEN_DIR)/tManager_tecsgen.h  $(GEN_DIR)/tMotor_tecsgen.h  tMotor_inline.h $(GEN_DIR)/global_tecsgen.h $(GEN_DIR)/sManage_tecsgen.h $(GEN_DIR)/sMotor_tecsgen.h $(GEN_DIR)/sTaskBody_tecsgen.h $(GEN_DIR)/tTaskbody1_factory.h $(GEN_DIR)/tTaskbody1_tecsgen.h
+$(_TECS_OBJ_DIR)tTaskbody1_templ.o : tTaskbody1_templ.c  $(GEN_DIR)/tManager_tecsgen.h  $(GEN_DIR)/tMotor_tecsgen.h  tMotor_inline.h $(GEN_DIR)/global_tecsgen.h $(GEN_DIR)/sManage_tecsgen.h $(GEN_DIR)/sMotor_tecsgen.h $(GEN_DIR)/sTaskBody_tecsgen.h $(GEN_DIR)/tTaskbody1_factory.h $(GEN_DIR)/tTaskbody1_tecsgen.h
+$(_TECS_OBJ_DIR)tTaskbody1.o : tTaskbody1.c  $(GEN_DIR)/tManager_tecsgen.h  $(GEN_DIR)/tMotor_tecsgen.h  tMotor_inline.h $(GEN_DIR)/global_tecsgen.h $(GEN_DIR)/sManage_tecsgen.h $(GEN_DIR)/sMotor_tecsgen.h $(GEN_DIR)/sTaskBody_tecsgen.h $(GEN_DIR)/tTaskbody1_factory.h $(GEN_DIR)/tTaskbody1_tecsgen.h
+
+# Celltype: tTaskbody2  #_MDEP_#
+$(_TECS_OBJ_DIR)tTaskbody2_tecsgen.o : tTaskbody2_tecsgen.c  $(GEN_DIR)/tMotor_tecsgen.h  $(GEN_DIR)/tSensor_tecsgen.h  tMotor_inline.h  tSensor_inline.h $(GEN_DIR)/global_tecsgen.h $(GEN_DIR)/sMotor_tecsgen.h $(GEN_DIR)/sSensor_tecsgen.h $(GEN_DIR)/sTaskBody_tecsgen.h $(GEN_DIR)/tTaskbody2_factory.h $(GEN_DIR)/tTaskbody2_tecsgen.h
+$(_TECS_OBJ_DIR)tTaskbody2_templ.o : tTaskbody2_templ.c  $(GEN_DIR)/tMotor_tecsgen.h  $(GEN_DIR)/tSensor_tecsgen.h  tMotor_inline.h  tSensor_inline.h $(GEN_DIR)/global_tecsgen.h $(GEN_DIR)/sMotor_tecsgen.h $(GEN_DIR)/sSensor_tecsgen.h $(GEN_DIR)/sTaskBody_tecsgen.h $(GEN_DIR)/tTaskbody2_factory.h $(GEN_DIR)/tTaskbody2_tecsgen.h
+$(_TECS_OBJ_DIR)tTaskbody2.o : tTaskbody2.c  $(GEN_DIR)/tMotor_tecsgen.h  $(GEN_DIR)/tSensor_tecsgen.h  tMotor_inline.h  tSensor_inline.h $(GEN_DIR)/global_tecsgen.h $(GEN_DIR)/sMotor_tecsgen.h $(GEN_DIR)/sSensor_tecsgen.h $(GEN_DIR)/sTaskBody_tecsgen.h $(GEN_DIR)/tTaskbody2_factory.h $(GEN_DIR)/tTaskbody2_tecsgen.h
+
+# Celltype: tManager  #_MDEP_#
+$(_TECS_OBJ_DIR)tManager_tecsgen.o : tManager_tecsgen.c  $(GEN_DIR)/tMotor_tecsgen.h  tMotor_inline.h $(GEN_DIR)/global_tecsgen.h $(GEN_DIR)/sManage_tecsgen.h $(GEN_DIR)/sMotor_tecsgen.h $(GEN_DIR)/sTaskBody_tecsgen.h $(GEN_DIR)/tManager_factory.h $(GEN_DIR)/tManager_tecsgen.h
+$(_TECS_OBJ_DIR)tManager_templ.o : tManager_templ.c  $(GEN_DIR)/tMotor_tecsgen.h  tMotor_inline.h $(GEN_DIR)/global_tecsgen.h $(GEN_DIR)/sManage_tecsgen.h $(GEN_DIR)/sMotor_tecsgen.h $(GEN_DIR)/sTaskBody_tecsgen.h $(GEN_DIR)/tManager_factory.h $(GEN_DIR)/tManager_tecsgen.h
+$(_TECS_OBJ_DIR)tManager.o : tManager.c  $(GEN_DIR)/tMotor_tecsgen.h  tMotor_inline.h $(GEN_DIR)/global_tecsgen.h $(GEN_DIR)/sManage_tecsgen.h $(GEN_DIR)/sMotor_tecsgen.h $(GEN_DIR)/sTaskBody_tecsgen.h $(GEN_DIR)/tManager_factory.h $(GEN_DIR)/tManager_tecsgen.h
+
+# Celltype: tMotor  #_MDEP_#
+$(_TECS_OBJ_DIR)tMotor_tecsgen.o : tMotor_tecsgen.c $(GEN_DIR)/global_tecsgen.h $(GEN_DIR)/sMotor_tecsgen.h $(GEN_DIR)/tMotor_factory.h $(GEN_DIR)/tMotor_tecsgen.h tMotor_inline.h
+$(_TECS_OBJ_DIR)tMotor_templ.o : tMotor_templ.c $(GEN_DIR)/global_tecsgen.h $(GEN_DIR)/sMotor_tecsgen.h $(GEN_DIR)/tMotor_factory.h $(GEN_DIR)/tMotor_tecsgen.h tMotor_inline.h
+$(_TECS_OBJ_DIR)tMotor.o : tMotor.c $(GEN_DIR)/global_tecsgen.h $(GEN_DIR)/sMotor_tecsgen.h $(GEN_DIR)/tMotor_factory.h $(GEN_DIR)/tMotor_tecsgen.h tMotor_inline.h
+
+# Celltype: tSensor  #_MDEP_#
+$(_TECS_OBJ_DIR)tSensor_tecsgen.o : tSensor_tecsgen.c $(GEN_DIR)/global_tecsgen.h $(GEN_DIR)/sSensor_tecsgen.h $(GEN_DIR)/tSensor_factory.h $(GEN_DIR)/tSensor_tecsgen.h tSensor_inline.h
+$(_TECS_OBJ_DIR)tSensor_templ.o : tSensor_templ.c $(GEN_DIR)/global_tecsgen.h $(GEN_DIR)/sSensor_tecsgen.h $(GEN_DIR)/tSensor_factory.h $(GEN_DIR)/tSensor_tecsgen.h tSensor_inline.h
+$(_TECS_OBJ_DIR)tSensor.o : tSensor.c $(GEN_DIR)/global_tecsgen.h $(GEN_DIR)/sSensor_tecsgen.h $(GEN_DIR)/tSensor_factory.h $(GEN_DIR)/tSensor_tecsgen.h tSensor_inline.h
+

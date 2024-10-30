@@ -113,7 +113,7 @@ def parse_rust_functions(rust_file)
       @current_entry_function = nil
       @current_entry_function = TCFlow::Function.new(["#{rust_file}", rust_file_lines.index(line)+1])
       @current_entry_function.set_name(entry_func_name)
-      # print "debug: #{@current_entry_function}\n"
+      # print "debug: #{entry_func_name} = #{@current_entry_function}\n"
       # entry_func = nil
     end
 

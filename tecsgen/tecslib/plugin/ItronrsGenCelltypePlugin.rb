@@ -500,7 +500,7 @@ class ItronrsGenCelltypePlugin < RustGenCelltypePlugin
     # itron のコンフィグレーションファイルにミューテックス静的APIを生成する
     def gen_mutex_static_api_for_configuration
         file = AppFile.open( "#{$gen}/tecsgen.cfg" )
-        file.print "CRE_MTX( TECS_RUST_MUTEX_#{@@mutex_ref_id}, { NULL, NULL });\n"
+        file.print "CRE_MTX( TECS_RUST_MUTEX_#{@@mutex_ref_id}, { TA_INHERIT });\n"
         file.close
         @@mutex_ref_id += 1
     end
@@ -675,29 +675,30 @@ use itron::mutex::{MutexRef, LockError, UnlockError};
 use crate::print;
 use crate::print::*;
 
-pub type TECSDummyLockGuard = u32;
-
 pub trait LockableForMutex {
     fn lock(&self);
     fn unlock(&self);
 }
 
+pub type TECSDummyLockGuard = u32;
+
 pub struct TECSMutexRef<'a>{
-	pub inner: MutexRef<'a>, //MutexRef
+	pub inner: MutexRef<'a>,
 }
 
-pub struct TECSDummyMutexRef{
-}
+pub struct TECSDummyMutexRef{}
 
 #[link_section = ".rodata"]
 pub static DUMMY_MUTEX_GUARD: TECSDummyLockGuard = 0;
+
+#[link_section = ".rodata"]
+pub static DUMMY_MUTEX_REF: TECSDummyMutexRef = TECSDummyMutexRef{};
 
 impl LockableForMutex for TECSMutexRef<'_>{
     #[inline]
     fn lock(&self){
         match self.inner.lock(){
-            Ok(_) => {
-            },
+            Ok(_) => {},
             Err(e) => {
                 match e {
                     BadContext => {
@@ -742,8 +743,7 @@ impl LockableForMutex for TECSMutexRef<'_>{
     #[inline]
     fn unlock(&self){
         match self.inner.unlock(){
-            Ok(_) => {
-            },
+            Ok(_) => {},
             Err(e) => {
                 match e {
                     BadContext => {
@@ -770,16 +770,10 @@ impl LockableForMutex for TECSMutexRef<'_>{
 
 impl LockableForMutex for TECSDummyMutexRef{
     #[inline]
-    fn lock(&self){
-    }
+    fn lock(&self){}
     #[inline]
-    fn unlock(&self){
-    }
+    fn unlock(&self){}
 }
-
-#[link_section = ".rodata"]
-pub static DUMMY_MUTEX_REF: TECSDummyMutexRef = TECSDummyMutexRef{
-};
             EOS
 
         mutex_file = CFile.open( "#{$gen}/tecs_mutex.rs", "w" )

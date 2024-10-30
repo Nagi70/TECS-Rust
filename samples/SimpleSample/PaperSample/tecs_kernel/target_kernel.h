@@ -3,9 +3,7 @@
  *      Toyohashi Open Platform for Embedded Real-Time Systems/
  *      Advanced Standard Profile Kernel
  * 
- *  Copyright (C) 2015,2016 by Ushio Laboratory
- *              Graduate School of Engineering Science, Osaka Univ., JAPAN
- *  Copyright (C) 2015-2020 by Embedded and Real-Time Systems Laboratory
+ *  Copyright (C) 2006-2018 by Embedded and Real-Time Systems Laboratory
  *              Graduate School of Information Science, Nagoya Univ., JAPAN
  * 
  *  上記著作権者は，以下の(1)〜(4)の条件を満たす場合に限り，本ソフトウェ
@@ -37,100 +35,56 @@
  *  アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
  *  の責任を負わない．
  * 
- *  $Id: kernel.cdl 1437 2020-05-20 12:12:16Z ertl-hiro $
+ *  $Id: target_kernel.h 1058 2018-11-19 16:19:31Z ertl-hiro $
  */
 
 /*
- *		TOPPERS/ASPカーネルオブジェクト コンポーネント記述ファイル
+ *		kernel.hのターゲット依存部（CT11MPCore用）
+ *
+ *  このヘッダファイルは，kernel.hからインクルードされる．他のファイル
+ *  から直接インクルードすることはない．このファイルをインクルードする
+ *  前に，t_stddef.hがインクルードされるので，それに依存してもよい．
  */
+
+#ifndef TOPPERS_TARGET_KERNEL_H
+#define TOPPERS_TARGET_KERNEL_H
 
 /*
- *  カーネルオブジェクトのコンポーネント化のためのヘッダファイル
+ *  割込み優先度の範囲
  */
-import_C("tecs_kernel.h");
-
-typedef	int_t	TaskRef;
+#define TMIN_INTPRI		(-15)		/* 割込み優先度の最小値（最高値）*/
+#define TMAX_INTPRI		(-1)		/* 割込み優先度の最大値（最低値）*/
 
 /*
- *  タスク本体のシグニチャ
+ *  サポートできる機能の定義
  */
-signature sTaskBody {
-	void	main(void);
-};
+#define TOPPERS_TARGET_SUPPORT_ENA_INT		/* ena_int */
+#define TOPPERS_TARGET_SUPPORT_DIS_INT		/* dis_int */
+#define TOPPERS_TARGET_SUPPORT_CLR_INT		/* clr_int */
+#define TOPPERS_TARGET_SUPPORT_RAS_INT		/* ras_int */
+#define TOPPERS_TARGET_SUPPORT_PRB_INT		/* prb_int */
+#define TOPPERS_TARGET_SUPPORT_OVRHDR
 
 /*
- *  タスク操作のシグニチャ（タスクコンテキスト用）
+ *  高分解能タイマのタイマ周期
  */
-signature sTask {
-	ER		activate(void);
-	ER_UINT	cancelActivate(void);
-	ER		getTaskState([out] STAT *p_tskstat);
-	ER		changePriority([in] PRI priority);
-	ER		getPriority([out] PRI *p_priority);
-	ER		refer([out] T_RTSK *pk_taskStatus);
-
-	ER		wakeup(void);
-	ER_UINT	cancelWakeup(void);
-	ER		releaseWait(void);
-	ER		suspend(void);
-	ER		resume(void);
-
-	ER		raiseTerminate(void);
-	ER		terminate(void);
-};
+/* TCYC_HRTCNTは定義しない．*/
 
 /*
- *  タスク操作のシグニチャ（非タスクコンテキスト用）
+ *  高分解能タイマのカウント値の進み幅
  */
-[context("non-task")]
-signature siTask {
-	ER		activate(void);
-	ER		wakeup(void);
-	ER		releaseWait(void);
-};
+#define TSTEP_HRTCNT	1U
 
 /*
- *  タイムイベント通知を受け取るためのシグネチャ
+ *  スプリアス割込みへの対策
  */
-[context("non-task")]
-signature siNotificationHandler {
-};
+#ifdef TOPPERS_USE_QEMU
+#define MPCORE_TMR_CLEAR_INT()		clear_int(MPCORE_IRQNO_TMR)
+#endif /* TOPPERS_USE_QEMU */
 
 /*
- *  タスクのセルタイプ
+ *  コアで共通な定義
  */
-[active]
-celltype tTaskRs {
-	[inline] entry	sTask	eTask;
-	[inline] entry	siTask	eiTask;
-	call	sTaskBody	cTaskBody;
+#include "core_kernel.h"
 
-	[inline] entry	siNotificationHandler	eiActivateNotificationHandler;
-	[inline] entry	siNotificationHandler	eiWakeUpNotificationHandler;
-
-	attr {
-		[omit]ID		id = C_EXP("TSKID_$id$");
-		//TaskRef			task = C_EXP("TSKID_$id$_REF");
-		TaskRef			task_ref = C_EXP("unsafe{TaskRef::from_raw_nonnull(NonZeroI32::new(TSKID_$id$).unwrap())}");
-		[omit] ATR		attribute = C_EXP("TA_NULL");
-		[omit] PRI		priority;
-		[omit] size_t	stackSize;
-	};
-
-	factory {
-		write("tecsgen.cfg",
-				"CRE_TSK(%s, { %s, 0, tTask_start, %s, %s, NULL });",
-									id, attribute, priority, stackSize);
-		//write("kernel_obj_ref.rs", 
-		//		"static %s_REF:TaskRef = unsafe{TaskRef::from_raw_nonnull(NonZeroI32::new(%s).unwrap())};",
-		//							id, id);
-
-	};
-	FACTORY {
-		write("tecsgen.cfg", "#include \"$ct$_tecsgen.h\"");
-		write("$ct$_factory.h", "#include \"kernel_cfg.h\"");
-		//write("lib.rs", "mod kernel_cfg;");
-		//write("lib.rs", "mod kernel_obj_ref;");
-		//write("kernel_obj_ref.rs", "use crate::kernel_cfg::*;");
-	};
-};
+#endif /* TOPPERS_TARGET_KERNEL_H */

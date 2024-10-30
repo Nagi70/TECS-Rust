@@ -1,0 +1,84 @@
+import(<kernel_rs.cdl>);
+
+typedef int_t   pbio_direction_t;
+typedef int_t   pbio_port_id_t;
+typedef int_t   pbio_error_t;
+typedef int_t   Option_Ref_a_mut__pup_motor_t__;
+typedef int_t   Option_Ref_a_mut__pup_ultrasonic_sensor_t__;
+typedef int_t   bool;
+
+signature sTaskbody {
+    void main( void );
+};
+
+signature sManage {
+    void manage( void );
+};
+
+signature sMotor {
+    void setMotorRef( void );
+    void setup( [in] pbio_direction_t positive_direction, [in] bool reset_count );
+    void setSpeed( [in] int32_t speed );
+    void stop( void );
+};
+
+signature sSensor {
+    void setDeviceRef( void );
+    void getDistance( [out] int32_t* distance );
+    void lightOn( void );
+    void lightSet( [in] int32_t bv1, [in] int32_t bv2, [in] int32_t bv3, [in] int32_t bv4 );
+    void lightOff( void );
+};
+
+[generate ( ItronrsGenPlugin, "lib")]
+celltype tTaskbody1 {
+    entry sTaskBody eTaskbody;
+    call sManage cManager;
+    call sMotor cMotor;
+    var{
+        int32_t speed = 0;
+    };
+};
+
+[generate ( ItronrsGenPlugin, "lib")]
+celltype tTaskbody2 {
+    entry sTaskBody eTaskbody;
+    call sSensor cSensor;
+    call sMotor cMotor;
+    var{
+        int32_t speed = 0;
+        int32_t sensor_value = 0;
+    };
+};
+
+[generate ( ItronrsGenPlugin, "lib")]
+celltype tManager {
+    entry sTaskBody eManage1;
+    entry sManage eManage2;
+    call sMotor cMotor;
+    var {
+        int32_t task_id = 0;
+    };
+};
+
+[generate ( ItronrsGenPlugin, "lib")]
+celltype tMotor {
+    [inline] entry sMotor eMotor;
+    attr {
+        pbio_port_id_t port = C_EXP("pbio_port_id_t::PBIO_PORT_ID_$port$");
+    };
+    var {
+       Option_Ref_a_mut__pup_motor_t__ motor = C_EXP("None");
+    };
+};
+
+[generate ( ItronrsGenPlugin, "lib")]
+celltype tSensor {
+    [inline] entry sSensor eSensor;
+    attr{
+        pbio_port_id_t port = C_EXP("pbio_port_id_t::PBIO_PORT_ID_$port$");
+    };
+    var {
+        Option_Ref_a_mut__pup_ultrasonic_sensor_t__ ult = C_EXP("None");
+    };
+};

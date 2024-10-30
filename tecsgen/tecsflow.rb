@@ -199,7 +199,7 @@ class Namespace
   						ep.get_signature.get_function_head_array.each{ |f|
   							ep_func = "#{celltype.get_global_name}_#{ep.get_name}_#{f.get_name}".to_sym
                 if $rustflow then
-                  ep_func = "#{camel_case(snake_case(ep.get_name.to_s))}For#{get_rust_celltype_name(celltype)}.#{f.get_name}".to_sym
+                  ep_func = "#{camel_case(snake_case(ep.get_name.to_s))}For#{get_rust_celltype_name(celltype)}.#{snake_case(f.get_name.to_s)}".to_sym
                   # print "print_all_cells: rustflow is true\n"
                 end
 	  						if $tcflow_funclist[ ep_func ] then
@@ -273,6 +273,11 @@ class Cell
           # if @@printed_func_nsp_list[ func_nsp ] != true then
           # end
           ep_func = "#{ct.get_global_name}_#{entry_port_name}_#{func_name}".to_sym
+
+          if $rustflow then
+            ep_func = "#{camel_case(snake_case(entry_port_name.to_s))}For#{get_rust_celltype_name(ct)}.#{snake_case(func_name.to_s)}".to_sym
+            # print "print_all_cells: rustflow is true\n"
+          end
           # print "  ", ep_func, "\n"
           if $tcflow_funclist[ ep_func ].kind_of? TCFlow::Function then
             func = $tcflow_funclist[ ep_func ]
@@ -282,7 +287,11 @@ class Cell
               # if cell.get_namespace_path == nil then
               #   cell.show_tree 0
               # end
+              if $rustflow then
+                print "[unreferenced entry function] #{ep_func.to_s}"
+              else
                 print "[unreferenced entry function] #{cell.get_namespace_path}.#{entry_port_name}.#{func_name}"
+              end
               #end
               cell.print_entry_func_flow entry_port_name, func_name, indent_level, parent_cell
             end
@@ -435,7 +444,7 @@ class Cell
     if ! @celltype.kind_of? CompositeCelltype
       ep_func = "#{@celltype.get_global_name}_#{entry_port_name}_#{func_name}".to_sym
       if $rustflow then
-        ep_func = "#{camel_case(snake_case(entry_port_name.to_s))}For#{get_rust_celltype_name(@celltype)}.#{func_name}".to_sym
+        ep_func = "#{camel_case(snake_case(entry_port_name.to_s))}For#{get_rust_celltype_name(@celltype)}.#{snake_case(func_name.to_s)}".to_sym
         # print "print_entry_func_flow: rustflow is true\n"
       end
       if $tcflow_funclist[ ep_func ] then
@@ -1129,7 +1138,7 @@ module TECSFlow
       end
     end
 
-    puts "accessed_cell_hash: #{accessed_cell_hash}"
+    # puts "accessed_cell_hash: #{accessed_cell_hash}"
 
     # 排他制御がかかっているセルのみを抽出
     exclusive_control_cells = accessed_cell_hash.select{ |k, v| v["ExclusiveControl"] == true }

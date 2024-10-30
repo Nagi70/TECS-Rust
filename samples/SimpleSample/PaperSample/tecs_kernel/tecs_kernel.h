@@ -3,7 +3,7 @@
  *      Toyohashi Open Platform for Embedded Real-Time Systems/
  *      Advanced Standard Profile Kernel
  * 
- *  Copyright (C) 2015,2016 by Ushio Laboratory
+ *  Copyright (C) 2015 by Ushio Laboratory
  *              Graduate School of Engineering Science, Osaka Univ., JAPAN
  *  Copyright (C) 2015-2020 by Embedded and Real-Time Systems Laboratory
  *              Graduate School of Information Science, Nagoya Univ., JAPAN
@@ -37,100 +37,18 @@
  *  アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
  *  の責任を負わない．
  * 
- *  $Id: kernel.cdl 1437 2020-05-20 12:12:16Z ertl-hiro $
+ *  $Id: tecs_kernel.h 1437 2020-05-20 12:12:16Z ertl-hiro $
  */
 
 /*
- *		TOPPERS/ASPカーネルオブジェクト コンポーネント記述ファイル
+ *		カーネルオブジェクトのコンポーネント化のためのヘッダファイル
  */
 
-/*
- *  カーネルオブジェクトのコンポーネント化のためのヘッダファイル
- */
-import_C("tecs_kernel.h");
+#include "kernel.h"
 
-typedef	int_t	TaskRef;
+extern void tTask_start(EXINF exinf);
 
-/*
- *  タスク本体のシグニチャ
- */
-signature sTaskBody {
-	void	main(void);
-};
+extern void tISR_start(EXINF exinf);
 
-/*
- *  タスク操作のシグニチャ（タスクコンテキスト用）
- */
-signature sTask {
-	ER		activate(void);
-	ER_UINT	cancelActivate(void);
-	ER		getTaskState([out] STAT *p_tskstat);
-	ER		changePriority([in] PRI priority);
-	ER		getPriority([out] PRI *p_priority);
-	ER		refer([out] T_RTSK *pk_taskStatus);
-
-	ER		wakeup(void);
-	ER_UINT	cancelWakeup(void);
-	ER		releaseWait(void);
-	ER		suspend(void);
-	ER		resume(void);
-
-	ER		raiseTerminate(void);
-	ER		terminate(void);
-};
-
-/*
- *  タスク操作のシグニチャ（非タスクコンテキスト用）
- */
-[context("non-task")]
-signature siTask {
-	ER		activate(void);
-	ER		wakeup(void);
-	ER		releaseWait(void);
-};
-
-/*
- *  タイムイベント通知を受け取るためのシグネチャ
- */
-[context("non-task")]
-signature siNotificationHandler {
-};
-
-/*
- *  タスクのセルタイプ
- */
-[active]
-celltype tTaskRs {
-	[inline] entry	sTask	eTask;
-	[inline] entry	siTask	eiTask;
-	call	sTaskBody	cTaskBody;
-
-	[inline] entry	siNotificationHandler	eiActivateNotificationHandler;
-	[inline] entry	siNotificationHandler	eiWakeUpNotificationHandler;
-
-	attr {
-		[omit]ID		id = C_EXP("TSKID_$id$");
-		//TaskRef			task = C_EXP("TSKID_$id$_REF");
-		TaskRef			task_ref = C_EXP("unsafe{TaskRef::from_raw_nonnull(NonZeroI32::new(TSKID_$id$).unwrap())}");
-		[omit] ATR		attribute = C_EXP("TA_NULL");
-		[omit] PRI		priority;
-		[omit] size_t	stackSize;
-	};
-
-	factory {
-		write("tecsgen.cfg",
-				"CRE_TSK(%s, { %s, 0, tTask_start, %s, %s, NULL });",
-									id, attribute, priority, stackSize);
-		//write("kernel_obj_ref.rs", 
-		//		"static %s_REF:TaskRef = unsafe{TaskRef::from_raw_nonnull(NonZeroI32::new(%s).unwrap())};",
-		//							id, id);
-
-	};
-	FACTORY {
-		write("tecsgen.cfg", "#include \"$ct$_tecsgen.h\"");
-		write("$ct$_factory.h", "#include \"kernel_cfg.h\"");
-		//write("lib.rs", "mod kernel_cfg;");
-		//write("lib.rs", "mod kernel_obj_ref;");
-		//write("kernel_obj_ref.rs", "use crate::kernel_cfg::*;");
-	};
-};
+extern void tInitializeRoutine_start(EXINF exinf);
+extern void tTerminateRoutine_start(EXINF exinf);
