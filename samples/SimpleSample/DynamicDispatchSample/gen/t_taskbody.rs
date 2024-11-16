@@ -32,6 +32,6 @@ pub static ETASKBODYFORTASKBODY2: ETaskbodyForTTaskbody = ETaskbodyForTTaskbody 
 impl<> TTaskbody<'_> {
 	#[inline]
 	pub fn get_cell_ref(&self) -> &dyn SMotor {
-		&self.c_motor
+		self.c_motor
 	}
 }

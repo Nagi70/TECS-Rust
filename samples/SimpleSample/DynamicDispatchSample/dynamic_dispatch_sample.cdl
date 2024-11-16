@@ -58,8 +58,8 @@ cell tTaskbody Taskbody2 {
     cMotor = MotorB.eMotor;
 };
 
-[generate( ItronrsGenPlugin, "lib")]
-cell tTask_rs Task1{
+//[generate( ItronrsGenPlugin, "lib")]
+cell tTaskRs Task1{
     cTaskBody = Taskbody1.eTaskbody;
     id = C_EXP("TASK1");
 	task_ref = C_EXP("unsafe{TaskRef::from_raw_nonnull(NonZeroI32::new(TASK1).unwrap())}");
@@ -68,8 +68,8 @@ cell tTask_rs Task1{
     priority = 42;
 };
 
-[generate( ItronrsGenPlugin, "lib")]
-cell tTask_rs Task2{
+//[generate( ItronrsGenPlugin, "lib")]
+cell tTaskRs Task2{
     cTaskBody = Taskbody2.eTaskbody;
     id = C_EXP("TASK2");
 	task_ref = C_EXP("unsafe{TaskRef::from_raw_nonnull(NonZeroI32::new(TASK2).unwrap())}");

@@ -387,40 +387,71 @@ class RustGenCelltypePlugin < CelltypePlugin
     end
 
     def gen_mod_in_main_lib_rs_for_celltype celltype
-        plugin_option = @plugin_arg_str.strip
-        if plugin_option == "main" || plugin_option == "lib" then
-            lib_file = CFile.open( "#{$gen}/#{plugin_option}.rs", "a" )
-            lib_file.print "mod #{snake_case(celltype.get_global_name.to_s)};\n"
+        plugin_option = @plugin_arg_str.split(",").map(&:strip)
+        file_name = nil
+        if plugin_option.include?("main") then
+            file_name = "main"
+        elsif plugin_option.include?("lib") then
+            file_name = "lib"
+        end
+
+        if file_name != nil then
+            File.write("#{$gen}/#{file_name}.rs", "") unless File.exist?("#{$gen}/#{file_name}.rs")
+            lib_file = File.read("#{$gen}/#{file_name}.rs")
+            last_mod_line = lib_file.rindex(/^mod\s+\w+;/)
+            
+            new_mods = ["mod #{snake_case(celltype.get_global_name.to_s)};\n"]
+
             @celltype.get_port_list.each{ |port|
                 if port.get_port_type == :ENTRY then
-                    lib_file.print "mod #{snake_case(celltype.get_global_name.to_s)}_impl;\n"
+                    # lib_file.print "mod #{snake_case(celltype.get_global_name.to_s)}_impl;\n"
+                    new_mods.push("mod #{snake_case(celltype.get_global_name.to_s)}_impl;\n")
                     break
                 end
             }
-            lib_file.close
-            # lib.rsなどのファイルのmod重複を削除する
-            lines = File.readlines("#{$gen}/#{plugin_option}.rs", chomp: true).uniq!
-            if lines != nil then
-                File.open("#{$gen}/#{plugin_option}.rs", 'w') do |file|
-                    lines.each { |line| file.puts line }
+
+            # mod記述の最後に新しいmodを挿入
+            if last_mod_line
+                insert_position = last_mod_line + lib_file[last_mod_line..].index("\n") + 1
+                new_mods.each do |mod|
+                    next if lib_file.include?(mod)
+                    lib_file.insert(insert_position, "#{mod}")
+                    insert_position += "#{mod}".length
                 end
+            else
+                # もしmod記述が見つからなければ、ファイルの末尾に追加
+                lib_file << new_mods.join("\n")
             end
+
+            File.write("#{$gen}/#{file_name}.rs", lib_file)
         end
     end
 
     def gen_mod_in_main_lib_rs_for_signature signature
-        plugin_option = @plugin_arg_str.strip
-        if plugin_option == "main" || plugin_option == "lib" then
-            lib_file = CFile.open( "#{$gen}/#{plugin_option}.rs", "a" )
-            lib_file.print "mod #{snake_case(signature.get_global_name.to_s)};\n"
-            lib_file.close
-            # lib.rsなどのファイルのmod重複を削除する
-            lines = File.readlines("#{$gen}/#{plugin_option}.rs", chomp: true).uniq!
-            if lines != nil then
-                File.open("#{$gen}/#{plugin_option}.rs", 'w') do |file|
-                    lines.each { |line| file.puts line }
-                end
+        plugin_option = @plugin_arg_str.split(",").map(&:strip)
+        file_name = nil
+        if plugin_option.include?("main") then
+            file_name = "main"
+        elsif plugin_option.include?("lib") then
+            file_name = "lib"
+        end
+
+        if file_name != nil then
+            lib_file = File.read("#{$gen}/#{file_name}.rs")
+            return if lib_file.include?("mod #{snake_case(signature.get_global_name.to_s)};")
+
+            last_mod_line = lib_file.rindex(/^mod\s+\w+;/)
+
+            # mod記述の最後に新しいmodを挿入
+            if last_mod_line
+                insert_position = last_mod_line + lib_file[last_mod_line..].index("\n") + 1
+                lib_file.insert(insert_position, "mod #{snake_case(signature.get_global_name.to_s)};\n")
+            else
+                # もしmod記述が見つからなければ、ファイルの末尾に追加
+                lib_file << "mod #{snake_case(signature.get_global_name.to_s)};"
             end
+
+            File.write("#{$gen}/#{file_name}.rs", lib_file)
         end
     end
 

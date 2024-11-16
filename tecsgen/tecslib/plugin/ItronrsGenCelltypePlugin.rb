@@ -74,17 +74,18 @@ class ItronrsGenCelltypePlugin < RustGenCelltypePlugin
     end
 
     # セルタイプ名から，カーネルオブジェクトかどうか判断し，Ref型文字列に変換する
-    def get_itronrs_kernel_obj_ref_str celltype_name
-        case celltype_name
-        when "tTaskRs"
+    def get_itronrs_kernel_obj_ref_str
+        plugin_option = @plugin_arg_str.split(",").map(&:strip)
+        case plugin_option
+        when plugin_option.include?("TASK")
             return "TaskRef"
-        when "tSemaphoreRs"
+        when plugin_option.include?("SEMAPHORE") 
             return "SemaphoreRef"
-        when "tEventflagRs"
+        when plugin_option.include?("EVENTFLAG")
             return "EventflagRef"
-        when "tDataqueueRs"
+        when plugin_option.include?("DATAQUEUE")
             return "DataqueueRef"
-        when "tMutexRs"
+        when plugin_option.include?("MUTEX")
             return "MutexRef"
         else
             return "unknown"
@@ -92,20 +93,83 @@ class ItronrsGenCelltypePlugin < RustGenCelltypePlugin
     end
 
     def gen_mod_in_main_lib_rs_for_celltype celltype
-        plugin_option = @plugin_arg_str.strip
-        if plugin_option == "main" || plugin_option == "lib" then
-            tempfile = CFile.open( "#{$gen}/#{plugin_option}.rs", "a" )
-            tempfile.print "#![no_std]\n"
-            tempfile.print "#![feature(const_option)]\n"
-            tempfile.print "mod kernel_cfg;\n"
-            tempfile.close
+        plugin_option = @plugin_arg_str.split(",").map(&:strip)
+        file_name = nil
+        if plugin_option.include?("main") then
+            file_name = "main"
+        elsif plugin_option.include?("lib") then
+            file_name = "lib"
         end
+
+        if file_name != nil then
+            write_list = ["#![no_std]", "#![feature(const_option)]", "mod kernel_cfg;"]
+            File.write("#{$gen}/#{file_name}.rs", "") unless File.exist?("#{$gen}/#{file_name}.rs")
+            tempfile = File.read("#{$gen}/#{file_name}.rs")
+
+            write_list.each do |write|
+                if tempfile.include?(write) then
+                    next
+                else
+                    tempfile << write + "\n"
+                end
+            end
+            File.write("#{$gen}/#{file_name}.rs", tempfile)
+        end
+
+        if plugin_option.include?("TASK") then
+            gen_task_func_definition file_name, celltype
+        end
+
         super(celltype)
+
+
+    end
+
+    def gen_task_func_definition file_option, celltype
+        file = File.read("#{$gen}/#{file_option}.rs")
+
+        if !file.include?("use crate::" + snake_case(celltype.get_global_name.to_s) + "::*;") then
+            file << "\nuse crate::" + snake_case(celltype.get_global_name.to_s) + "::*;\n"
+        end
+
+        if !file.include?("use s_task_body::*;") then
+            file << "use s_task_body::*;\n"
+        end
+        
+        celltype.get_cell_list.each{ |cell|
+            search_pattern = /
+                \#\[\s*no_mangle\s*\]\n
+                pub\s+extern\s*"C"\s+fn\s+tecs_rust_start_#{snake_case(cell.get_global_name.to_s)}\(\s*_\s*:\s*usize\s*\)\s*\{\n
+                \s*#{cell.get_global_name.to_s.upcase}\.c_task_body\.main\(\);\n
+            \}/x
+            if !file.match?(search_pattern) then
+                file << "\n#[no_mangle]\n"
+                file << "pub extern \"C\" fn tecs_rust_start_" + snake_case(cell.get_global_name.to_s) + "(_: usize) {\n"
+                file << "\t#{cell.get_global_name.to_s.upcase}.c_task_body.main();\n" # TODO: 呼び口である c_task_body が sTaskBody でつながっていることを前提としている
+                file << "}\n"
+
+                gen_task_static_api_for_configuration cell
+            end
+        }
+
+        File.write("#{$gen}/#{file_option}.rs", file)
+    end
+
+    def gen_task_static_api_for_configuration cell
+        file = AppFile.open( "#{$gen}/tecsgen.cfg" )
+
+        id = cell.get_attr_initializer("id".to_sym)
+        attribute = cell.get_attr_initializer("attribute".to_sym)
+        priority = cell.get_attr_initializer("priority".to_sym)
+        stack_size = cell.get_attr_initializer("stackSize".to_sym)
+
+        file.print "CRE_TSK(#{id}, { #{attribute}, 0, tecs_rust_start_#{snake_case(cell.get_global_name.to_s)}, #{priority}, #{stack_size}, NULL });\n"
+        file.close
     end
 
     # @use_string_list に格納されている文字列を元に use 文を生成する
     def gen_use_header file
-        obj_ref_str = get_itronrs_kernel_obj_ref_str @celltype.get_global_name.to_s
+        obj_ref_str = get_itronrs_kernel_obj_ref_str
         if obj_ref_str != "unknown" then
             file.print "use crate::kernel_cfg::*;\n"
             # file.print "use crate::kernel_obj_ref::*;\n"
@@ -173,7 +237,7 @@ class ItronrsGenCelltypePlugin < RustGenCelltypePlugin
     def gen_use_for_trait_files file, celltype, port
         super(file, celltype, port)
         if port.get_port_type == :ENTRY then
-            object_ref = get_itronrs_kernel_obj_ref_str celltype.get_global_name.to_s
+            object_ref = get_itronrs_kernel_obj_ref_str
             file.print "use itron::abi::*;\n"
             object_module = object_ref.gsub(/Ref/, "").downcase
             file.print "use itron::#{object_module}::#{object_ref};\n"

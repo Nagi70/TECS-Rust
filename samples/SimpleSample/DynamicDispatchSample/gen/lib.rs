@@ -14,3 +14,16 @@ mod t_motor_b;
 mod t_motor_b_impl;
 mod t_taskbody;
 mod t_taskbody_impl;
+
+use crate::t_task_rs::*;
+use s_task_body::*;
+
+#[no_mangle]
+pub extern "C" fn tecs_rust_start_task1(_: usize) {
+	TASK1.c_task_body.main();
+}
+
+#[no_mangle]
+pub extern "C" fn tecs_rust_start_task2(_: usize) {
+	TASK2.c_task_body.main();
+}

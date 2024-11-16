@@ -1,7 +1,3 @@
-use crate::kernel_cfg::*;
-use itron::abi::*;
-use itron::task::TaskRef;
-use core::num::NonZeroI32;
 use crate::{s_task_body::*, t_taskbody::*};
 
 pub struct TTaskRs<'a, T>
@@ -83,6 +79,6 @@ pub static EIWAKEUPNOTIFICATIONHANDLERFORTASK2: EiWakeUpNotificationHandlerForTT
 impl<T: STaskBody> TTaskRs<'_, T> {
 	#[inline]
 	pub fn get_cell_ref(&self) -> (&T, &TaskRef) {
-		(&self.c_task_body, &self.task_ref)
+		(self.c_task_body, &self.task_ref)
 	}
 }

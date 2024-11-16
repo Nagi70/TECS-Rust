@@ -8,22 +8,22 @@ impl STask for ETaskForTTaskRs<'_>{
 
 	}
 	#[inline]
-	fn cancelActivate(&self) -> ER_UINT{
+	fn cancel_activate(&self) -> ER_UINT{
 		let (c_task_body, task_ref) = self.cell.get_cell_ref();
 
 	}
 	#[inline]
-	fn getTaskState(&self, p_tskstat: &mut STAT) -> ER{
+	fn get_task_state(&self, p_tskstat: &mut STAT) -> ER{
 		let (c_task_body, task_ref) = self.cell.get_cell_ref();
 
 	}
 	#[inline]
-	fn changePriority(&self, priority: &PRI) -> ER{
+	fn change_priority(&self, priority: &PRI) -> ER{
 		let (c_task_body, task_ref) = self.cell.get_cell_ref();
 
 	}
 	#[inline]
-	fn getPriority(&self, p_priority: &mut PRI) -> ER{
+	fn get_priority(&self, p_priority: &mut PRI) -> ER{
 		let (c_task_body, task_ref) = self.cell.get_cell_ref();
 
 	}
@@ -38,12 +38,12 @@ impl STask for ETaskForTTaskRs<'_>{
 
 	}
 	#[inline]
-	fn cancelWakeup(&self) -> ER_UINT{
+	fn cancel_wakeup(&self) -> ER_UINT{
 		let (c_task_body, task_ref) = self.cell.get_cell_ref();
 
 	}
 	#[inline]
-	fn releaseWait(&self) -> ER{
+	fn release_wait(&self) -> ER{
 		let (c_task_body, task_ref) = self.cell.get_cell_ref();
 
 	}
@@ -58,7 +58,7 @@ impl STask for ETaskForTTaskRs<'_>{
 
 	}
 	#[inline]
-	fn raiseTerminate(&self) -> ER{
+	fn raise_terminate(&self) -> ER{
 		let (c_task_body, task_ref) = self.cell.get_cell_ref();
 
 	}
@@ -82,7 +82,7 @@ impl SiTask for EiTaskForTTaskRs<'_>{
 
 	}
 	#[inline]
-	fn releaseWait(&self) -> ER{
+	fn release_wait(&self) -> ER{
 		let (c_task_body, task_ref) = self.cell.get_cell_ref();
 
 	}

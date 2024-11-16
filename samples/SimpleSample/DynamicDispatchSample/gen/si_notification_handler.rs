@@ -1,5 +1,5 @@
 use spin::Mutex;
 use itron::abi::*;
-use itron::task::TaskRef;
+use itron::unknown::unknown;
 pub trait SiNotificationHandler {
 }
