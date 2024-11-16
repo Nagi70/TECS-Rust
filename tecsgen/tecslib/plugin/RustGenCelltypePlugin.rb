@@ -400,6 +400,7 @@ class RustGenCelltypePlugin < CelltypePlugin
         end
 
         if file_name != nil then
+            File.write("#{$gen}/#{file_name}.rs", "") unless File.exist?("#{$gen}/#{file_name}.rs")
             lib_file = File.read("#{$gen}/#{file_name}.rs")
             last_mod_line = lib_file.rindex(/^mod\s+\w+;/)
             

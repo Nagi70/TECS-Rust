@@ -103,6 +103,7 @@ class ItronrsGenCelltypePlugin < RustGenCelltypePlugin
 
         if file_name != nil then
             write_list = ["#![no_std]", "#![feature(const_option)]", "mod kernel_cfg;", "mod tecs_mutex;", "mod tecs_print;"]
+            File.write("#{$gen}/#{file_name}.rs", "") unless File.exist?("#{$gen}/#{file_name}.rs")
             tempfile = File.read("#{$gen}/#{file_name}.rs")
 
             write_list.each do |write|
