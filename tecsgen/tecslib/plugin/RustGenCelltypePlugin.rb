@@ -392,6 +392,7 @@ class RustGenCelltypePlugin < CelltypePlugin
 
     def gen_mod_in_main_lib_rs_for_celltype celltype
         plugin_option = @plugin_arg_str.strip
+        # print "plugin_option: #{plugin_option}\n"
         if plugin_option == "main" || plugin_option == "lib" then
             lib_file = CFile.open( "#{$gen}/#{plugin_option}.rs", "a" )
             lib_file.print "mod #{snake_case(celltype.get_global_name.to_s)};\n"

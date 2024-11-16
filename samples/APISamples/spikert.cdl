@@ -1,0 +1,88 @@
+import(<kernel_rs.cdl>);
+
+typedef int_t   PbioDirectionT;
+typedef int_t   PbioPortIdT;
+typedef int_t   PbioErrorT;
+typedef int_t   Option_Ref_a_mut__PupMotorT__;
+typedef int_t   Option_Ref_a_mut__PupUltrasonicT__;
+typedef int_t   bool;
+
+signature sMotor {
+    void set_motor_ref( void );
+    void setup( [in] PbioDirectionT positive_direction, [in] bool reset_count );
+    void set_speed( [in] int32_t speed );
+    void stop( void );
+};
+
+signature sSensor {
+    void set_device_ref( void );
+    void get_distance( [out] int32_t* distance );
+    void light_on( void );
+    void light_set( [in] int32_t bv1, [in] int32_t bv2, [in] int32_t bv3, [in] int32_t bv4 );
+    void light_off( void );
+};
+
+signature sPowerdown{
+    void powerdown( [in] PbioErrorT error );
+};
+
+[generate (ItronrsGenPlugin, "lib")]
+celltype tMotor {
+    [inline] entry sMotor eMotor;
+    attr {
+        PbioPortIdT port = C_EXP("PbioPortIdT::PBIO_PORT_ID_$port$");
+    };
+    var {
+       Option_Ref_a_mut__PupMotorT__ motor = C_EXP("None");
+    };
+};
+
+[generate (ItronrsGenPlugin, "lib")]
+celltype tSensor {
+    [inline] entry sSensor eSensor;
+    attr{
+        PbioPortIdT port = C_EXP("PbioPortIdT::PBIO_PORT_ID_$port$");
+    };
+    var {
+        Option_Ref_a_mut__PupUltrasonicT__ ult = C_EXP("None");
+    };
+};
+
+[generate (ItronrsGenPlugin, "lib")]
+celltype tTaskbody {
+    [inline] entry sTaskBody eTaskbody;
+    call sSensor cSensor;
+    call sMotor cMotor;
+};
+
+[generate (ItronrsGenPlugin, "lib")]
+celltype tMotorbody {
+    call sMotor cMotor;
+    entry sTaskBody eMotorbody;
+};
+
+[generate (ItronrsGenPlugin, "lib")]
+celltype tSensorbody {
+    call sSensor cSensor;
+    entry sTaskBody eSensorbody;
+};
+
+[generate (ItronrsGenPlugin, "lib")]
+celltype tMMbody {
+    call sMotor cMotor1;
+    call sMotor cMotor2;
+    entry sTaskBody eMMbody;
+};
+
+[generate (ItronrsGenPlugin, "lib")]
+celltype tSSbody {
+    call sSensor cSensor1;
+    call sSensor cSensor2;
+    entry sTaskBody eSSbody;
+};
+
+[generate (ItronrsGenPlugin, "lib")]
+celltype tPowerdown {
+    [inline] entry sPowerdown ePowerdown1;
+    [inline] entry sPowerdown ePowerdown2;
+};

@@ -1,0 +1,76 @@
+import(<../spikert.cdl>);
+
+cell tMotor Motor1 {
+    port = C_EXP("PbioPortIdT::PBIO_PORT_ID_A");
+};
+
+cell tMotor Motor2 {
+    port = C_EXP("PbioPortIdT::PBIO_PORT_ID_B");
+};
+
+cell tSensor Sensor1 {
+    port = C_EXP("PbioPortIdT::PBIO_PORT_ID_C");
+};
+
+cell tSensor Sensor2 {
+    port = C_EXP("PbioPortIdT::PBIO_PORT_ID_D");
+};
+
+cell tMMbody MMbody {
+    cMotor1 = Motor1.eMotor;
+    cMotor2 = Motor2.eMotor;
+};
+
+cell tMotorbody Motorbody {
+    cMotor = Motor2.eMotor;
+};
+
+cell tSSbody SSbody {
+    cSensor1 = Sensor1.eSensor;
+    cSensor2 = Sensor2.eSensor;
+};
+
+cell tSensorbody Sensorbody {
+    cSensor = Sensor2.eSensor;
+};
+
+
+[generate( ItronrsGenPlugin, "lib")]
+cell tTaskRs Task1{
+    cTaskBody = MMbody.eMMbody;
+    id = C_EXP("TASK1");
+	task_ref = C_EXP("unsafe{TaskRef::from_raw_nonnull(NonZeroI32::new(TASK1).unwrap())}");
+    attribute = C_EXP("TA_ACT");
+    stackSize = 1024;
+    priority = 42;
+};
+
+[generate( ItronrsGenPlugin, "lib")]
+cell tTaskRs Task2{
+    cTaskBody = Motorbody.eMotorbody;
+    id = C_EXP("TASK2");
+	task_ref = C_EXP("unsafe{TaskRef::from_raw_nonnull(NonZeroI32::new(TASK2).unwrap())}");
+    attribute = C_EXP("TA_ACT");
+    stackSize = 1024;
+    priority = 42;
+};
+
+[generate( ItronrsGenPlugin, "lib, TASK")]
+cell tTaskRs Task3{
+    cTaskBody = SSbody.eSSbody;
+    id = C_EXP("TASK3");
+	task_ref = C_EXP("unsafe{TaskRef::from_raw_nonnull(NonZeroI32::new(TASK3).unwrap())}");
+    attribute = C_EXP("TA_ACT");
+    stackSize = 1024;
+    priority = 42;
+};
+
+[generate( ItronrsGenPlugin, "lib, TASK")]
+cell tTaskRs Task4{
+    cTaskBody = Sensorbody.eSensorbody;
+    id = C_EXP("TASK4");
+	task_ref = C_EXP("unsafe{TaskRef::from_raw_nonnull(NonZeroI32::new(TASK4).unwrap())}");
+    attribute = C_EXP("TA_ACT");
+    stackSize = 1024;
+    priority = 42;
+};
