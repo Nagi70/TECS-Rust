@@ -7,7 +7,7 @@ pub struct TSensor<'a>
 {
 	port: PbioPortIdT,
 	variable: SyncTSensorVar<'a>,
-	mutex_ref: &'a TECSMutexRef<'a>,
+	mutex_ref: &'a (dyn LockableForMutex + Sync + Send),
 }
 
 pub struct TSensorVar<'a>{
@@ -25,25 +25,20 @@ pub struct ESensorForTSensor<'a>{
 }
 
 pub struct LockGuardForTSensor<'a>{
-	mutex_ref: &'a TECSMutexRef<'a>,
+	mutex_ref: &'a (dyn LockableForMutex + Sync + Send),
 }
 
 #[link_section = ".rodata"]
 pub static SENSOR1: TSensor = TSensor {
 	port: PbioPortIdT::PBIO_PORT_ID_C,
 	variable: &SENSOR1VAR,
-	mutex_ref: &SENSOR1_MUTEX_REF,
+	mutex_ref: &DUMMY_MUTEX_REF,
 };
 
 pub static SENSOR1VAR: SyncTSensorVar = SyncTSensorVar {
 	unsafe_var: UnsafeCell::new(TSensorVar {
 		ult: None,
 	}),
-};
-
-#[link_section = ".rodata"]
-pub static SENSOR1_MUTEX_REF: TECSMutexRef = TECSMutexRef{
-	inner: unsafe{MutexRef::from_raw_nonnull(NonZero::new(TECS_RUST_MUTEX_3).unwrap())},
 };
 
 #[link_section = ".rodata"]
@@ -66,7 +61,7 @@ pub static SENSOR2VAR: SyncTSensorVar = SyncTSensorVar {
 
 #[link_section = ".rodata"]
 pub static SENSOR2_MUTEX_REF: TECSMutexRef = TECSMutexRef{
-	inner: unsafe{MutexRef::from_raw_nonnull(NonZero::new(TECS_RUST_MUTEX_4).unwrap())},
+	inner: unsafe{MutexRef::from_raw_nonnull(NonZero::new(TECS_RUST_MUTEX_2).unwrap())},
 };
 
 #[link_section = ".rodata"]

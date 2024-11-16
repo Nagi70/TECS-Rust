@@ -99,7 +99,7 @@ signature siNotificationHandler {
 /*
  *  タスクのセルタイプ
  */
-[active]
+[active, generate( ItronrsGenPlugin, "lib, TASK")]
 celltype tTaskRs {
 	[inline] entry	sTask	eTask;
 	[inline] entry	siTask	eiTask;
@@ -118,9 +118,9 @@ celltype tTaskRs {
 	};
 
 	factory {
-		write("tecsgen.cfg",
-				"CRE_TSK(%s, { %s, 0, tTask_start, %s, %s, NULL });",
-									id, attribute, priority, stackSize);
+		//write("tecsgen.cfg",
+		//		"CRE_TSK(%s, { %s, 0, tTask_start, %s, %s, NULL });",
+		//							id, attribute, priority, stackSize);
 		//write("kernel_obj_ref.rs", 
 		//		"static %s_REF:TaskRef = unsafe{TaskRef::from_raw_nonnull(NonZeroI32::new(%s).unwrap())};",
 		//							id, id);

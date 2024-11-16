@@ -7,7 +7,7 @@ pub struct TMotor<'a>
 {
 	port: PbioPortIdT,
 	variable: SyncTMotorVar<'a>,
-	mutex_ref: &'a TECSMutexRef<'a>,
+	mutex_ref: &'a (dyn LockableForMutex + Sync + Send),
 }
 
 pub struct TMotorVar<'a>{
@@ -25,25 +25,20 @@ pub struct EMotorForTMotor<'a>{
 }
 
 pub struct LockGuardForTMotor<'a>{
-	mutex_ref: &'a TECSMutexRef<'a>,
+	mutex_ref: &'a (dyn LockableForMutex + Sync + Send),
 }
 
 #[link_section = ".rodata"]
 pub static MOTOR1: TMotor = TMotor {
 	port: PbioPortIdT::PBIO_PORT_ID_A,
 	variable: &MOTOR1VAR,
-	mutex_ref: &MOTOR1_MUTEX_REF,
+	mutex_ref: &DUMMY_MUTEX_REF,
 };
 
 pub static MOTOR1VAR: SyncTMotorVar = SyncTMotorVar {
 	unsafe_var: UnsafeCell::new(TMotorVar {
 		motor: None,
 	}),
-};
-
-#[link_section = ".rodata"]
-pub static MOTOR1_MUTEX_REF: TECSMutexRef = TECSMutexRef{
-	inner: unsafe{MutexRef::from_raw_nonnull(NonZero::new(TECS_RUST_MUTEX_1).unwrap())},
 };
 
 #[link_section = ".rodata"]
@@ -66,7 +61,7 @@ pub static MOTOR2VAR: SyncTMotorVar = SyncTMotorVar {
 
 #[link_section = ".rodata"]
 pub static MOTOR2_MUTEX_REF: TECSMutexRef = TECSMutexRef{
-	inner: unsafe{MutexRef::from_raw_nonnull(NonZero::new(TECS_RUST_MUTEX_2).unwrap())},
+	inner: unsafe{MutexRef::from_raw_nonnull(NonZero::new(TECS_RUST_MUTEX_1).unwrap())},
 };
 
 #[link_section = ".rodata"]

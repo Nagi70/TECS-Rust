@@ -23,3 +23,26 @@ mod t_mmbody;
 mod t_mmbody_impl;
 mod t_ssbody;
 mod t_ssbody_impl;
+
+use crate::t_task_rs::*;
+use s_task_body::*;
+
+#[no_mangle]
+pub extern "C" fn tecs_rust_start_task1(_: usize) {
+	TASK1.c_task_body.main();
+}
+
+#[no_mangle]
+pub extern "C" fn tecs_rust_start_task2(_: usize) {
+	TASK2.c_task_body.main();
+}
+
+#[no_mangle]
+pub extern "C" fn tecs_rust_start_task3(_: usize) {
+	TASK3.c_task_body.main();
+}
+
+#[no_mangle]
+pub extern "C" fn tecs_rust_start_task4(_: usize) {
+	TASK4.c_task_body.main();
+}
