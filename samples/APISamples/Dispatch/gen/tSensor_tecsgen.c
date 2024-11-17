@@ -27,13 +27,13 @@ tSensor_INIB tSensor_INIB_tab[] = {
     {
         /* entry port #_EP_# */ 
         /* attribute(RO) */ 
-        PbioPortIdT::PBIO_PORT_ID_C,             /* port */
+        PbioPortIdT::PbioPortIdC,                /* port */
     },
     /* cell: tSensor_CB_tab[1]:  Sensor2 id=2 */
     {
         /* entry port #_EP_# */ 
         /* attribute(RO) */ 
-        PbioPortIdT::PBIO_PORT_ID_D,             /* port */
+        PbioPortIdT::PbioPortIdD,                /* port */
     },
 };
 

@@ -1,6 +1,7 @@
 use itron::mutex::{MutexRef, LockError, UnlockError};
 use crate::print;
-use crate::print::*;
+use crate::tecs_print::*;
+use itron::abi::uinit_t;
 
 pub trait LockableForMutex {
     fn lock(&self);

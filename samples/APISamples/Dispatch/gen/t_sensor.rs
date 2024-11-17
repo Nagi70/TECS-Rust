@@ -1,17 +1,17 @@
+use itron::mutex::MutexRef;
 use core::cell::UnsafeCell;
 use crate::tecs_mutex::*;
 use core::num::NonZeroI32;
 use crate::kernel_cfg::*;
-use spin::Mutex;
 pub struct TSensor<'a>
 {
 	port: PbioPortIdT,
-	variable: SyncTSensorVar<'a>,
+	variable: &'a SyncTSensorVar<'a>,
 	mutex_ref: &'a (dyn LockableForMutex + Sync + Send),
 }
 
 pub struct TSensorVar<'a>{
-	pub ult: Option<&'a mut PupUltrasonicT>,
+	pub ult: Option<&'a mut PupUltrasonicSensorT>,
 }
 
 pub struct SyncTSensorVar<'a>{
@@ -30,7 +30,7 @@ pub struct LockGuardForTSensor<'a>{
 
 #[link_section = ".rodata"]
 pub static SENSOR1: TSensor = TSensor {
-	port: PbioPortIdT::PBIO_PORT_ID_C,
+	port: PbioPortIdT::PbioPortIdC,
 	variable: &SENSOR1VAR,
 	mutex_ref: &DUMMY_MUTEX_REF,
 };
@@ -48,7 +48,7 @@ pub static ESENSORFORSENSOR1: ESensorForTSensor = ESensorForTSensor {
 
 #[link_section = ".rodata"]
 pub static SENSOR2: TSensor = TSensor {
-	port: PbioPortIdT::PBIO_PORT_ID_D,
+	port: PbioPortIdT::PbioPortIdD,
 	variable: &SENSOR2VAR,
 	mutex_ref: &SENSOR2_MUTEX_REF,
 };
@@ -61,7 +61,7 @@ pub static SENSOR2VAR: SyncTSensorVar = SyncTSensorVar {
 
 #[link_section = ".rodata"]
 pub static SENSOR2_MUTEX_REF: TECSMutexRef = TECSMutexRef{
-	inner: unsafe{MutexRef::from_raw_nonnull(NonZero::new(TECS_RUST_MUTEX_2).unwrap())},
+	inner: unsafe{MutexRef::from_raw_nonnull(NonZeroI32::new(TECS_RUST_MUTEX_2).unwrap())},
 };
 
 #[link_section = ".rodata"]
@@ -75,9 +75,9 @@ impl<'a> Drop for LockGuardForTSensor<'a> {
 	}
 }
 
-impl'a,  TSensor<'a> {
+impl<'a> TSensor<'a> {
 	#[inline]
-	pub fn get_cell_ref<'a>(&'static self) -> (&PbioPortIdT, &mut TSensorVar, LockGuardForTSensor) {
+	pub fn get_cell_ref(&'static self) -> (&'static PbioPortIdT, &'static mut TSensorVar, LockGuardForTSensor) {
 		self.mutex_ref.lock();
 		(
 			&self.port,

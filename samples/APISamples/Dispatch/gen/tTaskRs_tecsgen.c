@@ -41,7 +41,7 @@ tTaskRs_INIB tTaskRs_INIB_tab[] = {
         &MMbody_eMMbody_des,                     /* cTaskBody #_CCP1_# */
         /* entry port #_EP_# */ 
         /* attribute(RO) */ 
-        unsafe{TaskRef::from_raw_nonnull(NonZeroI32::new(TASK1).unwrap())}, /* task_ref */
+        unsafe{TaskRef::from_raw_nonnull(NonZeroI32::new(TECS_RUST_TASK1).unwrap())}, /* task_ref */
     },
     /* cell: tTaskRs_CB_tab[1]:  Task2 id=2 */
     {
@@ -49,7 +49,7 @@ tTaskRs_INIB tTaskRs_INIB_tab[] = {
         &Motorbody_eMotorbody_des,               /* cTaskBody #_CCP1_# */
         /* entry port #_EP_# */ 
         /* attribute(RO) */ 
-        unsafe{TaskRef::from_raw_nonnull(NonZeroI32::new(TASK2).unwrap())}, /* task_ref */
+        unsafe{TaskRef::from_raw_nonnull(NonZeroI32::new(TECS_RUST_TASK2).unwrap())}, /* task_ref */
     },
     /* cell: tTaskRs_CB_tab[2]:  Task3 id=3 */
     {
@@ -57,7 +57,7 @@ tTaskRs_INIB tTaskRs_INIB_tab[] = {
         &SSbody_eSSbody_des,                     /* cTaskBody #_CCP1_# */
         /* entry port #_EP_# */ 
         /* attribute(RO) */ 
-        unsafe{TaskRef::from_raw_nonnull(NonZeroI32::new(TASK3).unwrap())}, /* task_ref */
+        unsafe{TaskRef::from_raw_nonnull(NonZeroI32::new(TECS_RUST_TASK3).unwrap())}, /* task_ref */
     },
     /* cell: tTaskRs_CB_tab[3]:  Task4 id=4 */
     {
@@ -65,7 +65,7 @@ tTaskRs_INIB tTaskRs_INIB_tab[] = {
         &Sensorbody_eSensorbody_des,             /* cTaskBody #_CCP1_# */
         /* entry port #_EP_# */ 
         /* attribute(RO) */ 
-        unsafe{TaskRef::from_raw_nonnull(NonZeroI32::new(TASK4).unwrap())}, /* task_ref */
+        unsafe{TaskRef::from_raw_nonnull(NonZeroI32::new(TECS_RUST_TASK4).unwrap())}, /* task_ref */
     },
 };
 

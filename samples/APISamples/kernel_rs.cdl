@@ -109,9 +109,9 @@ celltype tTaskRs {
 	[inline] entry	siNotificationHandler	eiWakeUpNotificationHandler;
 
 	attr {
-		[omit]ID		id = C_EXP("TSKID_$id$");
+		[omit]ID		id = C_EXP("TECS_RUST_TASK$id$");
 		//TaskRef			task = C_EXP("TSKID_$id$_REF");
-		TaskRef			task_ref = C_EXP("unsafe{TaskRef::from_raw_nonnull(NonZeroI32::new(TSKID_$id$).unwrap())}");
+		TaskRef			task_ref = C_EXP("unsafe{TaskRef::from_raw_nonnull(NonZeroI32::new(TECS_RUST_TASK$id$).unwrap())}");
 		[omit] ATR		attribute = C_EXP("TA_NULL");
 		[omit] PRI		priority;
 		[omit] size_t	stackSize;

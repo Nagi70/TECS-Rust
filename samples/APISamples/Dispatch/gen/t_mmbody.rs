@@ -1,7 +1,3 @@
-use core::cell::UnsafeCell;
-use crate::tecs_mutex::*;
-use core::num::NonZeroI32;
-use crate::kernel_cfg::*;
 use crate::{s_motor::*, t_motor::*};
 
 pub struct TMmbody<'a, T, U>
@@ -29,7 +25,7 @@ pub static EMMBODYFORMMBODY: EMmbodyForTMmbody = EMmbodyForTMmbody {
 };
 
 impl<T: SMotor, U: SMotor> TMmbody<'_, T, U> {
-	pub fn get_cell_ref(&'static self) -> (&T, &U) {
+	pub fn get_cell_ref(&'static self) -> (&'static T, &'static U) {
 		(
 			self.c_motor1,
 			self.c_motor2

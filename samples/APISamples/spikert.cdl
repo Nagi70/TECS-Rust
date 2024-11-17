@@ -4,7 +4,7 @@ typedef int_t   PbioDirectionT;
 typedef int_t   PbioPortIdT;
 typedef int_t   PbioErrorT;
 typedef int_t   Option_Ref_a_mut__PupMotorT__;
-typedef int_t   Option_Ref_a_mut__PupUltrasonicT__;
+typedef int_t   Option_Ref_a_mut__PupUltrasonicSensorT__;
 typedef int_t   bool;
 
 signature sMotor {
@@ -44,7 +44,7 @@ celltype tSensor {
         PbioPortIdT port = C_EXP("PbioPortIdT::PBIO_PORT_ID_$port$");
     };
     var {
-        Option_Ref_a_mut__PupUltrasonicT__ ult = C_EXP("None");
+        Option_Ref_a_mut__PupUltrasonicSensorT__ ult = C_EXP("None");
     };
 };
 

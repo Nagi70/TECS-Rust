@@ -235,11 +235,14 @@ class RustGenCelltypePlugin < CelltypePlugin
 
     end
 
+    def gen_use_mutex file
+        file.print "use spin::Mutex;\n"
+    end
+
     # @use_string_list に格納されている文字列を元に use 文を生成する
     def gen_use_header file
         if @celltype.get_var_list.length != 0 then
-            file.print "use spin::Mutex;\n"
-            # file.print "use crate::kernel_obj_ref::*;\n"
+            gen_use_mutex file
         end
         if @use_string_list.length != 0 then
             file.print "use crate::{"
@@ -917,6 +920,7 @@ class RustGenCelltypePlugin < CelltypePlugin
     def gen_rust_get_cell_ref file, celltype, callport_list, use_jenerics_alphabet
         # セルタイプに受け口がない場合は，生成しない
         # 受け口がないならば，get_cell_ref 関数が呼ばれることは現状無いため
+        life_time_declare = false
         celltype.get_port_list.each{ |port|
             if port.get_port_type == :ENTRY then
                 jenerics_flag = true
@@ -925,7 +929,7 @@ class RustGenCelltypePlugin < CelltypePlugin
                 else
                     # check_only_entryport_celltype では，dyn な呼び口を判定していないため，ここで判定する
                     celltype.get_port_list.each{ |port|
-                        if check_gen_dyn_for_port(port) == nil && use_jenerics_alphabet.length != 0 then
+                        if check_gen_dyn_for_port(port) == nil || use_jenerics_alphabet.length != 0 then
                             file.print "<"
                         end
                         break
@@ -937,10 +941,17 @@ class RustGenCelltypePlugin < CelltypePlugin
                     # ライフタイムアノテーションが必要な型が変数にあるかどうかを判断
                     var_type_name = var.get_type.get_type_str
                     if check_lifetime_annotation(var_type_name) then
-                        file.print "'a, "
+                        # file.print "'a, "
+                        file.print "'a"
+                        life_time_declare = true
                         break
                     end
                 }
+
+                if use_jenerics_alphabet.length != 0 && life_time_declare == true then
+                    file.print ", "
+                end
+
                 # impl のジェネリクスを生成
                 callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
                     if check_gen_dyn_for_port(callport) == nil then
@@ -956,7 +967,7 @@ class RustGenCelltypePlugin < CelltypePlugin
                 else
                     # check_only_entryport_celltype では，dyn な呼び口を判定していないため，ここで判定する
                     celltype.get_port_list.each{ |port|
-                        if check_gen_dyn_for_port(port) == nil && use_jenerics_alphabet.length != 0 then
+                        if check_gen_dyn_for_port(port) == nil || use_jenerics_alphabet.length != 0 then
                             file.print ">"
                         end
                         break
@@ -1002,7 +1013,7 @@ class RustGenCelltypePlugin < CelltypePlugin
                 # TODO：ライフタイムについては，もう少し厳格にする必要がある
                 celltype.get_var_list.each{ |var|
                     var_type_name = var.get_type.get_type_str
-                    if check_lifetime_annotation(var_type_name) then
+                    if check_lifetime_annotation(var_type_name) && life_time_declare == false then
                         file.print "<'a>"
                         break
                     end
@@ -1015,7 +1026,7 @@ class RustGenCelltypePlugin < CelltypePlugin
 
                 # 呼び口をタプルの配列に追加
                 callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
-                    return_tuple_type_list.push("&#{alphabet}")
+                    return_tuple_type_list.push("&'static #{alphabet}")
                     return_tuple_list.push("self.#{snake_case(callport.get_name.to_s)}")
                 end
 
@@ -1024,7 +1035,7 @@ class RustGenCelltypePlugin < CelltypePlugin
                     if attr.is_omit? then
                         next
                     end
-                    return_tuple_type_list.push("&#{c_type_to_rust_type(attr.get_type)}")
+                    return_tuple_type_list.push("&'static #{c_type_to_rust_type(attr.get_type)}")
                     return_tuple_list.push("&self.#{attr.get_name.to_s}")
                 }
 

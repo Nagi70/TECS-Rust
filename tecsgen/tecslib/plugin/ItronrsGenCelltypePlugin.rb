@@ -76,16 +76,15 @@ class ItronrsGenCelltypePlugin < RustGenCelltypePlugin
     # セルタイプ名から，カーネルオブジェクトかどうか判断し，Ref型文字列に変換する
     def get_itronrs_kernel_obj_ref_str
         plugin_option = @plugin_arg_str.split(",").map(&:strip)
-        case plugin_option
-        when plugin_option.include?("TASK")
+        if plugin_option.include?("TASK") then
             return "TaskRef"
-        when plugin_option.include?("SEMAPHORE") 
+        elsif plugin_option.include?("SEMAPHORE") then
             return "SemaphoreRef"
-        when plugin_option.include?("EVENTFLAG")
+        elsif plugin_option.include?("EVENTFLAG") then
             return "EventflagRef"
-        when plugin_option.include?("DATAQUEUE")
+        elsif plugin_option.include?("DATAQUEUE") then
             return "DataqueueRef"
-        when plugin_option.include?("MUTEX")
+        elsif plugin_option.include?("MUTEX") then
             return "MutexRef"
         else
             return "unknown"
@@ -162,31 +161,56 @@ class ItronrsGenCelltypePlugin < RustGenCelltypePlugin
         attribute = cell.get_attr_initializer("attribute".to_sym)
         priority = cell.get_attr_initializer("priority".to_sym)
         stack_size = cell.get_attr_initializer("stackSize".to_sym)
-
+        
+        # TODO: tTaskRs であることを前提としている
         file.print "CRE_TSK(#{id}, { #{attribute}, 0, tecs_rust_start_#{snake_case(cell.get_global_name.to_s)}, #{priority}, #{stack_size}, NULL });\n"
         file.close
     end
 
-    # @use_string_list に格納されている文字列を元に use 文を生成する
-    def gen_use_header file
-        obj_ref_str = get_itronrs_kernel_obj_ref_str
-        if obj_ref_str != "unknown" then
-            # file.print "use crate::kernel_obj_ref::*;  //特別な生成部\n"
-            file.print "use itron::abi::*;\n"
-            # TODO: task の部分の変換
-            file.print "use itron::task::#{obj_ref_str};\n"
-        end
+    def gen_use_mutex file
+        file.print "use itron::mutex::MutexRef;\n"
         file.print "use core::cell::UnsafeCell;\n"
         file.print "use crate::tecs_mutex::*;\n"
         file.print "use core::num::NonZeroI32;\n"
         file.print "use crate::kernel_cfg::*;\n"
+    end
+
+    def gen_use_header file
+        kernel_obj = get_itronrs_kernel_obj_ref_str
+        if kernel_obj != "unknown" then
+            file.print "use itron::#{kernel_obj[0..-4].downcase}::#{kernel_obj};\n"
+            file.print "use core::num::NonZeroI32;\n"
+            file.print "use crate::kernel_cfg::*;\n"
+        end
+        
         super(file)
+    end
+
+    # セル構造体の呼び口フィールドの定義を生成
+    def gen_rust_cell_structure_callport file, callport_list, use_jenerics_alphabet
+        task_flag = false
+        task_flag = true if get_itronrs_kernel_obj_ref_str == "TaskRef"
+
+        callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
+            # TODO: tTaskRs がタスクオブジェクトであることを前提としている
+            if task_flag == true && snake_case(callport.get_name.to_s) == "c_task_body" then
+                file.print "\tpub #{snake_case(callport.get_name.to_s)}: &'a "
+            else
+                file.print "\t#{snake_case(callport.get_name.to_s)}: &'a "
+            end
+
+            if check_gen_dyn_for_port(callport) == nil then
+                file.print "#{alphabet},\n"
+            else
+                file.print "(#{check_gen_dyn_for_port(callport)} + Sync + Send),\n"
+            end
+        end
     end
 
     # セル構造体の変数フィールドの定義を生成
     def gen_rust_cell_structure_variable file, celltype
         if celltype.get_var_list.length != 0 then
-            file.print "\tvariable: Sync#{get_rust_celltype_name(celltype)}Var"
+            file.print "\tvariable: &'a Sync#{get_rust_celltype_name(celltype)}Var"
             celltype.get_var_list.each{ |var|
                 var_type_name = var.get_type.get_type_str
                 if check_lifetime_annotation(var_type_name) then
@@ -349,6 +373,7 @@ class ItronrsGenCelltypePlugin < RustGenCelltypePlugin
     def gen_rust_get_cell_ref file, celltype, callport_list, use_jenerics_alphabet
         # セルタイプに受け口がない場合は，生成しない
         # 受け口がないならば，get_cell_ref 関数が呼ばれることは現状無いため
+        life_time_declare = false
         celltype.get_port_list.each{ |port|
             if port.get_port_type == :ENTRY then
                 jenerics_flag = true
@@ -357,7 +382,7 @@ class ItronrsGenCelltypePlugin < RustGenCelltypePlugin
                 else
                     # check_only_entryport_celltype では，dyn な呼び口を判定していないため，ここで判定する
                     celltype.get_port_list.each{ |port|
-                        if check_gen_dyn_for_port(port) == nil && use_jenerics_alphabet.length != 0 then
+                        if check_gen_dyn_for_port(port) == nil || use_jenerics_alphabet.length != 0 then
                             file.print "<"
                         end
                         break
@@ -369,10 +394,16 @@ class ItronrsGenCelltypePlugin < RustGenCelltypePlugin
                     # ライフタイムアノテーションが必要な型が変数にあるかどうかを判断
                     var_type_name = var.get_type.get_type_str
                     if check_lifetime_annotation(var_type_name) then
-                        file.print "'a, "
+                        file.print "'a"
+                        life_time_declare = true
                         break
                     end
                 }
+
+                if use_jenerics_alphabet.length != 0 && life_time_declare == true then
+                    file.print ", "
+                end
+
                 # impl のジェネリクスを生成
                 callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
                     if check_gen_dyn_for_port(callport) == nil then
@@ -388,7 +419,7 @@ class ItronrsGenCelltypePlugin < RustGenCelltypePlugin
                 else
                     # check_only_entryport_celltype では，dyn な呼び口を判定していないため，ここで判定する
                     celltype.get_port_list.each{ |port|
-                        if check_gen_dyn_for_port(port) == nil && use_jenerics_alphabet.length != 0 then
+                        if check_gen_dyn_for_port(port) == nil || use_jenerics_alphabet.length != 0 then
                             file.print ">"
                         end
                         break
@@ -434,7 +465,7 @@ class ItronrsGenCelltypePlugin < RustGenCelltypePlugin
                 # TODO：ライフタイムについては，もう少し厳格にする必要がある
                 celltype.get_var_list.each{ |var|
                     var_type_name = var.get_type.get_type_str
-                    if check_lifetime_annotation(var_type_name) then
+                    if check_lifetime_annotation(var_type_name) && life_time_declare == false then
                         file.print "<'a>"
                         break
                     end
@@ -447,7 +478,7 @@ class ItronrsGenCelltypePlugin < RustGenCelltypePlugin
 
                 # 呼び口をタプルの配列に追加
                 callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
-                    return_tuple_type_list.push("&#{alphabet}")
+                    return_tuple_type_list.push("&'static #{alphabet}")
                     return_tuple_list.push("self.#{snake_case(callport.get_name.to_s)}")
                 end
 
@@ -456,13 +487,13 @@ class ItronrsGenCelltypePlugin < RustGenCelltypePlugin
                     if attr.is_omit? then
                         next
                     end
-                    return_tuple_type_list.push("&#{c_type_to_rust_type(attr.get_type)}")
+                    return_tuple_type_list.push("&'static #{c_type_to_rust_type(attr.get_type)}")
                     return_tuple_list.push("&self.#{attr.get_name.to_s}")
                 }
 
                 # 変数をタプルの配列に追加
                 if celltype.get_var_list.length != 0 then
-                    return_tuple_type_list.push("&mut #{get_rust_celltype_name(celltype)}Var")
+                    return_tuple_type_list.push("&'static mut #{get_rust_celltype_name(celltype)}Var")
                     # celltype.get_var_list.each{ |var|
                     #     var_type_name = var.get_type.get_type_str
                     #     if check_lifetime_annotation(var_type_name) then
@@ -562,7 +593,8 @@ class ItronrsGenCelltypePlugin < RustGenCelltypePlugin
     # itron のコンフィグレーションファイルにミューテックス静的APIを生成する
     def gen_mutex_static_api_for_configuration
         file = AppFile.open( "#{$gen}/tecsgen.cfg" )
-        file.print "CRE_MTX( TECS_RUST_MUTEX_#{@@mutex_ref_id}, { TA_INHERIT });\n"
+        # file.print "CRE_MTX( TECS_RUST_MUTEX_#{@@mutex_ref_id}, { TA_INHERIT });\n"
+        file.print "CRE_MTX( TECS_RUST_MUTEX_#{@@mutex_ref_id}, { TA_CEILING, 1 });\n"
         file.close
         @@mutex_ref_id += 1
     end
@@ -602,7 +634,7 @@ class ItronrsGenCelltypePlugin < RustGenCelltypePlugin
         if multiple then
             file.print "#[link_section = \".rodata\"]\n"
             file.print "pub static #{cell.get_global_name.to_s.upcase}_MUTEX_REF: TECSMutexRef = TECSMutexRef{\n"
-            file.print "\tinner: unsafe{MutexRef::from_raw_nonnull(NonZero::new(TECS_RUST_MUTEX_#{@@mutex_ref_id}).unwrap())},\n"
+            file.print "\tinner: unsafe{MutexRef::from_raw_nonnull(NonZeroI32::new(TECS_RUST_MUTEX_#{@@mutex_ref_id}).unwrap())},\n"
             file.print "};\n\n"
             gen_mutex_static_api_for_configuration
         end
@@ -735,7 +767,8 @@ class ItronrsGenCelltypePlugin < RustGenCelltypePlugin
         contents = <<~'EOS'
 use itron::mutex::{MutexRef, LockError, UnlockError};
 use crate::print;
-use crate::print::*;
+use crate::tecs_print::*;
+use itron::abi::uinit_t;
 
 pub trait LockableForMutex {
     fn lock(&self);
@@ -846,6 +879,7 @@ impl LockableForMutex for TECSDummyMutexRef{
     # syslog の Rust ラップである print.rs を生成する
     def gen_tecs_print_rs
         contents = <<~'EOS'
+use itron::abi::uinit_t;
 use itron::abi::*;
 
 extern "C"{

@@ -27,13 +27,13 @@ tMotor_INIB tMotor_INIB_tab[] = {
     {
         /* entry port #_EP_# */ 
         /* attribute(RO) */ 
-        PbioPortIdT::PBIO_PORT_ID_A,             /* port */
+        PbioPortIdT::PbioPortIdA,                /* port */
     },
     /* cell: tMotor_CB_tab[1]:  Motor2 id=2 */
     {
         /* entry port #_EP_# */ 
         /* attribute(RO) */ 
-        PbioPortIdT::PBIO_PORT_ID_B,             /* port */
+        PbioPortIdT::PbioPortIdB,                /* port */
     },
 };
 

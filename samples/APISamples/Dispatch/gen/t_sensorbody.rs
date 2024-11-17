@@ -1,7 +1,3 @@
-use core::cell::UnsafeCell;
-use crate::tecs_mutex::*;
-use core::num::NonZeroI32;
-use crate::kernel_cfg::*;
 use crate::{s_sensor::*, t_sensor::*};
 
 pub struct TSensorbody<'a, T>
@@ -26,7 +22,7 @@ pub static ESENSORBODYFORSENSORBODY: ESensorbodyForTSensorbody = ESensorbodyForT
 };
 
 impl<T: SSensor> TSensorbody<'_, T> {
-	pub fn get_cell_ref(&'static self) -> &T {
+	pub fn get_cell_ref(&'static self) -> &'static T {
 		self.c_sensor
 	}
 }

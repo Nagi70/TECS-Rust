@@ -1,6 +1,6 @@
 use spin::Mutex;
 use itron::abi::*;
-use itron::unknown::unknown;
+use itron::task::TaskRef;
 pub trait SiTask {
 	fn activate(&'static self)-> ER;
 	fn wakeup(&'static self)-> ER;

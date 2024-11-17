@@ -17,7 +17,7 @@ typedef int_t          PbioDirectionT;
 typedef int_t          PbioPortIdT;
 typedef int_t          PbioErrorT;
 typedef int_t          Option_Ref_a_mut__PupMotorT__;
-typedef int_t          Option_Ref_a_mut__PupUltrasonicT__;
+typedef int_t          Option_Ref_a_mut__PupUltrasonicSensorT__;
 typedef int_t          bool;
 
 #define INITIALIZE_TECS() 

@@ -1,12 +1,11 @@
-use core::cell::UnsafeCell;
-use crate::tecs_mutex::*;
+use itron::task::TaskRef;
 use core::num::NonZeroI32;
 use crate::kernel_cfg::*;
 use crate::{s_task_body::*, t_mmbody::*, t_motorbody::*, t_ssbody::*, t_sensorbody::*};
 
 pub struct TTaskRs<'a>
 {
-	c_task_body: &'a (dyn STaskBody + Sync + Send),
+	pub c_task_body: &'a (dyn STaskBody + Sync + Send),
 	task_ref: TaskRef<'a>,
 }
 
@@ -29,7 +28,7 @@ pub struct EiWakeUpNotificationHandlerForTTaskRs<'a>{
 #[link_section = ".rodata"]
 pub static TASK1: TTaskRs = TTaskRs {
 	c_task_body: &EMMBODYFORMMBODY,
-	task_ref: unsafe{TaskRef::from_raw_nonnull(NonZeroI32::new(TASK1).unwrap())},
+	task_ref: unsafe{TaskRef::from_raw_nonnull(NonZeroI32::new(TECS_RUST_TASK1).unwrap())},
 };
 
 #[link_section = ".rodata"]
@@ -55,7 +54,7 @@ pub static EIWAKEUPNOTIFICATIONHANDLERFORTASK1: EiWakeUpNotificationHandlerForTT
 #[link_section = ".rodata"]
 pub static TASK2: TTaskRs = TTaskRs {
 	c_task_body: &EMOTORBODYFORMOTORBODY,
-	task_ref: unsafe{TaskRef::from_raw_nonnull(NonZeroI32::new(TASK2).unwrap())},
+	task_ref: unsafe{TaskRef::from_raw_nonnull(NonZeroI32::new(TECS_RUST_TASK2).unwrap())},
 };
 
 #[link_section = ".rodata"]
@@ -81,7 +80,7 @@ pub static EIWAKEUPNOTIFICATIONHANDLERFORTASK2: EiWakeUpNotificationHandlerForTT
 #[link_section = ".rodata"]
 pub static TASK3: TTaskRs = TTaskRs {
 	c_task_body: &ESSBODYFORSSBODY,
-	task_ref: unsafe{TaskRef::from_raw_nonnull(NonZeroI32::new(TASK3).unwrap())},
+	task_ref: unsafe{TaskRef::from_raw_nonnull(NonZeroI32::new(TECS_RUST_TASK3).unwrap())},
 };
 
 #[link_section = ".rodata"]
@@ -107,7 +106,7 @@ pub static EIWAKEUPNOTIFICATIONHANDLERFORTASK3: EiWakeUpNotificationHandlerForTT
 #[link_section = ".rodata"]
 pub static TASK4: TTaskRs = TTaskRs {
 	c_task_body: &ESENSORBODYFORSENSORBODY,
-	task_ref: unsafe{TaskRef::from_raw_nonnull(NonZeroI32::new(TASK4).unwrap())},
+	task_ref: unsafe{TaskRef::from_raw_nonnull(NonZeroI32::new(TECS_RUST_TASK4).unwrap())},
 };
 
 #[link_section = ".rodata"]
@@ -132,7 +131,7 @@ pub static EIWAKEUPNOTIFICATIONHANDLERFORTASK4: EiWakeUpNotificationHandlerForTT
 
 impl<> TTaskRs<'_> {
 	#[inline]
-	pub fn get_cell_ref(&'static self) -> (&dyn STaskBody, &TaskRef) {
+	pub fn get_cell_ref(&'static self) -> (&'static dyn STaskBody, &'static TaskRef) {
 		(
 			self.c_task_body,
 			&self.task_ref
