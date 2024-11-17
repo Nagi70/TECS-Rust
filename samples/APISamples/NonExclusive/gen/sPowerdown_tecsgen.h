@@ -20,7 +20,7 @@ struct tag_sPowerdown_VDES {
 
 /* signature function table #_SFT_# */
 struct tag_sPowerdown_VMT {
-    void           (*powerdown__T)( const struct tag_sPowerdown_VDES *edp, pbio_error_t error );
+    void           (*powerdown__T)( const struct tag_sPowerdown_VDES *edp, PbioErrorT error );
 };
 
 /* signature descriptor #_SDES_# for dynamic join */

@@ -19,3 +19,16 @@ mod t_motorbody;
 mod t_motorbody_impl;
 mod t_sensorbody;
 mod t_sensorbody_impl;
+
+use crate::t_task_rs::*;
+use s_task_body::*;
+
+#[no_mangle]
+pub extern "C" fn tecs_rust_start_task1(_: usize) {
+	TASK1.c_task_body.main();
+}
+
+#[no_mangle]
+pub extern "C" fn tecs_rust_start_task2(_: usize) {
+	TASK2.c_task_body.main();
+}

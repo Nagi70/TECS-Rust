@@ -5,13 +5,12 @@ use crate::kernel_cfg::*;
 use spin::Mutex;
 pub struct TMotor<'a>
 {
-	port: pbio_port_id_t,
+	port: PbioPortIdT,
 	variable: SyncTMotorVar<'a>,
-	mutex_ref: &'a TECSMutexRef<'a>,
 }
 
 pub struct TMotorVar<'a>{
-	pub motor: Option<&'a mut pup_motor_t>,
+	pub motor: Option<&'a mut PupMotorT>,
 }
 
 pub struct SyncTMotorVar<'a>{
@@ -24,15 +23,10 @@ pub struct EMotorForTMotor<'a>{
 	pub cell: &'a TMotor<'a>,
 }
 
-pub struct LockGuardForTMotor<'a>{
-	mutex_ref: &'a TECSMutexRef<'a>,
-}
-
 #[link_section = ".rodata"]
 pub static MOTOR: TMotor = TMotor {
-	port: pbio_port_id_t::PBIO_PORT_ID_A,
+	port: PbioPortIdT::PBIO_PORT_ID_A,
 	variable: &MOTORVAR,
-	mutex_ref: &MOTOR_MUTEX_REF,
 };
 
 pub static MOTORVAR: SyncTMotorVar = SyncTMotorVar {
@@ -42,31 +36,17 @@ pub static MOTORVAR: SyncTMotorVar = SyncTMotorVar {
 };
 
 #[link_section = ".rodata"]
-pub static MOTOR_MUTEX_REF: TECSMutexRef = TECSMutexRef{
-	inner: unsafe{MutexRef::from_raw_nonnull(NonZero::new(TECS_RUST_MUTEX_1).unwrap())},
-};
-
-#[link_section = ".rodata"]
 pub static EMOTORFORMOTOR: EMotorForTMotor = EMotorForTMotor {
 	cell: &MOTOR,
 };
 
-impl<'a> Drop for LockGuardForTMotor<'a> {
-	fn drop(&mut self){
-		self.mutex_ref.unlock();
-	}
-}
-
 impl'a,  TMotor<'a> {
 	#[inline]
-	pub fn get_cell_ref<'a>(&'static self) -> (&pbio_port_id_t, &mut TMotorVar, LockGuardForTMotor) {
-		self.mutex_ref.lock();
+	pub fn get_cell_ref<'a>(&'static self) -> (&PbioPortIdT, &mut TMotorVar, &TECSDummyLockGuard) {
 		(
 			&self.port,
 			unsafe{&mut *self.variable.unsafe_var.get()},
-			LockGuardForTMotor{
-				mutex_ref: self.mutex_ref,
-			}
+			&DUMMY_LOCK_GUARD
 		)
 	}
 }

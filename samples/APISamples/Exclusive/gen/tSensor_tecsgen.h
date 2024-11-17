@@ -32,14 +32,14 @@ extern "C" {
 typedef const struct tag_tSensor_INIB {
     /* call port #_NEP_# */ 
     /* attribute(RO) #_ATO_# */ 
-    pbio_port_id_t port;
+    PbioPortIdT    port;
 }  tSensor_INIB;
 /* cell CB type definition #_CCTPA_# */
 typedef struct tag_tSensor_CB {
     tSensor_INIB  *_inib;
     /* call port #_NEP_# */ 
     /* var #_VA_# */ 
-    Option_Ref_a_mut__pup_ultrasonic_sensor_t__ ult;
+    Option_Ref_a_mut__PupUltrasonicT__ ult;
 }  tSensor_CB;
 /* singleton cell CB prototype declaration #_MCPB_# */
 extern tSensor_CB  tSensor_CB_tab[];

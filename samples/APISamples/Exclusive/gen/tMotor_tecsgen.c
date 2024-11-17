@@ -25,7 +25,7 @@ tMotor_INIB tMotor_INIB_tab[] = {
     {
         /* entry port #_EP_# */ 
         /* attribute(RO) */ 
-        pbio_port_id_t::PBIO_PORT_ID_A,          /* port */
+        PbioPortIdT::PBIO_PORT_ID_A,             /* port */
     },
 };
 

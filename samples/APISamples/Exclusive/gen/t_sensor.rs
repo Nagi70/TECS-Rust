@@ -5,13 +5,13 @@ use crate::kernel_cfg::*;
 use spin::Mutex;
 pub struct TSensor<'a>
 {
-	port: pbio_port_id_t,
+	port: PbioPortIdT,
 	variable: SyncTSensorVar<'a>,
 	mutex_ref: &'a TECSMutexRef<'a>,
 }
 
 pub struct TSensorVar<'a>{
-	pub ult: Option<&'a mut pup_ultrasonic_sensor_t>,
+	pub ult: Option<&'a mut PupUltrasonicT>,
 }
 
 pub struct SyncTSensorVar<'a>{
@@ -30,7 +30,7 @@ pub struct LockGuardForTSensor<'a>{
 
 #[link_section = ".rodata"]
 pub static SENSOR: TSensor = TSensor {
-	port: pbio_port_id_t::PBIO_PORT_ID_C,
+	port: PbioPortIdT::PBIO_PORT_ID_C,
 	variable: &SENSORVAR,
 	mutex_ref: &SENSOR_MUTEX_REF,
 };
@@ -59,7 +59,7 @@ impl<'a> Drop for LockGuardForTSensor<'a> {
 
 impl'a,  TSensor<'a> {
 	#[inline]
-	pub fn get_cell_ref<'a>(&'static self) -> (&pbio_port_id_t, &mut TSensorVar, LockGuardForTSensor) {
+	pub fn get_cell_ref<'a>(&'static self) -> (&PbioPortIdT, &mut TSensorVar, LockGuardForTSensor) {
 		self.mutex_ref.lock();
 		(
 			&self.port,

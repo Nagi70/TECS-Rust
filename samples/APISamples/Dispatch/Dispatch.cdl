@@ -35,7 +35,7 @@ cell tSensorbody Sensorbody {
 };
 
 
-[generate( ItronrsGenPlugin, "lib")]
+[generate( ItronrsGenPlugin, "lib, TASK")]
 cell tTaskRs Task1{
     cTaskBody = MMbody.eMMbody;
     id = C_EXP("TASK1");
@@ -45,7 +45,7 @@ cell tTaskRs Task1{
     priority = 42;
 };
 
-[generate( ItronrsGenPlugin, "lib")]
+[generate( ItronrsGenPlugin, "lib, TASK")]
 cell tTaskRs Task2{
     cTaskBody = Motorbody.eMotorbody;
     id = C_EXP("TASK2");

@@ -32,14 +32,14 @@ extern "C" {
 typedef const struct tag_tMotor_INIB {
     /* call port #_NEP_# */ 
     /* attribute(RO) #_ATO_# */ 
-    pbio_port_id_t port;
+    PbioPortIdT    port;
 }  tMotor_INIB;
 /* cell CB type definition #_CCTPA_# */
 typedef struct tag_tMotor_CB {
     tMotor_INIB  *_inib;
     /* call port #_NEP_# */ 
     /* var #_VA_# */ 
-    Option_Ref_a_mut__pup_motor_t__ motor;
+    Option_Ref_a_mut__PupMotorT__ motor;
 }  tMotor_CB;
 /* singleton cell CB prototype declaration #_MCPB_# */
 extern tMotor_CB  tMotor_CB_tab[];
@@ -50,7 +50,7 @@ typedef struct tag_tMotor_CB *tMotor_IDX;
 /* prototype declaration of entry port function #_EPP_# */
 /* sMotor */
 Inline void         tMotor_eMotor_set_motor_ref(tMotor_IDX idx);
-Inline void         tMotor_eMotor_setup(tMotor_IDX idx, pbio_direction_t positive_direction, bool reset_count);
+Inline void         tMotor_eMotor_setup(tMotor_IDX idx, PbioDirectionT positive_direction, bool reset_count);
 Inline void         tMotor_eMotor_set_speed(tMotor_IDX idx, int32_t speed);
 Inline void         tMotor_eMotor_stop(tMotor_IDX idx);
 #ifdef __cplusplus

@@ -13,11 +13,11 @@
 #ifndef TOPPERS_MACRO_ONLY
 
 typedef int_t          TaskRef;
-typedef int_t          pbio_direction_t;
-typedef int_t          pbio_port_id_t;
-typedef int_t          pbio_error_t;
-typedef int_t          Option_Ref_a_mut__pup_motor_t__;
-typedef int_t          Option_Ref_a_mut__pup_ultrasonic_sensor_t__;
+typedef int_t          PbioDirectionT;
+typedef int_t          PbioPortIdT;
+typedef int_t          PbioErrorT;
+typedef int_t          Option_Ref_a_mut__PupMotorT__;
+typedef int_t          Option_Ref_a_mut__PupUltrasonicT__;
 typedef int_t          bool;
 
 #define INITIALIZE_TECS() 

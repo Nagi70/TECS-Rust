@@ -387,6 +387,7 @@ class Cell
     entry_port_name = func_nsp.to_s.split(".")[1]
     entry_func_name = func_nsp.to_s.split(".")[2]
 
+    # Path のなかに存在する func_nsp の次以降の Path を取得
     results = []
     $flow_json_hash.each do |cell, flow|
       flow[:Accessed].each do |accessed|
@@ -394,6 +395,20 @@ class Cell
           if path[:Calleeport].to_s == entry_port_name && path[:Function].to_s == entry_func_name then
             accessed[:Path][i+1..-1].each do |path|
               break if accessed[:Path][i+1][:CellName] != cell_name.to_sym
+              # print "check\n"
+              results << path
+            end
+          end
+        end
+      end
+    end
+
+    # ActiceCell と Path をまたぐように fucn_nsp が存在している場合の処理
+    if results.length == 0 then
+      $flow_json_hash.each do |cell, flow|
+        flow[:Accessed].each do |accessed|
+          if accessed[:Calleeport].to_s == entry_port_name && accessed[:Function].to_s == entry_func_name then
+            accessed[:Path].each_with_index do |path, i|
               results << path
             end
           end

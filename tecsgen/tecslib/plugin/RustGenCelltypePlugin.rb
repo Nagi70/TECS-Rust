@@ -44,6 +44,7 @@ class RustGenCelltypePlugin < CelltypePlugin
     @@module_generated = false
     @@mutex_ref_id = 1
     @@json_parse_result = []
+    @@main_lib_rs_cleaned = false
 
     #celltype::     Celltype        セルタイプ（インスタンス）
     def initialize( celltype, option )
@@ -400,7 +401,7 @@ class RustGenCelltypePlugin < CelltypePlugin
         end
 
         if file_name != nil then
-            File.write("#{$gen}/#{file_name}.rs", "") unless File.exist?("#{$gen}/#{file_name}.rs")
+            # File.write("#{$gen}/#{file_name}.rs", "") unless File.exist?("#{$gen}/#{file_name}.rs")
             lib_file = File.read("#{$gen}/#{file_name}.rs")
             last_mod_line = lib_file.rindex(/^mod\s+\w+;/)
             
@@ -441,6 +442,7 @@ class RustGenCelltypePlugin < CelltypePlugin
         end
 
         if file_name != nil then
+            # File.write("#{$gen}/#{file_name}.rs", "") unless File.exist?("#{$gen}/#{file_name}.rs")
             lib_file = File.read("#{$gen}/#{file_name}.rs")
             return if lib_file.include?("mod #{snake_case(signature.get_global_name.to_s)};")
 
@@ -1301,6 +1303,25 @@ class RustGenCelltypePlugin < CelltypePlugin
         end
 
         @use_string_list = []
+
+        if @@main_lib_rs_cleaned != true then
+            plugin_option = @plugin_arg_str.split(",").map(&:strip)
+            file_name = nil
+            if plugin_option.include?("main") then
+                file_name = "main"
+            elsif plugin_option.include?("lib") then
+                file_name = "lib"
+            end
+
+            # 最適化の際、既に main もしくは lib が存在するため、一度空にして、正常に生成されるようにする
+            if File.exist?("#{$gen}/#{file_name}.rs") then
+                File.open("#{$gen}/#{file_name}.rs", "w") { |file| }
+            else
+                File.write("#{$gen}/#{file_name}.rs", "")
+            end
+
+            @@main_lib_rs_cleaned = true
+        end
 
         # そのセルタイプの全てのセルに対して，ファイルを生成する
         # @celltype.get_cell_list.each{ |cell|

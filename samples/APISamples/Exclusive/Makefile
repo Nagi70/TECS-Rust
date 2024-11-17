@@ -14,7 +14,7 @@ CFLAGS = $(INCLUDES) $(DEFINES) -D  "Inline=static inline"
 LD = gcc
 
 #default srource directory
-SRC_DIR = $(BASE_DIR)/src
+SRC_DIR = $(BASE_DIR)/../src
 
 #default TECS generator
 TECSGEN_EXE = tecsgen
@@ -31,7 +31,11 @@ PRE_TECSGEN_TARGET =
 # Post-tecsgen target
 POST_TECSGEN_TARGET =
 
-RUST_SRCS = $(SRC_DIR)/t_taskbody_impl.rs $(SRC_DIR)/t_alice_impl.rs $(SRC_DIR)/t_bob_impl.rs $(SRC_DIR)/t_carol_impl.rs
+RUST_SRCS = $(SRC_DIR)/t_task_rs_impl.rs\
+			$(SRC_DIR)/t_motor_impl.rs\
+			$(SRC_DIR)/t_motorbody_impl.rs\
+			$(SRC_DIR)/t_sensor_impl.rs\
+			$(SRC_DIR)/t_sensorbody_impl.rs
 
 allall: tecs
 	make all     # in order to include generated Makefile.tecsgen & Makefile.depend

@@ -5,13 +5,13 @@ use crate::kernel_cfg::*;
 use spin::Mutex;
 pub struct TMotor<'a>
 {
-	port: pbio_port_id_t,
+	port: PbioPortIdT,
 	variable: SyncTMotorVar<'a>,
 	mutex_ref: &'a TECSMutexRef<'a>,
 }
 
 pub struct TMotorVar<'a>{
-	pub motor: Option<&'a mut pup_motor_t>,
+	pub motor: Option<&'a mut PupMotorT>,
 }
 
 pub struct SyncTMotorVar<'a>{
@@ -30,7 +30,7 @@ pub struct LockGuardForTMotor<'a>{
 
 #[link_section = ".rodata"]
 pub static MOTOR: TMotor = TMotor {
-	port: pbio_port_id_t::PBIO_PORT_ID_A,
+	port: PbioPortIdT::PBIO_PORT_ID_A,
 	variable: &MOTORVAR,
 	mutex_ref: &MOTOR_MUTEX_REF,
 };
@@ -59,7 +59,7 @@ impl<'a> Drop for LockGuardForTMotor<'a> {
 
 impl'a,  TMotor<'a> {
 	#[inline]
-	pub fn get_cell_ref<'a>(&'static self) -> (&pbio_port_id_t, &mut TMotorVar, LockGuardForTMotor) {
+	pub fn get_cell_ref<'a>(&'static self) -> (&PbioPortIdT, &mut TMotorVar, LockGuardForTMotor) {
 		self.mutex_ref.lock();
 		(
 			&self.port,
