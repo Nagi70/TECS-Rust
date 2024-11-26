@@ -1,7 +1,3 @@
-use core::cell::UnsafeCell;
-use crate::tecs_mutex::*;
-use core::num::NonZeroI32;
-use crate::kernel_cfg::*;
 use crate::{s_hello::*, t_alice::*, t_bob::*};
 
 pub struct TTaskbody<'a>
@@ -43,8 +39,8 @@ pub static ETASKBODYFORTASKBODY3: ETaskbodyForTTaskbody = ETaskbodyForTTaskbody 
 	cell: &TASKBODY3,
 };
 
-impl TTaskbody<'_> {
-	pub fn get_cell_ref(&'static self) -> &dyn SHello {
+impl<> TTaskbody<'_> {
+	pub fn get_cell_ref(&'static self) -> &'static dyn SHello {
 		self.c_person
 	}
 }

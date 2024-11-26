@@ -1,4 +1,3 @@
-use spin::Mutex;
 pub trait SMotor {
 	fn set_motor_ref(&'static self);
 	fn setup(&'static self, positive_direction: &PbioDirectionT, reset_count: &bool);

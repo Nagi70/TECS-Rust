@@ -125,7 +125,7 @@ def parse_rust_functions(rust_file)
       c_calls.each do |call|
         before_dot = call.split('.').first
         after_dot = call.split('.').last
-        cname = before_dot.split('_').last
+        cname = before_dot.split("_", 2).last
         call = "c" + camel_case(cname) + "." + after_dot
         call.prepend("->")
         call << "__T"

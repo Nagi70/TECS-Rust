@@ -1,0 +1,29 @@
+import(<../spikert.cdl>);
+
+cell tMotor MotorA {
+    port = C_EXP("PbioPortIdT::PbioPortIdA");
+};
+
+cell tMotor MotorB {
+    port = C_EXP("PbioPortIdT::PbioPortIdB");
+};
+
+cell tSensor Sensor {
+    port = C_EXP("PbioPortIdT::PbioPortIdC");
+};
+
+cell tTaskbody Taskbody {
+    cMotorA = MotorA.eMotor;
+    cMotorB = MotorB.eMotor;
+    cSensor = Sensor.eSensor;
+};
+
+[generate( ItronrsGenPlugin, "lib, TASK")]
+cell tTaskRs Task1{
+    cTaskBody = Taskbody.eTaskbody;
+    id = C_EXP("TECS_RUST_TASK1");
+	task_ref = C_EXP("unsafe{TaskRef::from_raw_nonnull(NonZeroI32::new(TECS_RUST_TASK1).unwrap())}");
+    attribute = C_EXP("TA_ACT");
+    stackSize = 1024;
+    priority = 7;
+};

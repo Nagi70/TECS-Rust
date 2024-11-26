@@ -1,12 +1,12 @@
-use core::cell::UnsafeCell;
+use itron::mutex::MutexRef;
 use crate::tecs_mutex::*;
+use core::cell::UnsafeCell;
 use core::num::NonZeroI32;
 use crate::kernel_cfg::*;
-use spin::Mutex;
 pub struct TMotor<'a>
 {
 	port: PbioPortIdT,
-	variable: SyncTMotorVar<'a>,
+	variable: &'a SyncTMotorVar<'a>,
 	mutex_ref: &'a TECSMutexRef<'a>,
 }
 
@@ -30,7 +30,7 @@ pub struct LockGuardForTMotor<'a>{
 
 #[link_section = ".rodata"]
 pub static MOTOR: TMotor = TMotor {
-	port: PbioPortIdT::PBIO_PORT_ID_A,
+	port: PbioPortIdT::PbioPortIdA,
 	variable: &MOTORVAR,
 	mutex_ref: &MOTOR_MUTEX_REF,
 };
@@ -43,7 +43,7 @@ pub static MOTORVAR: SyncTMotorVar = SyncTMotorVar {
 
 #[link_section = ".rodata"]
 pub static MOTOR_MUTEX_REF: TECSMutexRef = TECSMutexRef{
-	inner: unsafe{MutexRef::from_raw_nonnull(NonZero::new(TECS_RUST_MUTEX_1).unwrap())},
+	inner: unsafe{MutexRef::from_raw_nonnull(NonZeroI32::new(TECS_RUST_MUTEX_1).unwrap())},
 };
 
 #[link_section = ".rodata"]
@@ -57,9 +57,9 @@ impl<'a> Drop for LockGuardForTMotor<'a> {
 	}
 }
 
-impl'a,  TMotor<'a> {
+impl<'a> TMotor<'a> {
 	#[inline]
-	pub fn get_cell_ref<'a>(&'static self) -> (&PbioPortIdT, &mut TMotorVar, LockGuardForTMotor) {
+	pub fn get_cell_ref(&'static self) -> (&'static PbioPortIdT, &'static mut TMotorVar, LockGuardForTMotor) {
 		self.mutex_ref.lock();
 		(
 			&self.port,

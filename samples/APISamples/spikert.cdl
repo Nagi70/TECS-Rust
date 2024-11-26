@@ -8,18 +8,18 @@ typedef int_t   Option_Ref_a_mut__PupUltrasonicSensorT__;
 typedef int_t   bool;
 
 signature sMotor {
-    void set_motor_ref( void );
+    void setMotorRef( void );
     void setup( [in] PbioDirectionT positive_direction, [in] bool reset_count );
-    void set_speed( [in] int32_t speed );
+    void setSpeed( [in] int32_t speed );
     void stop( void );
 };
 
 signature sSensor {
-    void set_device_ref( void );
-    void get_distance( [out] int32_t* distance );
-    void light_on( void );
-    void light_set( [in] int32_t bv1, [in] int32_t bv2, [in] int32_t bv3, [in] int32_t bv4 );
-    void light_off( void );
+    void setDeviceRef( void );
+    void getDistance( [out] int32_t* distance );
+    void lightOn( void );
+    void lightSet( [in] int32_t bv1, [in] int32_t bv2, [in] int32_t bv3, [in] int32_t bv4 );
+    void lightOff( void );
 };
 
 signature sPowerdown{
@@ -50,9 +50,10 @@ celltype tSensor {
 
 [generate (ItronrsGenPlugin, "lib")]
 celltype tTaskbody {
-    [inline] entry sTaskBody eTaskbody;
+    entry sTaskBody eTaskbody;
+    call sMotor cMotorA;
+    call sMotor cMotorB;
     call sSensor cSensor;
-    call sMotor cMotor;
 };
 
 [generate (ItronrsGenPlugin, "lib")]

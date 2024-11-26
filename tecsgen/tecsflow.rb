@@ -152,6 +152,7 @@ class Namespace
       cell_obj = {
         "Cell": cellname,
         "Celltype": celltype,
+        "ExclusiveControl": "false",
         "Accessed": []
       }
       $flow_json_hash[cellname] = cell_obj
@@ -913,6 +914,8 @@ module TECSFlow
       json_list << $flow_json_hash[cell.get_name.to_s]
     }
 
+    analyze_deadlock json_list, cell_list
+
     json_file = File.open( "#{$gen}/tecsflow.json", "w" ) do |f|
       f.write(JSON.pretty_generate(json_list))
     end
@@ -922,9 +925,6 @@ module TECSFlow
     # end
 
     # generate_json_file
-
-    analyze_deadlock json_list, cell_list
-    
   end
 
   def self.analyze_call_port_func_name fname
@@ -1157,6 +1157,12 @@ module TECSFlow
 
     # 排他制御がかかっているセルのみを抽出
     exclusive_control_cells = accessed_cell_hash.select{ |k, v| v["ExclusiveControl"] == true }
+
+    # 排他制御が必要なセルの情報を json_list に反映
+    json_list.each do |entry|
+      next if exclusive_control_cells[entry[:Cell].to_s] == nil
+      entry[:ExclusiveControl] = "true"
+    end
 
     graph = Graph.new
 

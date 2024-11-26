@@ -1,8 +1,8 @@
-use core::cell::UnsafeCell;
+use itron::mutex::MutexRef;
 use crate::tecs_mutex::*;
+use core::cell::UnsafeCell;
 use core::num::NonZeroI32;
 use crate::kernel_cfg::*;
-use spin::Mutex;
 use crate::{s_hello3::*, t_carol::*};
 
 pub struct TBob<'a, T>
@@ -11,7 +11,7 @@ where
 {
 	c_carol: &'a T,
 	id: i32,
-	variable: SyncTBobVar,
+	variable: &'a SyncTBobVar,
 	mutex_ref: &'a TECSMutexRef<'a>,
 }
 
@@ -53,7 +53,7 @@ pub static BOBVAR: SyncTBobVar = SyncTBobVar {
 
 #[link_section = ".rodata"]
 pub static BOB_MUTEX_REF: TECSMutexRef = TECSMutexRef{
-	inner: unsafe{MutexRef::from_raw_nonnull(NonZero::new(TECS_RUST_MUTEX_2).unwrap())},
+	inner: unsafe{MutexRef::from_raw_nonnull(NonZeroI32::new(TECS_RUST_MUTEX_2).unwrap())},
 };
 
 #[link_section = ".rodata"]
@@ -82,7 +82,7 @@ pub static BOB2VAR: SyncTBobVar = SyncTBobVar {
 
 #[link_section = ".rodata"]
 pub static BOB2_MUTEX_REF: TECSMutexRef = TECSMutexRef{
-	inner: unsafe{MutexRef::from_raw_nonnull(NonZero::new(TECS_RUST_MUTEX_3).unwrap())},
+	inner: unsafe{MutexRef::from_raw_nonnull(NonZeroI32::new(TECS_RUST_MUTEX_3).unwrap())},
 };
 
 #[link_section = ".rodata"]
@@ -102,7 +102,7 @@ impl Drop for LockGuardForTBob {
 }
 
 impl<T: SHello3> TBob<'_, T> {
-	pub fn get_cell_ref(&'static self) -> (&T, &i32, &mut TBobVar, LockGuardForTBob) {
+	pub fn get_cell_ref(&'static self) -> (&'static T, &'static i32, &'static mut TBobVar, LockGuardForTBob) {
 		self.mutex_ref.lock();
 		(
 			self.c_carol,

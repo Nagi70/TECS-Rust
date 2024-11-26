@@ -1,8 +1,8 @@
-use core::cell::UnsafeCell;
+use itron::mutex::MutexRef;
 use crate::tecs_mutex::*;
+use core::cell::UnsafeCell;
 use core::num::NonZeroI32;
 use crate::kernel_cfg::*;
-use spin::Mutex;
 use crate::{s_hello2::*, t_bob::*};
 
 pub struct TAlice<'a, T, U>
@@ -13,7 +13,7 @@ where
 	c_bob: &'a T,
 	c_bob2: &'a U,
 	id: i32,
-	variable: SyncTAliceVar,
+	variable: &'a SyncTAliceVar,
 	mutex_ref: &'a TECSMutexRef<'a>,
 }
 
@@ -56,7 +56,7 @@ pub static ALICEVAR: SyncTAliceVar = SyncTAliceVar {
 
 #[link_section = ".rodata"]
 pub static ALICE_MUTEX_REF: TECSMutexRef = TECSMutexRef{
-	inner: unsafe{MutexRef::from_raw_nonnull(NonZero::new(TECS_RUST_MUTEX_1).unwrap())},
+	inner: unsafe{MutexRef::from_raw_nonnull(NonZeroI32::new(TECS_RUST_MUTEX_1).unwrap())},
 };
 
 #[link_section = ".rodata"]
@@ -76,7 +76,7 @@ impl Drop for LockGuardForTAlice {
 }
 
 impl<T: SHello2, U: SHello2> TAlice<'_, T, U> {
-	pub fn get_cell_ref(&'static self) -> (&T, &U, &i32, &mut TAliceVar, LockGuardForTAlice) {
+	pub fn get_cell_ref(&'static self) -> (&'static T, &'static U, &'static i32, &'static mut TAliceVar, LockGuardForTAlice) {
 		self.mutex_ref.lock();
 		(
 			self.c_bob,

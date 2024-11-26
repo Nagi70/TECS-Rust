@@ -2,6 +2,7 @@
   {
     "Cell": "Taskbody1",
     "Celltype": "tTaskbody",
+    "ExclusiveControl": "false",
     "Accessed": [
       {
         "ActiveCell": "Task1",
@@ -18,6 +19,7 @@
   {
     "Cell": "Taskbody2",
     "Celltype": "tTaskbody",
+    "ExclusiveControl": "false",
     "Accessed": [
       {
         "ActiveCell": "Task2",
@@ -34,6 +36,7 @@
   {
     "Cell": "Taskbody3",
     "Celltype": "tTaskbody",
+    "ExclusiveControl": "false",
     "Accessed": [
       {
         "ActiveCell": "Task3",
@@ -50,6 +53,7 @@
   {
     "Cell": "Alice",
     "Celltype": "tAlice",
+    "ExclusiveControl": "true",
     "Accessed": [
       {
         "ActiveCell": "Task1",
@@ -88,6 +92,7 @@
   {
     "Cell": "Bob",
     "Celltype": "tBob",
+    "ExclusiveControl": "false",
     "Accessed": [
       {
         "ActiveCell": "Task1",
@@ -140,6 +145,7 @@
   {
     "Cell": "Bob2",
     "Celltype": "tBob",
+    "ExclusiveControl": "true",
     "Accessed": [
       {
         "ActiveCell": "Task1",
@@ -208,6 +214,7 @@
   {
     "Cell": "Carol",
     "Celltype": "tCarol",
+    "ExclusiveControl": "false",
     "Accessed": [
       {
         "ActiveCell": "Task1",
@@ -274,6 +281,7 @@
   {
     "Cell": "Carol2",
     "Celltype": "tCarol",
+    "ExclusiveControl": "false",
     "Accessed": [
       {
         "ActiveCell": "Task1",

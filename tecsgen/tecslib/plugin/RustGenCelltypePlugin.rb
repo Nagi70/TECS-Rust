@@ -349,7 +349,8 @@ class RustGenCelltypePlugin < CelltypePlugin
 
             gen_mod_in_main_lib_rs_for_signature sig
             trait_file = CFile.open( "#{$gen}/#{snake_case(sig_name)}.rs", "w" )
-            gen_use_for_trait_files trait_file, @celltype, port
+            # gen_use_for_trait_files trait_file, @celltype, port
+            # gen_use_mutex trait_file
 
             trait_file.print "pub trait #{camel_case(snake_case(sig_name))} {\n"
 
@@ -1107,7 +1108,7 @@ class RustGenCelltypePlugin < CelltypePlugin
         }
         use_list.uniq!
         if @celltype.get_var_list.length != 0 then
-            file.print "use spin::Mutex;\n"
+            gen_use_mutex file
         end
         file.print "use crate::{"
         use_list.each{ |use_str|
@@ -1172,27 +1173,36 @@ class RustGenCelltypePlugin < CelltypePlugin
         json_string = File.read(file_path)
         data = JSON.parse(json_string)
 
-        accessed_cells = Hash.new { |hash, key| hash[key] = { "ExclusiveContol" => "false", "Accessed" => 0, "Celltype" => nil } }
+        accessed_cells = Hash.new { |hash, key| hash[key] = { "ExclusiveContol" => "false", "Accessed" => 0, "Celltype" => nil, "TaskList" => [] } }
+        # 各セルのアクセス回数をカウントするためのハッシュ (現在、このアクセス回数はコード生成に必要のない情報)
         access_count = Hash.new(0)
 
         # すべてのセルのCelltypeを設定する
         data.each do |entry|
           accessed_cells[entry["Cell"]]["Celltype"] = entry["Celltype"]
         end
+
+        # すべてのセルの排他制御の有無を設定する
+        # tecsflow のほうで排他制御の有無は判定済み
+        data.each do |entry|
+            accessed_cells[entry["Cell"]]["ExclusiveContol"] = "true" if entry["ExclusiveContol"] == "true"
+        end
     
         # すべてのセルのアクセス回数をカウント
+        # すべてのセルのアクセスタスクリストを取得
         data.each do |entry|
           entry["Accessed"].each do |access|
             active_cell = access["ActiveCell"]
             access_count[entry["Cell"]] += 1
+            accessed_cells[entry["Cell"]]["TaskList"].push(active_cell).uniq!
           end
         end
     
-        # 複数のセルからアクセスされる場合に ExclusiveContol を true に設定
-        access_count.each do |cell, count|
-          accessed_cells[cell]["ExclusiveContol"] = "true" if count > 1
-          accessed_cells[cell]["Accessed"] = count
-        end
+        # 複数のタスクからアクセスされる場合に ExclusiveContol を true に設定
+        # access_count.each do |cell, count|
+        #     accessed_cells[cell]["ExclusiveContol"] = "true" if accessed_cells[cell]["TaskList"].length > 1
+        #     accessed_cells[cell]["Accessed"] = count  
+        # end
     
         # result = accessed_cells.map { |cell, details| { cell => details } }
     
@@ -1203,7 +1213,8 @@ class RustGenCelltypePlugin < CelltypePlugin
         return accessed_cells
     end
 
-    # 排他制御をかけるかどうかを再判定する
+    # 排他制御をかけるかどうかを、セルタイプ毎に再判定する
+    # ルートに近いセルに排他制御があり、かつ新しい合流が無い場合、そのセルタイプの排他制御を無効にする
     def json_parse_update celltype, json_parse_result
         return json_parse_result if celltype.is_active? == true
 
@@ -1215,6 +1226,8 @@ class RustGenCelltypePlugin < CelltypePlugin
                     cell_accessed = json_parse_result[cell.get_global_name.to_s]["Accessed"]
                     callee_cell_accessed = json_parse_result[callee_cell_name]["Accessed"]
                     # puts "#{cell.get_global_name.to_s} -> #{callee_cell_name} : #{cell_accessed} -> #{callee_cell_accessed}"
+                    # 呼び元と呼び先のセルのアクセス回数が同じ場合は排他制御がいらないため、falseに設定
+                    # TODO: タスクのリストで判定するように修正
                     if cell_accessed == callee_cell_accessed then
                         json_parse_result[callee_cell_name]["ExclusiveContol"] = "false"
                     end
@@ -1358,9 +1371,10 @@ class RustGenCelltypePlugin < CelltypePlugin
                     if @@json_parse_result.length == 0 then
                         puts "#{@celltype.get_global_name.to_s}: json_parse"
                         @@json_parse_result = json_parse json_file_path
+                        # @@json_parse_result = json_parse_update @celltype, @@json_parse_result
                     else
-                        puts "#{@celltype.get_global_name.to_s}: json_parse_update"
-                        @@json_parse_result = json_parse_update @celltype, @@json_parse_result
+                        # puts "#{@celltype.get_global_name.to_s}: json_parse_update"
+                        # @@json_parse_result = json_parse_update @celltype, @@json_parse_result
                     end
                     # puts "#{@@json_parse_result}"
                 else

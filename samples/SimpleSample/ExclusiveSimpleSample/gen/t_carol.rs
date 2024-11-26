@@ -1,12 +1,12 @@
-use core::cell::UnsafeCell;
+use itron::mutex::MutexRef;
 use crate::tecs_mutex::*;
+use core::cell::UnsafeCell;
 use core::num::NonZeroI32;
 use crate::kernel_cfg::*;
-use spin::Mutex;
 pub struct TCarol<'a>
 {
 	id: i32,
-	variable: SyncTCarolVar,
+	variable: &'a SyncTCarolVar,
 	mutex_ref: &'a TECSMutexRef<'a>,
 }
 
@@ -43,7 +43,7 @@ pub static CAROLVAR: SyncTCarolVar = SyncTCarolVar {
 
 #[link_section = ".rodata"]
 pub static CAROL_MUTEX_REF: TECSMutexRef = TECSMutexRef{
-	inner: unsafe{MutexRef::from_raw_nonnull(NonZero::new(TECS_RUST_MUTEX_4).unwrap())},
+	inner: unsafe{MutexRef::from_raw_nonnull(NonZeroI32::new(TECS_RUST_MUTEX_4).unwrap())},
 };
 
 #[link_section = ".rodata"]
@@ -66,7 +66,7 @@ pub static CAROL2VAR: SyncTCarolVar = SyncTCarolVar {
 
 #[link_section = ".rodata"]
 pub static CAROL2_MUTEX_REF: TECSMutexRef = TECSMutexRef{
-	inner: unsafe{MutexRef::from_raw_nonnull(NonZero::new(TECS_RUST_MUTEX_5).unwrap())},
+	inner: unsafe{MutexRef::from_raw_nonnull(NonZeroI32::new(TECS_RUST_MUTEX_5).unwrap())},
 };
 
 #[link_section = ".rodata"]
@@ -80,8 +80,8 @@ impl Drop for LockGuardForTCarol {
 	}
 }
 
-impl TCarol<'_> {
-	pub fn get_cell_ref(&'static self) -> (&i32, &mut TCarolVar, LockGuardForTCarol) {
+impl<> TCarol<'_> {
+	pub fn get_cell_ref(&'static self) -> (&'static i32, &'static mut TCarolVar, LockGuardForTCarol) {
 		self.mutex_ref.lock();
 		(
 			&self.id,

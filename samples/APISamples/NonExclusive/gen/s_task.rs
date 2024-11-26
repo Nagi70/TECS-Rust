@@ -1,6 +1,3 @@
-use spin::Mutex;
-use itron::abi::*;
-use itron::unknown::unknown;
 pub trait STask {
 	fn activate(&'static self)-> ER;
 	fn cancel_activate(&'static self)-> ER_UINT;

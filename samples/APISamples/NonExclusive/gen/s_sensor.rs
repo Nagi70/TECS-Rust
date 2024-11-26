@@ -1,4 +1,3 @@
-use spin::Mutex;
 pub trait SSensor {
 	fn set_device_ref(&'static self);
 	fn get_distance(&'static self, distance: &mut i32);

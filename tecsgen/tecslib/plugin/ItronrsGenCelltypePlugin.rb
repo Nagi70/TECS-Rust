@@ -169,8 +169,8 @@ class ItronrsGenCelltypePlugin < RustGenCelltypePlugin
 
     def gen_use_mutex file
         file.print "use itron::mutex::MutexRef;\n"
-        file.print "use core::cell::UnsafeCell;\n"
         file.print "use crate::tecs_mutex::*;\n"
+        file.print "use core::cell::UnsafeCell;\n"
         file.print "use core::num::NonZeroI32;\n"
         file.print "use crate::kernel_cfg::*;\n"
     end
@@ -768,7 +768,7 @@ class ItronrsGenCelltypePlugin < RustGenCelltypePlugin
 use itron::mutex::{MutexRef, LockError, UnlockError};
 use crate::print;
 use crate::tecs_print::*;
-use itron::abi::uinit_t;
+use itron::abi::uint_t;
 
 pub trait LockableForMutex {
     fn lock(&self);
@@ -784,7 +784,7 @@ pub struct TECSMutexRef<'a>{
 pub struct TECSDummyMutexRef{}
 
 #[link_section = ".rodata"]
-pub static DUMMY_MUTEX_GUARD: TECSDummyLockGuard = 0;
+pub static DUMMY_LOCK_GUARD: TECSDummyLockGuard = 0;
 
 #[link_section = ".rodata"]
 pub static DUMMY_MUTEX_REF: TECSDummyMutexRef = TECSDummyMutexRef{};
@@ -879,7 +879,7 @@ impl LockableForMutex for TECSDummyMutexRef{
     # syslog の Rust ラップである print.rs を生成する
     def gen_tecs_print_rs
         contents = <<~'EOS'
-use itron::abi::uinit_t;
+use itron::abi::uint_t;
 use itron::abi::*;
 
 extern "C"{

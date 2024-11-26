@@ -1,12 +1,12 @@
-use core::cell::UnsafeCell;
+use itron::mutex::MutexRef;
 use crate::tecs_mutex::*;
+use core::cell::UnsafeCell;
 use core::num::NonZeroI32;
 use crate::kernel_cfg::*;
-use spin::Mutex;
 pub struct TMotor<'a>
 {
 	port: PbioPortIdT,
-	variable: SyncTMotorVar<'a>,
+	variable: &'a SyncTMotorVar<'a>,
 }
 
 pub struct TMotorVar<'a>{
@@ -25,7 +25,7 @@ pub struct EMotorForTMotor<'a>{
 
 #[link_section = ".rodata"]
 pub static MOTOR: TMotor = TMotor {
-	port: PbioPortIdT::PBIO_PORT_ID_A,
+	port: PbioPortIdT::PbioPortIdA,
 	variable: &MOTORVAR,
 };
 
@@ -40,9 +40,9 @@ pub static EMOTORFORMOTOR: EMotorForTMotor = EMotorForTMotor {
 	cell: &MOTOR,
 };
 
-impl'a,  TMotor<'a> {
+impl<'a> TMotor<'a> {
 	#[inline]
-	pub fn get_cell_ref<'a>(&'static self) -> (&PbioPortIdT, &mut TMotorVar, &TECSDummyLockGuard) {
+	pub fn get_cell_ref(&'static self) -> (&'static PbioPortIdT, &'static mut TMotorVar, &TECSDummyLockGuard) {
 		(
 			&self.port,
 			unsafe{&mut *self.variable.unsafe_var.get()},
