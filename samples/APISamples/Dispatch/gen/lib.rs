@@ -24,6 +24,11 @@ mod t_mmbody_impl;
 mod t_ssbody;
 mod t_ssbody_impl;
 
+#[panic_handler]
+fn panic(_panic: &core::panic::PanicInfo<'_>) -> ! {
+    loop {}
+}
+
 use crate::t_task_rs::*;
 use s_task_body::*;
 

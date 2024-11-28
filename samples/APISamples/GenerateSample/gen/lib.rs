@@ -18,6 +18,11 @@ mod s_sensor;
 mod t_taskbody;
 mod t_taskbody_impl;
 
+#[panic_handler]
+fn panic(_panic: &core::panic::PanicInfo<'_>) -> ! {
+    loop {}
+}
+
 use crate::t_task_rs::*;
 use s_task_body::*;
 

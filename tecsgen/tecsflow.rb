@@ -321,9 +321,23 @@ class Cell
 
     path_item_stack_copy = Marshal.load(Marshal.dump($path_item_stack))
 
+    # タスクの優先度を取得する
+    # タスク以外のアクティブセルの場合や、priority 属性が無い場合、0 とする
+    task_priority = 0
+    $flow_stack.first[0].get_celltype.get_attribute_list.each{ |attr|
+      if attr.get_name == :priority then
+        task_priority = attr.get_initializer
+      end
+    }
+
+    # if $flow_stack.first[0].get_attr_initializer(:priority) != nil then
+    #   task_priority = $flow_stack.first[0].get_attr_initializer(:priority)
+    # end
+
     # $path_item_stack を全て accessed_item に追加
     accessed_item = {
       "ActiveCell": $flow_stack.first[0].get_name,
+      "Priority": task_priority,
       "Celltype": $flow_stack.first[0].get_celltype.get_name,
       "Callport": $path_item_stack[0][0][:Callport],
       "Calleeport": $path_item_stack[0][0][:Calleeport],
@@ -1164,23 +1178,53 @@ module TECSFlow
       entry[:ExclusiveControl] = "true"
     end
 
+    # 以下はサイクルデッドロックの検知コードだったが、サイクルデッドロックは TECS/Rust では発生しないためコメントアウト
+    # cycle_deadlock_detection json_list, exclusive_control_cells, active_cell_list
+
+    # 再入サイクルの検知
+    puts "--- reentry cycles ---"
+    # puts "#{$reentry_cell_list}"
+
+    $reentry_cell_list.each_with_index do |(reentered_cell, reentry_cell), index| 
+      # puts "#{reentry_cell} -> #{reentered_cell}"
+      if accessed_cell_hash[reentered_cell]["ExclusiveControl"] == true then
+        print "[re-entry #{index + 1}] ::"
+
+        accessed_cell_hash[reentry_cell].each_with_index do |(k, v), i|
+          next if k == "ExclusiveControl"
+          print ", " if i > 0
+          
+          if v then
+            print "#{k}"
+          end
+        end
+        print "\n"
+
+        puts "\t#{reentered_cell} is under exclusive control and will be re-entered on a call from #{reentry_cell}"
+
+      end
+    end
+
+  end
+
+  def self.cycle_deadlock_detection json_list, exclusive_list, active_cell_list
     graph = Graph.new
 
-    # exclusive_control_cells.each do |cell_k, task_v|
+    # exclusive_list.each do |cell_k, task_v|
     #   task_v.each do |tsk_k, tsk_v|
     #     next if tsk_k == "ExclusiveControl"
     #     graph.add_edge(cell_k, tsk_k) if tsk_v
     #   end
     # end
 
-    exclusive_control_cells.each do |cell_name, activetask_v|
+    exclusive_list.each do |cell_name, activetask_v|
       json_list.each do |entry|
         #TODO: 同じ名前のセルが存在する場合、正しいセルかどうかを判定する機能を実装する必要がある
         next if entry[:Cell].to_s != cell_name.to_s
         entry[:Accessed].each do |task|
           current_cell_name = task[:ActiveCell].to_s
           task[:Path].each do |path|
-            next if exclusive_control_cells[path[:CellName].to_s] == nil
+            next if exclusive_list[path[:CellName].to_s] == nil
             graph.add_edge(current_cell_name, path[:CellName].to_s)
             current_cell_name = path[:CellName].to_s
           end
@@ -1215,31 +1259,6 @@ module TECSFlow
         puts "\t#{tasks[0]} -> (#{resources.join(', ')}) <- #{tasks[-1]}"
       end
     end
-
-
-    puts "--- reentry cycles ---"
-    # puts "#{$reentry_cell_list}"
-
-    $reentry_cell_list.each_with_index do |(reentered_cell, reentry_cell), index| 
-      # puts "#{reentry_cell} -> #{reentered_cell}"
-      if accessed_cell_hash[reentered_cell]["ExclusiveControl"] == true then
-        print "[re-entry #{index + 1}] ::"
-
-        accessed_cell_hash[reentry_cell].each_with_index do |(k, v), i|
-          next if k == "ExclusiveControl"
-          print ", " if i > 0
-          
-          if v then
-            print "#{k}"
-          end
-        end
-        print "\n"
-
-        puts "\t#{reentered_cell} is under exclusive control and will be re-entered on a call from #{reentry_cell}"
-
-      end
-    end
-
   end
 
   def self.process_file(file)

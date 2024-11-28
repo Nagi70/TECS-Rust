@@ -1,5 +1,4 @@
-use itron::mutex::MutexRef;
-use crate::tecs_mutex::*;
+use crate::tecs_ex_ctrl::*;
 use core::cell::UnsafeCell;
 use core::num::NonZeroI32;
 use crate::kernel_cfg::*;

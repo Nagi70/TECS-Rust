@@ -1,4 +1,8 @@
-use spin::Mutex;
+use itron::mutex::MutexRef;
+use crate::tecs_mutex::*;
+use core::cell::UnsafeCell;
+use core::num::NonZeroI32;
+use crate::kernel_cfg::*;
 use crate::{t_sensor::*, s_sensor::*};
 
 impl SSensor for ESensorForTSensor<'_>{

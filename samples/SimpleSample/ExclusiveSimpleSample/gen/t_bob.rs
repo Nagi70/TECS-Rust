@@ -1,5 +1,4 @@
-use itron::mutex::MutexRef;
-use crate::tecs_mutex::*;
+use crate::tecs_ex_ctrl::*;
 use core::cell::UnsafeCell;
 use core::num::NonZeroI32;
 use crate::kernel_cfg::*;
@@ -12,7 +11,7 @@ where
 	c_carol: &'a T,
 	id: i32,
 	variable: &'a SyncTBobVar,
-	mutex_ref: &'a TECSMutexRef<'a>,
+	ex_ctrl_ref: &'a (dyn LockManager + Sync + Send),
 }
 
 pub struct TBobVar{
@@ -34,7 +33,7 @@ pub struct EBob2ForTBob<'a>{
 }
 
 pub struct LockGuardForTBob<'a>{
-	mutex_ref: &'a TECSMutexRef<'a>,
+	ex_ctrl_ref: &'a (dyn LockManager + Sync + Send),
 }
 
 #[link_section = ".rodata"]
@@ -42,18 +41,14 @@ pub static BOB: TBob<ECarolForTCarol> = TBob {
 	c_carol: &ECAROLFORCAROL,
 	id: 1,
 	variable: &BOBVAR,
-	mutex_ref: &BOB_MUTEX_REF,
+	ex_ctrl_ref: &DUMMY_EX_CTRL_REF,
 };
 
 pub static BOBVAR: SyncTBobVar = SyncTBobVar {
+	/// This UnsafeCell is accessed by multiple tasks, but is secure because it is accessed exclusively, with exclusive control applied to the component closest to root.
 	unsafe_var: UnsafeCell::new(TBobVar {
 		count: 0,
 	}),
-};
-
-#[link_section = ".rodata"]
-pub static BOB_MUTEX_REF: TECSMutexRef = TECSMutexRef{
-	inner: unsafe{MutexRef::from_raw_nonnull(NonZeroI32::new(TECS_RUST_MUTEX_2).unwrap())},
 };
 
 #[link_section = ".rodata"]
@@ -71,18 +66,19 @@ pub static BOB2: TBob<ECarolForTCarol> = TBob {
 	c_carol: &ECAROLFORCAROL2,
 	id: 2,
 	variable: &BOB2VAR,
-	mutex_ref: &BOB2_MUTEX_REF,
+	ex_ctrl_ref: &BOB2_EX_CTRL_REF,
 };
 
 pub static BOB2VAR: SyncTBobVar = SyncTBobVar {
+	/// This UnsafeCell is accessed by multiple tasks, but is safe because it is operated exclusively by the semaphore object.
 	unsafe_var: UnsafeCell::new(TBobVar {
 		count: 0,
 	}),
 };
 
 #[link_section = ".rodata"]
-pub static BOB2_MUTEX_REF: TECSMutexRef = TECSMutexRef{
-	inner: unsafe{MutexRef::from_raw_nonnull(NonZeroI32::new(TECS_RUST_MUTEX_3).unwrap())},
+pub static BOB2_EX_CTRL_REF: TECSSemaphoreRef = TECSSemaphoreRef{
+	inner: unsafe{SemaphoreRef::from_raw_nonnull(NonZeroI32::new(TECS_RUST_EX_CTRL_2).unwrap())},
 };
 
 #[link_section = ".rodata"]
@@ -97,19 +93,19 @@ pub static EBOB2FORBOB2: EBob2ForTBob = EBob2ForTBob {
 
 impl Drop for LockGuardForTBob {
 	fn drop(&mut self){
-		self.mutex_ref.unlock();
+		self.ex_ctrl_ref.unlock();
 	}
 }
 
 impl<T: SHello3> TBob<'_, T> {
 	pub fn get_cell_ref(&'static self) -> (&'static T, &'static i32, &'static mut TBobVar, LockGuardForTBob) {
-		self.mutex_ref.lock();
+		self.ex_ctrl_ref.lock();
 		(
 			self.c_carol,
 			&self.id,
 			unsafe{&mut *self.variable.unsafe_var.get()},
 			LockGuardForTBob{
-				mutex_ref: self.mutex_ref,
+				ex_ctrl_ref: self.ex_ctrl_ref,
 			}
 		)
 	}

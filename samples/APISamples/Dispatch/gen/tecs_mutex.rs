@@ -1,7 +1,7 @@
 use itron::mutex::{MutexRef, LockError, UnlockError};
 use crate::print;
 use crate::tecs_print::*;
-use itron::abi::uinit_t;
+use itron::abi::uint_t;
 
 pub trait LockableForMutex {
     fn lock(&self);
@@ -17,7 +17,7 @@ pub struct TECSMutexRef<'a>{
 pub struct TECSDummyMutexRef{}
 
 #[link_section = ".rodata"]
-pub static DUMMY_MUTEX_GUARD: TECSDummyLockGuard = 0;
+pub static DUMMY_LOCK_GUARD: TECSDummyLockGuard = 0;
 
 #[link_section = ".rodata"]
 pub static DUMMY_MUTEX_REF: TECSDummyMutexRef = TECSDummyMutexRef{};

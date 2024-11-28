@@ -1,5 +1,4 @@
-use itron::mutex::MutexRef;
-use crate::tecs_mutex::*;
+use crate::tecs_ex_ctrl::*;
 use core::cell::UnsafeCell;
 use core::num::NonZeroI32;
 use crate::kernel_cfg::*;
@@ -14,7 +13,7 @@ where
 	c_bob2: &'a U,
 	id: i32,
 	variable: &'a SyncTAliceVar,
-	mutex_ref: &'a TECSMutexRef<'a>,
+	ex_ctrl_ref: &'a TECSSemaphoreRef<'a>,
 }
 
 pub struct TAliceVar{
@@ -36,7 +35,7 @@ pub struct EAlice2ForTAlice<'a>{
 }
 
 pub struct LockGuardForTAlice<'a>{
-	mutex_ref: &'a TECSMutexRef<'a>,
+	ex_ctrl_ref: &'a TECSSemaphoreRef<'a>,
 }
 
 #[link_section = ".rodata"]
@@ -45,18 +44,19 @@ pub static ALICE: TAlice<EBob1ForTBob, EBob1ForTBob> = TAlice {
 	c_bob2: &EBOB1FORBOB2,
 	id: 0,
 	variable: &ALICEVAR,
-	mutex_ref: &ALICE_MUTEX_REF,
+	ex_ctrl_ref: &ALICE_EX_CTRL_REF,
 };
 
 pub static ALICEVAR: SyncTAliceVar = SyncTAliceVar {
+	/// This UnsafeCell is accessed by multiple tasks, but is safe because it is operated exclusively by the semaphore object.
 	unsafe_var: UnsafeCell::new(TAliceVar {
 		count: 0,
 	}),
 };
 
 #[link_section = ".rodata"]
-pub static ALICE_MUTEX_REF: TECSMutexRef = TECSMutexRef{
-	inner: unsafe{MutexRef::from_raw_nonnull(NonZeroI32::new(TECS_RUST_MUTEX_1).unwrap())},
+pub static ALICE_EX_CTRL_REF: TECSSemaphoreRef = TECSSemaphoreRef{
+	inner: unsafe{SemaphoreRef::from_raw_nonnull(NonZeroI32::new(TECS_RUST_EX_CTRL_1).unwrap())},
 };
 
 #[link_section = ".rodata"]
@@ -71,20 +71,20 @@ pub static EALICE2FORALICE: EAlice2ForTAlice = EAlice2ForTAlice {
 
 impl Drop for LockGuardForTAlice {
 	fn drop(&mut self){
-		self.mutex_ref.unlock();
+		self.ex_ctrl_ref.unlock();
 	}
 }
 
 impl<T: SHello2, U: SHello2> TAlice<'_, T, U> {
 	pub fn get_cell_ref(&'static self) -> (&'static T, &'static U, &'static i32, &'static mut TAliceVar, LockGuardForTAlice) {
-		self.mutex_ref.lock();
+		self.ex_ctrl_ref.lock();
 		(
 			self.c_bob,
 			self.c_bob2,
 			&self.id,
 			unsafe{&mut *self.variable.unsafe_var.get()},
 			LockGuardForTAlice{
-				mutex_ref: self.mutex_ref,
+				ex_ctrl_ref: self.ex_ctrl_ref,
 			}
 		)
 	}

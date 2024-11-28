@@ -1,6 +1,6 @@
 use itron::mutex::MutexRef;
-use core::cell::UnsafeCell;
 use crate::tecs_mutex::*;
+use core::cell::UnsafeCell;
 use core::num::NonZeroI32;
 use crate::kernel_cfg::*;
 pub struct TMotor<'a>

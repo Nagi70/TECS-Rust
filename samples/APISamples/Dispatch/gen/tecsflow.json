@@ -2,9 +2,11 @@
   {
     "Cell": "Motor1",
     "Celltype": "tMotor",
+    "ExclusiveControl": "false",
     "Accessed": [
       {
         "ActiveCell": "Task1",
+        "Priority": "7",
         "Celltype": "tTaskRs",
         "Callport": "cTaskBody",
         "Calleeport": "eMMbody",
@@ -24,9 +26,11 @@
   {
     "Cell": "Motor2",
     "Celltype": "tMotor",
+    "ExclusiveControl": "true",
     "Accessed": [
       {
         "ActiveCell": "Task1",
+        "Priority": "7",
         "Celltype": "tTaskRs",
         "Callport": "cTaskBody",
         "Calleeport": "eMMbody",
@@ -43,6 +47,7 @@
       },
       {
         "ActiveCell": "Task2",
+        "Priority": "7",
         "Celltype": "tTaskRs",
         "Callport": "cTaskBody",
         "Calleeport": "eMotorbody",
@@ -62,9 +67,11 @@
   {
     "Cell": "Sensor1",
     "Celltype": "tSensor",
+    "ExclusiveControl": "false",
     "Accessed": [
       {
         "ActiveCell": "Task3",
+        "Priority": "7",
         "Celltype": "tTaskRs",
         "Callport": "cTaskBody",
         "Calleeport": "eSSbody",
@@ -84,9 +91,11 @@
   {
     "Cell": "Sensor2",
     "Celltype": "tSensor",
+    "ExclusiveControl": "true",
     "Accessed": [
       {
         "ActiveCell": "Task3",
+        "Priority": "7",
         "Celltype": "tTaskRs",
         "Callport": "cTaskBody",
         "Calleeport": "eSSbody",
@@ -103,6 +112,7 @@
       },
       {
         "ActiveCell": "Task4",
+        "Priority": "7",
         "Celltype": "tTaskRs",
         "Callport": "cTaskBody",
         "Calleeport": "eSensorbody",
@@ -122,9 +132,11 @@
   {
     "Cell": "MMbody",
     "Celltype": "tMMbody",
+    "ExclusiveControl": "false",
     "Accessed": [
       {
         "ActiveCell": "Task1",
+        "Priority": "7",
         "Celltype": "tTaskRs",
         "Callport": "cTaskBody",
         "Calleeport": "eMMbody",
@@ -138,9 +150,11 @@
   {
     "Cell": "Motorbody",
     "Celltype": "tMotorbody",
+    "ExclusiveControl": "false",
     "Accessed": [
       {
         "ActiveCell": "Task2",
+        "Priority": "7",
         "Celltype": "tTaskRs",
         "Callport": "cTaskBody",
         "Calleeport": "eMotorbody",
@@ -154,9 +168,11 @@
   {
     "Cell": "SSbody",
     "Celltype": "tSSbody",
+    "ExclusiveControl": "false",
     "Accessed": [
       {
         "ActiveCell": "Task3",
+        "Priority": "7",
         "Celltype": "tTaskRs",
         "Callport": "cTaskBody",
         "Calleeport": "eSSbody",
@@ -170,9 +186,11 @@
   {
     "Cell": "Sensorbody",
     "Celltype": "tSensorbody",
+    "ExclusiveControl": "false",
     "Accessed": [
       {
         "ActiveCell": "Task4",
+        "Priority": "7",
         "Celltype": "tTaskRs",
         "Callport": "cTaskBody",
         "Calleeport": "eSensorbody",

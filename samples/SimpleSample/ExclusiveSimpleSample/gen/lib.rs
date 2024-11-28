@@ -1,7 +1,7 @@
 #![no_std]
 #![feature(const_option)]
 mod kernel_cfg;
-mod tecs_mutex;
+mod tecs_ex_ctrl;
 mod tecs_print;
 mod t_task;
 mod s_taskbody;

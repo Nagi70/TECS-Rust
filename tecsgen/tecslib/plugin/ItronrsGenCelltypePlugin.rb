@@ -101,7 +101,8 @@ class ItronrsGenCelltypePlugin < RustGenCelltypePlugin
         end
 
         if file_name != nil then
-            write_list = ["#![no_std]", "#![feature(const_option)]", "mod kernel_cfg;", "mod tecs_mutex;", "mod tecs_print;"]
+            # TODO: 本当に排他制御が必要なときのみ、排他制御モジュールを生成するようにする
+            write_list = ["#![no_std]", "#![feature(const_option)]", "mod kernel_cfg;", "mod tecs_ex_ctrl;", "mod tecs_print;"]
             # File.write("#{$gen}/#{file_name}.rs", "") unless File.exist?("#{$gen}/#{file_name}.rs")
             tempfile = File.read("#{$gen}/#{file_name}.rs")
 
@@ -126,6 +127,9 @@ class ItronrsGenCelltypePlugin < RustGenCelltypePlugin
 
     def gen_task_func_definition file_option, celltype
         file = File.read("#{$gen}/#{file_option}.rs")
+
+        # 一番最初のタスク関数生成の時だけ、以下のパニックハンドラと、二つのuse文を追加する
+        gen_panic_handler_in_main_lib_rs file
 
         if !file.include?("use crate::" + snake_case(celltype.get_global_name.to_s) + "::*;") then
             file << "\nuse crate::" + snake_case(celltype.get_global_name.to_s) + "::*;\n"
@@ -154,6 +158,19 @@ class ItronrsGenCelltypePlugin < RustGenCelltypePlugin
         File.write("#{$gen}/#{file_option}.rs", file)
     end
 
+    def gen_panic_handler_in_main_lib_rs file
+        search_code = <<~CODE
+
+#[panic_handler]
+fn panic(_panic: &core::panic::PanicInfo<'_>) -> ! {
+    loop {}
+}
+CODE
+        if !file.include?(search_code) then
+            file << search_code
+        end
+    end
+
     def gen_task_static_api_for_configuration cell
         file = AppFile.open( "#{$gen}/tecsgen.cfg" )
 
@@ -168,8 +185,9 @@ class ItronrsGenCelltypePlugin < RustGenCelltypePlugin
     end
 
     def gen_use_mutex file
-        file.print "use itron::mutex::MutexRef;\n"
-        file.print "use crate::tecs_mutex::*;\n"
+        # file.print "use itron::mutex::MutexRef;\n"
+        # file.print "use crate::tecs_mutex::*;\n"
+        file.print "use crate::tecs_ex_ctrl::*;\n" # TODO: 本当に排他制御が必要なときのみ生成するようにする
         file.print "use core::cell::UnsafeCell;\n"
         file.print "use core::num::NonZeroI32;\n"
         file.print "use crate::kernel_cfg::*;\n"
@@ -223,18 +241,64 @@ class ItronrsGenCelltypePlugin < RustGenCelltypePlugin
     end
 
     
-    # セル構造体の mutex_ref フィールドの定義を生成
-    def gen_rust_cell_structure_mutex_ref file, celltype
+    # セル構造体の ex_ctrl_ref フィールドの定義を生成
+    def gen_rust_cell_structure_ex_ctrl_ref file, celltype
         return if celltype.get_var_list.length == 0
 
-        result = check_gen_dyn_for_mutex_ref celltype
-        if result == "dyn" then
-            file.print "\tmutex_ref: &'a (dyn LockableForMutex + Sync + Send),\n"
-        elsif result == "dummy" then
-            # file.print "\tmutex_ref: &'a TECSDummyMutexRef,\n"
+        case check_gen_dyn_for_ex_ctrl_ref celltype
+        when "dyn"
+            file.print "\tex_ctrl_ref: &'a (dyn LockManager + Sync + Send),\n"
+        when "dummy"
+            # file.print "\tex_ctrl_ref: &'a TECSDummyMutexRef,\n"
         else
-            file.print "\tmutex_ref: &'a TECSMutexRef<'a>,\n"
+            case check_gen_mutex_or_semaphore celltype
+            when "mutex"
+                file.print "\tex_ctrl_ref: &'a TECSMutexRef<'a>,\n"
+            when "semaphore"
+                file.print "\tex_ctrl_ref: &'a TECSSemaphoreRef<'a>,\n"
+            else
+                # TODO: ミューテックスとセマフォの呼び分け自体にも動的ディスパッチを使うのは議論の余地あり
+                file.print "\tex_ctrl_ref: &'a (dyn LockManager + Sync + Send),\n"
+            end
         end
+    end
+
+    # ミューテックスを適用するセルとセマフォを適用するセルが混在するセルタイプかどうかを判断する
+    def check_gen_mutex_or_semaphore celltype
+        check_semaphore = []
+
+        celltype.get_cell_list.each{ |cell|
+            check_semaphore.push(check_gen_semaphore cell).uniq!
+        }
+
+        if check_semaphore.length >= 2 then
+            return "both"
+        elsif check_semaphore.first == true then
+            return "semaphore"
+        else
+            return "mutex"
+        end
+    end
+
+    # セルの排他制御をセマフォにするかどうかを判断する
+    # TODO: chg_pri があるか無いかを判定する必要がある
+    def check_gen_semaphore cell
+        # JSONファイルがパースされていない場合は，セマフォにしない
+        if @@json_parse_result.length == 0 then
+            return false
+        end
+
+        celltype = cell.get_celltype.get_global_name.to_s
+        if @@json_parse_result[cell.get_global_name.to_s]["Celltype"] == celltype then
+            # 優先度が同じタスクからのみアクセスされる場合は，セマフォにする
+            if @@json_parse_result[cell.get_global_name.to_s]["ExclusiveControl"] == "true" && @@json_parse_result[cell.get_global_name.to_s]["PriorityList"].length == 1 then
+                return true
+            else
+                return false
+            end
+        end
+
+        return false
     end
 
     # Sync変数構造体の定義を生成
@@ -285,22 +349,28 @@ class ItronrsGenCelltypePlugin < RustGenCelltypePlugin
         file.print " {}\n\n"
     end
 
-    # ミューテックスガード構造体の定義を生成
-    def gen_rust_mutex_guard_structure file, celltype
+    # ロックガード構造体の定義を生成
+    def gen_rust_lock_guard_structure file, celltype
         return if celltype.get_var_list.length == 0
 
-        result = check_gen_dyn_for_mutex_ref celltype
 
-        return if result == "dummy"
-
-        file.print "pub struct LockGuardFor#{get_rust_celltype_name(celltype)}<'a>{\n"
-
-        if result == "dyn" then
-            file.print "\tmutex_ref: &'a (dyn LockableForMutex + Sync + Send),\n"
-        # elsif result == "dummy" then
-        #     file.print "\tmutex_ref: &'a TECSDummyMutexRef,\n"
+        case check_gen_dyn_for_ex_ctrl_ref celltype
+        when "dyn"
+            file.print "pub struct LockGuardFor#{get_rust_celltype_name(celltype)}<'a>{\n"
+            file.print "\tex_ctrl_ref: &'a (dyn LockManager + Sync + Send),\n"
+        when "dummy"
+            return
         else
-            file.print "\tmutex_ref: &'a TECSMutexRef<'a>,\n"
+            file.print "pub struct LockGuardFor#{get_rust_celltype_name(celltype)}<'a>{\n"
+            # セマフォを適用できるかを判断する
+            case check_gen_mutex_or_semaphore celltype
+            when "mutex"
+                file.print "\tex_ctrl_ref: &'a TECSMutexRef<'a>,\n"
+            when "semaphore"
+                file.print "\tex_ctrl_ref: &'a TECSSemaphoreRef<'a>,\n"
+            else
+                file.print "\tex_ctrl_ref: &'a (dyn LockManager + Sync + Send),\n"
+            end
         end
 
         file.print "}\n\n"
@@ -505,16 +575,16 @@ class ItronrsGenCelltypePlugin < RustGenCelltypePlugin
                     return_tuple_list.push("unsafe{&mut *self.variable.unsafe_var.get()}")
                 end
 
-                # ミューテックスガードを配列に追加
-                # TODO: 変数が無い、もしくはダミーだけの時にはミューテックスガードを生成しなくてもいいかも。しかし、get_cell_ref の返り値の数はそろえる必要がある
+                # ロックガードを配列に追加
+                # TODO: 変数が無い、もしくはダミーだけの時にはロックガードを生成しなくてもいいかも。しかし、get_cell_ref の返り値の数はそろえる必要がある
                 if celltype.get_var_list.length != 0 then
-                    result = check_gen_dyn_for_mutex_ref celltype
+                    result = check_gen_dyn_for_ex_ctrl_ref celltype
                     if result == "dummy" then
                         return_tuple_type_list.push("&TECSDummyLockGuard")
                         return_tuple_list.push("&DUMMY_LOCK_GUARD")
                     else
                         return_tuple_type_list.push("LockGuardFor#{get_rust_celltype_name(celltype)}")
-                        return_tuple_list.push("LockGuardFor#{get_rust_celltype_name(celltype)}{\n\t\t\t\tmutex_ref: self.mutex_ref,\n\t\t\t}")
+                        return_tuple_list.push("LockGuardFor#{get_rust_celltype_name(celltype)}{\n\t\t\t\tex_ctrl_ref: self.ex_ctrl_ref,\n\t\t\t}")
                     end
                 end
 
@@ -537,9 +607,9 @@ class ItronrsGenCelltypePlugin < RustGenCelltypePlugin
                 file.print " {\n"
 
                 if celltype.get_var_list.length != 0 then
-                    result = check_gen_dyn_for_mutex_ref celltype
+                    result = check_gen_dyn_for_ex_ctrl_ref celltype
                     if result != "dummy" then
-                        file.print "\t\tself.mutex_ref.lock();\n"
+                        file.print "\t\tself.ex_ctrl_ref.lock();\n"
                     end
                 end
 
@@ -575,34 +645,70 @@ class ItronrsGenCelltypePlugin < RustGenCelltypePlugin
         } # celltype.get_port_list.each
     end
 
-    # mutex_ref フィールドの初期化を生成
-    def gen_rust_cell_structure_mutex_ref_initialize file, celltype, cell
+    # ex_ctrl_ref フィールドの初期化を生成
+    def gen_rust_cell_structure_ex_ctrl_ref_initialize file, celltype, cell
         return if celltype.get_var_list.length == 0
 
-        result = check_gen_dyn_for_mutex_ref celltype
+        result = check_gen_dyn_for_ex_ctrl_ref celltype
         return if result == "dummy"
 
-        multiple = check_multiple_accessed_for_cell cell
-        if multiple then
-            file.print "\tmutex_ref: &#{cell.get_global_name.to_s.upcase}_MUTEX_REF,\n"
+        case check_exclusive_control_for_cell cell
+        when true
+            file.print "\tex_ctrl_ref: &#{cell.get_global_name.to_s.upcase}_EX_CTRL_REF,\n"
         else
-            file.print "\tmutex_ref: &DUMMY_MUTEX_REF,\n"
+            file.print "\tex_ctrl_ref: &DUMMY_EX_CTRL_REF,\n"
         end
     end
 
     # itron のコンフィグレーションファイルにミューテックス静的APIを生成する
-    def gen_mutex_static_api_for_configuration
+    def gen_mutex_static_api_for_configuration cell
         file = AppFile.open( "#{$gen}/tecsgen.cfg" )
-        # file.print "CRE_MTX( TECS_RUST_MUTEX_#{@@mutex_ref_id}, { TA_INHERIT });\n"
-        file.print "CRE_MTX( TECS_RUST_MUTEX_#{@@mutex_ref_id}, { TA_CEILING, 1 });\n"
+
+        # TODO: 優先度上限か、優先度継承かをプラグインオプションで判断できるようにする
+        # file.print "CRE_MTX( TECS_RUST_EX_CTRL_#{@@ex_ctrl_ref_id}, { TA_INHERIT });\n"
+
+        # 優先度上限値の取得
+        ceiling_priority = get_ceiling_priority cell
+        file.print "CRE_MTX( TECS_RUST_EX_CTRL_#{@@ex_ctrl_ref_id}, { TA_CEILING, #{ceiling_priority} });\n"
         file.close
-        @@mutex_ref_id += 1
+        @@ex_ctrl_ref_id += 1
+    end
+
+    # itron のコンフィグレーションファイルにセマフォ静的APIを生成する
+    def gen_semaphore_static_api_for_configuration cell
+        file = AppFile.open( "#{$gen}/tecsgen.cfg" )
+
+        # 資源数 1 でセマフォを生成
+        file.print "CRE_SEM( TECS_RUST_EX_CTRL_#{@@ex_ctrl_ref_id}, { TA_NULL, 1, 1 });\n"
+        file.close
+        @@ex_ctrl_ref_id += 1
+    end
+
+    # セルのミューテックスオブジェクトの優先度上限値を取得する
+    def get_ceiling_priority cell
+        # JSONファイルがパースされていない場合は、優先度上限を 1 として返す
+        if @@json_parse_result.length == 0 then
+            return 1
+        end
+
+        # puts "@@json_parse_result: #{@@json_parse_result}"
+
+        celltype = cell.get_celltype.get_global_name.to_s
+        if @@json_parse_result[cell.get_global_name.to_s]["Celltype"] == celltype then
+            if @@json_parse_result[cell.get_global_name.to_s]["ExclusiveControl"] == "true" && @@json_parse_result[cell.get_global_name.to_s]["PriorityList"].length != 0 then
+                return @@json_parse_result[cell.get_global_name.to_s]["PriorityList"].min
+            end
+        end
+        puts "Error: JSON file does not include #{cell.get_global_name.to_s}"
+        return 1
     end
 
     # Sync変数構造体の初期化を生成
     def gen_rust_variable_structure_initialize file, cell
         if @celltype.get_var_list.length != 0 then
             file.print "pub static #{cell.get_global_name.to_s.upcase}VAR: Sync#{get_rust_celltype_name(cell.get_celltype)}Var = Sync#{get_rust_celltype_name(cell.get_celltype)}Var {\n"
+            file.print "\t"
+            gen_comments_safe_reason file, cell
             file.print "\tunsafe_var: UnsafeCell::new(#{get_rust_celltype_name(cell.get_celltype)}Var {\n"
             # 変数構造体のフィールドの初期化を生成
             @celltype.get_var_list.each{ |var|
@@ -627,24 +733,52 @@ class ItronrsGenCelltypePlugin < RustGenCelltypePlugin
         end
     end
 
-    # mutex_ref の初期化を生成
-    def gen_rust_mutex_ref_initialize file, cell
-        return if @celltype.get_var_list.length == 0
-        multiple = check_multiple_accessed_for_cell cell
-        if multiple then
-            file.print "#[link_section = \".rodata\"]\n"
-            file.print "pub static #{cell.get_global_name.to_s.upcase}_MUTEX_REF: TECSMutexRef = TECSMutexRef{\n"
-            file.print "\tinner: unsafe{MutexRef::from_raw_nonnull(NonZeroI32::new(TECS_RUST_MUTEX_#{@@mutex_ref_id}).unwrap())},\n"
-            file.print "};\n\n"
-            gen_mutex_static_api_for_configuration
+    def gen_comments_safe_reason file, cell
+        case check_exclusive_control_for_cell cell
+        when true
+            case check_gen_semaphore cell
+            when true
+                file.print "/// This UnsafeCell is accessed by multiple tasks, but is safe because it is operated exclusively by the semaphore object.\n"
+            else
+                file.print "/// This UnsafeCell is accessed by multiple tasks, but is safe because it is operated exclusively by the mutex object.\n"
+            end
+        else
+            case check_multiple_accessed_for_cell cell
+            when true
+                # root に近いコンポーネントで排他制御を行っている場合
+                file.print "/// This UnsafeCell is accessed by multiple tasks, but is secure because it is accessed exclusively, with exclusive control applied to the component closest to root.\n"
+            else
+                file.print "/// This UnsafeCell is safe because it is only accessed by one task due to the call flow and component structure of TECS.\n"
+            end
         end
     end
 
-    # ミューテックスガードに Drop トレイトを実装する
-    def gen_rust_impl_drop_for_mutex_guard_structure file, celltype
+    # ex_ctrl_ref の初期化を生成
+    def gen_rust_ex_ctrl_ref_initialize file, cell
+        return if @celltype.get_var_list.length == 0
+        multiple = check_exclusive_control_for_cell cell
+        if multiple then
+            file.print "#[link_section = \".rodata\"]\n"
+            case check_gen_semaphore cell
+            when true
+                file.print "pub static #{cell.get_global_name.to_s.upcase}_EX_CTRL_REF: TECSSemaphoreRef = TECSSemaphoreRef{\n"
+                file.print "\tinner: unsafe{SemaphoreRef::from_raw_nonnull(NonZeroI32::new(TECS_RUST_EX_CTRL_#{@@ex_ctrl_ref_id}).unwrap())},\n"
+                file.print "};\n\n"
+                gen_semaphore_static_api_for_configuration cell
+            else
+                file.print "pub static #{cell.get_global_name.to_s.upcase}_EX_CTRL_REF: TECSMutexRef = TECSMutexRef{\n"
+                file.print "\tinner: unsafe{MutexRef::from_raw_nonnull(NonZeroI32::new(TECS_RUST_EX_CTRL_#{@@ex_ctrl_ref_id}).unwrap())},\n"
+                file.print "};\n\n"
+                gen_mutex_static_api_for_configuration cell
+            end
+        end
+    end
+
+    # ロックガードに Drop トレイトを実装する
+    def gen_rust_impl_drop_for_lock_guard_structure file, celltype
         return if celltype.get_var_list.length == 0
 
-        result = check_gen_dyn_for_mutex_ref celltype
+        result = check_gen_dyn_for_ex_ctrl_ref celltype
         return if result == "dummy"
 
         file.print "impl"
@@ -665,7 +799,7 @@ class ItronrsGenCelltypePlugin < RustGenCelltypePlugin
         }
         file.print " {\n"
         file.print "\tfn drop(&mut self){\n"
-        file.print "\t\tself.mutex_ref.unlock();\n"
+        file.print "\t\tself.ex_ctrl_ref.unlock();\n"
         file.print "\t}\n"
         file.print "}\n\n"
     end
@@ -769,27 +903,217 @@ use itron::mutex::{MutexRef, LockError, UnlockError};
 use crate::print;
 use crate::tecs_print::*;
 use itron::abi::uint_t;
+use crate::tecs_ex_ctrl::*;
 
-pub trait LockableForMutex {
+pub struct TECSMutexRef<'a>{
+	pub inner: MutexRef<'a>,
+}
+
+impl LockManager for TECSMutexRef<'_>{
+    #[inline]
+    fn lock(&self){
+        match self.inner.lock(){
+            Ok(_) => {},
+            Err(e) => {
+                match e {
+                    BadContext => {
+                        print!("BadContextError::BadContext", );
+                        loop{}
+                    },
+                    NotSupported => {
+                        loop{}
+                    },
+                    BadId => {
+                        print!("BadContextError::BadId", );
+                        loop{}
+                    },
+                    AccessDenied => {
+                        print!("BadContextError::AccessDenied", );
+                        loop{}
+                    },
+                    Released => {
+                        print!("BadContextError::Released", );
+                        loop{}
+                    },
+                    TerminateErrorRequest => {
+                        print!("TerminateErrorReason::BadContext", );
+                        loop{}
+                    },
+                    Deleted => {
+                        print!("BadContextError::Deleted", );
+                        loop{}
+                    },
+                    BadParam => {
+                        print!("BadContextError::BadParam", );
+                        loop{}
+                    },
+                    DeadLock => {
+                        print!("BadContextError::DeadLock", );
+                        loop{}
+                    },
+                }
+            },
+        }
+    }
+    #[inline]
+    fn unlock(&self){
+        match self.inner.unlock(){
+            Ok(_) => {},
+            Err(e) => {
+                match e {
+                    BadContext => {
+                        print!("BadContextError::BadContext", );
+                        loop{}
+                    },
+                    BadId => {
+                        print!("BadContextError::BadId", );
+                        loop{}
+                    },
+                    AccessDenied => {
+                        print!("BadContextError::AccessDenied", );
+                        loop{}
+                    },
+                    BadSequence => {
+                        print!("BadContextError::BadSequence", );
+                        loop{}
+                    },
+                }
+            },
+        }
+    }
+}
+            EOS
+
+        mutex_file = CFile.open( "#{$gen}/tecs_mutex.rs", "w" )
+        mutex_file.print contents
+        mutex_file.close
+    end
+
+    # tecs_semaphore.rs を生成する
+    def gen_tecs_semaphore_rs
+        contents = <<~'EOS'
+use itron::semaphore::{SemaphoreRef, WaitError, SignalError};
+use crate::print;
+use crate::tecs_print::*;
+use itron::abi::uint_t;
+use crate::tecs_ex_ctrl::*;
+
+pub struct TECSSemaphoreRef<'a>{
+	pub inner: SemaphoreRef<'a>,
+}
+
+impl LockManager for TECSSemaphoreRef<'_>{
+    #[inline]
+    fn lock(&self){
+        match self.inner.wait(){
+            Ok(_) => {},
+            Err(e) => {
+                match e {
+                    BadContext => {
+                        print!("BadContextError::BadContext", );
+                        loop{}
+                    },
+                    NotSupported => {
+                        loop{}
+                    },
+                    BadId => {
+                        print!("BadContextError::BadId", );
+                        loop{}
+                    },
+                    AccessDenied => {
+                        print!("BadContextError::AccessDenied", );
+                        loop{}
+                    },
+                    Released => {
+                        print!("BadContextError::Released", );
+                        loop{}
+                    },
+                    TerminateErrorRequest => {
+                        print!("TerminateErrorReason::BadContext", );
+                        loop{}
+                    },
+                    Deleted => {
+                        print!("BadContextError::Deleted", );
+                        loop{}
+                    },
+                }
+            },
+        }
+    }
+    #[inline]
+    fn unlock(&self){
+        match self.inner.signal(){
+            Ok(_) => {},
+            Err(e) => {
+                match e {
+                    BadContext => {
+                        print!("BadContextError::BadContext", );
+                        loop{}
+                    },
+                    BadId => {
+                        print!("BadContextError::BadId", );
+                        loop{}
+                    },
+                    AccessDenied => {
+                        print!("BadContextError::AccessDenied", );
+                        loop{}
+                    },
+                    QueueOverflow => {
+                        print!("BadContextError::QueueOverflow", );
+                        loop{}
+                    },
+                }
+            },
+        }
+    }
+}
+            EOS
+
+        mutex_file = CFile.open( "#{$gen}/tecs_semaphore.rs", "w" )
+        mutex_file.print contents
+        mutex_file.close
+    end
+
+    # 排他制御のダミーなど、共通部分のファイルを生成する
+    def gen_tecs_ex_ctrl_rs
+        contents = <<~'EOS'
+use itron::mutex::{MutexRef, LockError, UnlockError};
+use itron::semaphore::{SemaphoreRef, WaitError, SignalError};
+use crate::print;
+use crate::tecs_print::*;
+use itron::abi::uint_t;
+
+pub trait LockManager {
     fn lock(&self);
     fn unlock(&self);
 }
 
 pub type TECSDummyLockGuard = u32;
 
+pub struct TECSDummyExclusiveControlRef{}
+
 pub struct TECSMutexRef<'a>{
 	pub inner: MutexRef<'a>,
 }
 
-pub struct TECSDummyMutexRef{}
+pub struct TECSSemaphoreRef<'a>{
+	pub inner: SemaphoreRef<'a>,
+}
 
 #[link_section = ".rodata"]
 pub static DUMMY_LOCK_GUARD: TECSDummyLockGuard = 0;
 
 #[link_section = ".rodata"]
-pub static DUMMY_MUTEX_REF: TECSDummyMutexRef = TECSDummyMutexRef{};
+pub static DUMMY_EX_CTRL_REF: TECSDummyExclusiveControlRef = TECSDummyExclusiveControlRef{};
 
-impl LockableForMutex for TECSMutexRef<'_>{
+impl LockManager for TECSDummyExclusiveLockRef{
+    #[inline]
+    fn lock(&self){}
+    #[inline]
+    fn unlock(&self){}
+}
+
+impl LockManager for TECSMutexRef<'_>{
     #[inline]
     fn lock(&self){
         match self.inner.lock(){
@@ -863,17 +1187,76 @@ impl LockableForMutex for TECSMutexRef<'_>{
     }
 }
 
-impl LockableForMutex for TECSDummyMutexRef{
+impl LockManager for TECSSemaphoreRef<'_>{
     #[inline]
-    fn lock(&self){}
+    fn lock(&self){
+        match self.inner.wait(){
+            Ok(_) => {},
+            Err(e) => {
+                match e {
+                    BadContext => {
+                        print!("BadContextError::BadContext", );
+                        loop{}
+                    },
+                    NotSupported => {
+                        loop{}
+                    },
+                    BadId => {
+                        print!("BadContextError::BadId", );
+                        loop{}
+                    },
+                    AccessDenied => {
+                        print!("BadContextError::AccessDenied", );
+                        loop{}
+                    },
+                    Released => {
+                        print!("BadContextError::Released", );
+                        loop{}
+                    },
+                    TerminateErrorRequest => {
+                        print!("TerminateErrorReason::BadContext", );
+                        loop{}
+                    },
+                    Deleted => {
+                        print!("BadContextError::Deleted", );
+                        loop{}
+                    },
+                }
+            },
+        }
+    }
     #[inline]
-    fn unlock(&self){}
+    fn unlock(&self){
+        match self.inner.signal(){
+            Ok(_) => {},
+            Err(e) => {
+                match e {
+                    BadContext => {
+                        print!("BadContextError::BadContext", );
+                        loop{}
+                    },
+                    BadId => {
+                        print!("BadContextError::BadId", );
+                        loop{}
+                    },
+                    AccessDenied => {
+                        print!("BadContextError::AccessDenied", );
+                        loop{}
+                    },
+                    QueueOverflow => {
+                        print!("BadContextError::QueueOverflow", );
+                        loop{}
+                    },
+                }
+            },
+        }
+    }
 }
             EOS
 
-        mutex_file = CFile.open( "#{$gen}/tecs_mutex.rs", "w" )
-        mutex_file.print contents
-        mutex_file.close
+        print_file = CFile.open( "#{$gen}/tecs_ex_ctrl.rs", "w" )
+        print_file.print contents
+        print_file.close
     end
 
     # syslog の Rust ラップである print.rs を生成する
@@ -958,7 +1341,14 @@ macro_rules! print{
 
         super(file)
 
-        gen_tecs_mutex_rs
+        # TODO: 必要なときにのみ生成するようにする
+        gen_tecs_ex_ctrl_rs
+
+        # TODO: 必要なときにのみ生成するようにする
+        # gen_tecs_mutex_rs
+
+        # TODO: 必要なときにのみ生成するようにする
+        # gen_tecs_semaphore_rs
 
         gen_tecs_print_rs
 

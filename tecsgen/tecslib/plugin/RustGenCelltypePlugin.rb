@@ -42,7 +42,7 @@ class RustGenCelltypePlugin < CelltypePlugin
     CLASS_NAME_SUFFIX = ""
     @@b_signature_header_generated = false
     @@module_generated = false
-    @@mutex_ref_id = 1
+    @@ex_ctrl_ref_id = 1
     @@json_parse_result = []
     @@main_lib_rs_cleaned = false
 
@@ -1173,7 +1173,7 @@ class RustGenCelltypePlugin < CelltypePlugin
         json_string = File.read(file_path)
         data = JSON.parse(json_string)
 
-        accessed_cells = Hash.new { |hash, key| hash[key] = { "ExclusiveContol" => "false", "Accessed" => 0, "Celltype" => nil, "TaskList" => [] } }
+        accessed_cells = Hash.new { |hash, key| hash[key] = { "ExclusiveControl" => "false", "Accessed" => 0, "Celltype" => nil, "TaskList" => [], "PriorityList" => [] } }
         # 各セルのアクセス回数をカウントするためのハッシュ (現在、このアクセス回数はコード生成に必要のない情報)
         access_count = Hash.new(0)
 
@@ -1185,7 +1185,7 @@ class RustGenCelltypePlugin < CelltypePlugin
         # すべてのセルの排他制御の有無を設定する
         # tecsflow のほうで排他制御の有無は判定済み
         data.each do |entry|
-            accessed_cells[entry["Cell"]]["ExclusiveContol"] = "true" if entry["ExclusiveContol"] == "true"
+            accessed_cells[entry["Cell"]]["ExclusiveControl"] = "true" if entry["ExclusiveControl"] == "true"
         end
     
         # すべてのセルのアクセス回数をカウント
@@ -1194,13 +1194,19 @@ class RustGenCelltypePlugin < CelltypePlugin
           entry["Accessed"].each do |access|
             active_cell = access["ActiveCell"]
             access_count[entry["Cell"]] += 1
+            # TaskListは、アクセスタスクの種類を格納する
             accessed_cells[entry["Cell"]]["TaskList"].push(active_cell).uniq!
+            
+            # PriorityListは、アクセスタスクの優先度の種類を格納する
+            # TODO: TaskList と PriorityList は対応していないため、対応させる
+            active_cell_priority = access["Priority"].to_i
+            accessed_cells[entry["Cell"]]["PriorityList"].push(active_cell_priority).uniq!
           end
         end
     
-        # 複数のタスクからアクセスされる場合に ExclusiveContol を true に設定
+        # 複数のタスクからアクセスされる場合に ExclusiveControl を true に設定
         # access_count.each do |cell, count|
-        #     accessed_cells[cell]["ExclusiveContol"] = "true" if accessed_cells[cell]["TaskList"].length > 1
+        #     accessed_cells[cell]["ExclusiveControl"] = "true" if accessed_cells[cell]["TaskList"].length > 1
         #     accessed_cells[cell]["Accessed"] = count  
         # end
     
@@ -1229,7 +1235,7 @@ class RustGenCelltypePlugin < CelltypePlugin
                     # 呼び元と呼び先のセルのアクセス回数が同じ場合は排他制御がいらないため、falseに設定
                     # TODO: タスクのリストで判定するように修正
                     if cell_accessed == callee_cell_accessed then
-                        json_parse_result[callee_cell_name]["ExclusiveContol"] = "false"
+                        json_parse_result[callee_cell_name]["ExclusiveControl"] = "false"
                     end
                 end
             }
@@ -1238,7 +1244,7 @@ class RustGenCelltypePlugin < CelltypePlugin
     end
 
     # 引数のセルが複数のタスクからアクセスされているかどうかを判断する
-    def check_multiple_accessed_for_cell cell
+    def check_exclusive_control_for_cell cell
         # JSONファイルがパースされていない場合は、排他制御がいるものとして true を返す
         if @@json_parse_result.length == 0 then
             return true
@@ -1246,7 +1252,7 @@ class RustGenCelltypePlugin < CelltypePlugin
 
         celltype = cell.get_celltype.get_global_name.to_s
         if @@json_parse_result[cell.get_global_name.to_s]["Celltype"] == celltype then
-            if @@json_parse_result[cell.get_global_name.to_s]["ExclusiveContol"] == "true" then
+            if @@json_parse_result[cell.get_global_name.to_s]["ExclusiveControl"] == "true" then
                 return true
             end
             return false
@@ -1255,9 +1261,26 @@ class RustGenCelltypePlugin < CelltypePlugin
         return false
     end
 
-    # 引数のセルタイプの mutex_ref に動的ディスパッチが必要かどうかを判断し、いる場合は dyn を、いらない場合は、ダミーかどうかを返す
-    def check_gen_dyn_for_mutex_ref celltype
-        dyn_check_results = celltype.get_cell_list.map { |cell| check_multiple_accessed_for_cell(cell) }
+    def check_multiple_accessed_for_cell cell
+        # JSONファイルがパースされていない場合は、保守的に true を返す
+        if @@json_parse_result.length == 0 then
+            return true
+        end
+
+        celltype = cell.get_celltype.get_global_name.to_s
+        if @@json_parse_result[cell.get_global_name.to_s]["Celltype"] == celltype then
+            if @@json_parse_result[cell.get_global_name.to_s]["TaskList"].length > 1 then
+                return true
+            end
+            return false
+        end
+        puts "Error: JSON file does not include #{cell.get_global_name.to_s}"
+        return false
+    end
+
+    # 引数のセルタイプの ex_ctrl_ref に動的ディスパッチが必要かどうかを判断し、いる場合は dyn を、いらない場合は、ダミーかどうかを返す
+    def check_gen_dyn_for_ex_ctrl_ref celltype
+        dyn_check_results = celltype.get_cell_list.map { |cell| check_exclusive_control_for_cell(cell) }
         
         if dyn_check_results.all?(true) then
             return "no_dummy"
@@ -1268,8 +1291,8 @@ class RustGenCelltypePlugin < CelltypePlugin
         end
     end
 
-    # セルタイプ構造体の mutex_ref フィールドの定義を生成
-    def gen_rust_cell_structure_mutex_ref file, celltype
+    # セルタイプ構造体の ex_ctrl_ref フィールドの定義を生成
+    def gen_rust_cell_structure_ex_ctrl_ref file, celltype
         # ItronrsPlugin で実装
         # TODO: spinクレート版を実装する場合はこの関数を使う
     end
@@ -1286,28 +1309,34 @@ class RustGenCelltypePlugin < CelltypePlugin
         # TODO: spinクレート版を実装する場合はこの関数を使う
     end
 
-    # ミューテックスガード構造体の定義を生成
-    def gen_rust_mutex_guard_structure file, celltype
+    # ロックガード構造体の定義を生成
+    def gen_rust_lock_guard_structure file, celltype
         # ItronrsPlugin で実装
         # TODO: spinクレート版を実装する場合はこの関数を使う
     end
 
-    # mutex_ref フィールドの初期化を生成
-    def gen_rust_cell_structure_mutex_ref_initialize file, celltype, cell
+    # ex_ctrl_ref フィールドの初期化を生成
+    def gen_rust_cell_structure_ex_ctrl_ref_initialize file, celltype, cell
         # ItronrsPlugin で実装
         # TODO: spinクレート版を実装する場合はこの関数を使う
     end
 
-    # mutex_ref の初期化を生成
-    def gen_rust_mutex_ref_initialize file, cell
+    # ex_ctrl_ref の初期化を生成
+    def gen_rust_ex_ctrl_ref_initialize file, cell
         # ItronrsPlugin で実装
         # TODO: spinクレート版を実装する場合はこの関数を使う
     end
 
-    # ミューテックスガードに Drop トレイトを実装する
-    def gen_rust_impl_drop_for_mutex_guard_structure file, celltype
+    # ロックガードに Drop トレイトを実装する
+    def gen_rust_impl_drop_for_lock_guard_structure file, celltype
         # ItronrsPlugin で実装
         # TODO: spinクレート版を実装する場合はこの関数を使う
+    end
+
+    # no_std のコンパイルの際に要求されるパニックハンドラを生成する
+    def gen_panic_handler_in_main_lib_rs file
+        # ItronrsPlugin で実装
+        # TODO: 必要があればこちらでも実装する
     end
 
     #=== tCelltype_factory.h に挿入するコードを生成する
@@ -1382,6 +1411,8 @@ class RustGenCelltypePlugin < CelltypePlugin
                 end
             end
 
+            puts "@@json_parse_result: #{@@json_parse_result}"
+
             file = CFile.open( "#{$gen}/#{snake_case(@celltype.get_global_name.to_s)}.rs", "w")
 
             @use_string_list = []
@@ -1424,9 +1455,9 @@ class RustGenCelltypePlugin < CelltypePlugin
             # セル構造体の変数フィールドの定義を生成
             gen_rust_cell_structure_variable file, @celltype
 
-            print "#{@celltype.get_global_name.to_s}: gen_rust_cell_structure_mutex_ref\n"
-            # セル構造体の mutex_ref フィールドの定義を生成
-            gen_rust_cell_structure_mutex_ref file, @celltype
+            print "#{@celltype.get_global_name.to_s}: gen_rust_cell_structure_ex_ctrl_ref\n"
+            # セル構造体の ex_ctrl_ref フィールドの定義を生成
+            gen_rust_cell_structure_ex_ctrl_ref file, @celltype
 
             file.print "}\n\n"
             
@@ -1447,8 +1478,8 @@ class RustGenCelltypePlugin < CelltypePlugin
             gen_rust_entry_structure file, @celltype
 
             print "#{@celltype.get_global_name.to_s}: gen_rust_entryport_structure_initialize\n"
-            # ミューテックスガード構造体の定義を生成
-            gen_rust_mutex_guard_structure file, @celltype
+            # ロックガード構造体の定義を生成
+            gen_rust_lock_guard_structure file, @celltype
 
             print "#{@celltype.get_global_name.to_s}: gen_mod_in_main_lib_rs_for_celltype\n"
             # main.rs もしくは lib.rs に mod を追加する
@@ -1478,9 +1509,9 @@ class RustGenCelltypePlugin < CelltypePlugin
                 # セルの構造体の変数フィールドの初期化を生成
                 gen_rust_cell_structure_variable_initialize file, @celltype, cell
 
-                print "#{@celltype.get_global_name.to_s}: gen_rust_cell_structure_mutex_ref_initialize\n"
-                # mutex_ref フィールドの初期化を生成
-                gen_rust_cell_structure_mutex_ref_initialize file, @celltype, cell
+                print "#{@celltype.get_global_name.to_s}: gen_rust_cell_structure_ex_ctrl_ref_initialize\n"
+                # ex_ctrl_ref フィールドの初期化を生成
+                gen_rust_cell_structure_ex_ctrl_ref_initialize file, @celltype, cell
 
                 file.print "};\n\n"
 
@@ -1488,9 +1519,9 @@ class RustGenCelltypePlugin < CelltypePlugin
                 # 変数構造体の初期化を生成
                 gen_rust_variable_structure_initialize file, cell
 
-                print "#{@celltype.get_global_name.to_s}: gen_rust_mutex_ref_initialize\n"
-                # mutex_ref の初期化を生成
-                gen_rust_mutex_ref_initialize file, cell
+                print "#{@celltype.get_global_name.to_s}: gen_rust_ex_ctrl_ref_initialize\n"
+                # ex_ctrl_ref の初期化を生成
+                gen_rust_ex_ctrl_ref_initialize file, cell
 
                 print "#{@celltype.get_global_name.to_s}: gen_rust_entryport_structure_initialize\n"
                 # 受け口構造体の初期化を生成
@@ -1498,9 +1529,9 @@ class RustGenCelltypePlugin < CelltypePlugin
 
             } # celltype.get_cell_list.each
 
-            print "#{@celltype.get_global_name.to_s}: gen_rust_impl_drop_for_mutex_guard_structure\n"
-            # ミューテックスガードに Drop トレイトを実装する
-            gen_rust_impl_drop_for_mutex_guard_structure file, @celltype
+            print "#{@celltype.get_global_name.to_s}: gen_rust_impl_drop_for_lock_guard_structure\n"
+            # ロックガードに Drop トレイトを実装する
+            gen_rust_impl_drop_for_lock_guard_structure file, @celltype
 
         if check_only_entryport_celltype @celltype then
         else
