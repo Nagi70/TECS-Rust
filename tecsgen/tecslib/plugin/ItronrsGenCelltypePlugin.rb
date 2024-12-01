@@ -93,12 +93,8 @@ class ItronrsGenCelltypePlugin < RustGenCelltypePlugin
 
     def gen_mod_in_main_lib_rs_for_celltype celltype
         plugin_option = @plugin_arg_str.split(",").map(&:strip)
-        file_name = nil
-        if plugin_option.include?("main") then
-            file_name = "main"
-        elsif plugin_option.include?("lib") then
-            file_name = "lib"
-        end
+
+        file_name = check_option_main_or_lib
 
         if file_name != nil then
             # TODO: 本当に排他制御が必要なときのみ、排他制御モジュールを生成するようにする
@@ -896,6 +892,50 @@ CODE
         }
     end
 
+    # Cargo の新規プロジェクトを作成する
+    def cargo_new_project path
+        super(path)
+
+        gen_config_toml path
+
+    end
+
+    # Cargo.toml の設定を変更する
+    def change_cargo_toml path
+        cargo_toml_path = "#{path}/Cargo.toml"
+
+        # TODO: asp3 か fmp3 かは、何かしらで判断する必要がある
+        itron_rs_depenence = "itron = { version = \"= 0.1.9\", features = [\"asp3\", \"nightly\", \"unstable\"] }"
+
+        File.open(cargo_toml_path, "a") do |file|
+            file.puts itron_rs_depenence
+            file.puts ""
+        end
+
+        super(path)
+    end
+
+    # cargo.toml の設定を生成する
+    def gen_config_toml path
+        config_toml_dir = "#{path}/.cargo"
+        comfig_toml_path = "#{config_toml_dir}/config.toml"
+
+        return if Dir.exist?(config_toml_dir)
+
+        Dir.mkdir(config_toml_dir)
+        File.open(comfig_toml_path, "w") do |file|
+            file.puts "[build]"
+            file.puts "# target = \"thumbv6m-none-eabi\"        # Cortex-M0 and Cortex-M0+"
+            file.puts "# target = \"thumbv7m-none-eabi\"        # Cortex-M3"
+            file.puts "# target = \"thumbv7em-none-eabi\"       # Cortex-M4 and Cortex-M7 (no FPU)"
+            file.puts "# target = \"thumbv7em-none-eabihf\"     # Cortex-M4F and Cortex-M7F (with FPU) (e.g., Spike-rt)"
+            file.puts "# target = \"thumbv8m.base-none-eabi\"   # Cortex-M23"
+            file.puts "# target = \"thumbv8m.main-none-eabi\"   # Cortex-M33 (no FPU)"
+            file.puts "# target = \"thumbv8m.main-none-eabihf\" # Cortex-M33 (with FPU)"
+            file.puts "# target = \"armv7a-none-eabi\"          # Bare Armv7-A (e.g., Zynq-7000 (Xilinx))"
+        end
+    end
+
     # tecs_mutex.rs を生成する
     def gen_tecs_mutex_rs
         contents = <<~'EOS'
@@ -1254,9 +1294,12 @@ impl LockManager for TECSSemaphoreRef<'_>{
 }
             EOS
 
-        print_file = CFile.open( "#{$gen}/tecs_ex_ctrl.rs", "w" )
-        print_file.print contents
-        print_file.close
+        get_diff_between_gen_and_src "tecs_ex_ctrl.rs"
+        ex_file = CFile.open( "#{$gen}/tecs_ex_ctrl.rs", "w" )
+        ex_file.print contents
+        ex_file.close
+
+        copy_gen_files_to_cargo @@cargo_path, "#{$gen}/tecs_ex_ctrl.rs"
     end
 
     # syslog の Rust ラップである print.rs を生成する
@@ -1325,9 +1368,12 @@ macro_rules! print{
 }
             EOS
 
+        get_diff_between_gen_and_src "tecs_print.rs"
         print_file = CFile.open( "#{$gen}/tecs_print.rs", "w" )
         print_file.print contents
         print_file.close
+
+        copy_gen_files_to_cargo @@cargo_path, "#{$gen}/tecs_print.rs"
     end
         
     #=== tCelltype_factory.h に挿入するコードを生成する
