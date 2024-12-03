@@ -1,4 +1,4 @@
-use itron::abi::uinit_t;
+use itron::abi::uint_t;
 use itron::abi::*;
 
 extern "C"{

@@ -1,3 +1,5 @@
+use itron::mutex::MutexRef;
+use itron::semaphore::SemaphoreRef;
 use crate::tecs_ex_ctrl::*;
 use core::cell::UnsafeCell;
 use core::num::NonZeroI32;
@@ -54,15 +56,15 @@ pub static SENSOR2: TSensor = TSensor {
 };
 
 pub static SENSOR2VAR: SyncTSensorVar = SyncTSensorVar {
-	/// This UnsafeCell is accessed by multiple tasks, but is safe because it is operated exclusively by the semaphore object.
+	/// This UnsafeCell is accessed by multiple tasks, but is safe because it is operated exclusively by the mutex object.
 	unsafe_var: UnsafeCell::new(TSensorVar {
 		ult: None,
 	}),
 };
 
 #[link_section = ".rodata"]
-pub static SENSOR2_EX_CTRL_REF: TECSSemaphoreRef = TECSSemaphoreRef{
-	inner: unsafe{SemaphoreRef::from_raw_nonnull(NonZeroI32::new(TECS_RUST_EX_CTRL_2).unwrap())},
+pub static SENSOR2_EX_CTRL_REF: TECSMutexRef = TECSMutexRef{
+	inner: unsafe{MutexRef::from_raw_nonnull(NonZeroI32::new(TECS_RUST_EX_CTRL_2).unwrap())},
 };
 
 #[link_section = ".rodata"]

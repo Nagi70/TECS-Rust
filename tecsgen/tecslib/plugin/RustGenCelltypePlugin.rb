@@ -47,6 +47,7 @@ class RustGenCelltypePlugin < CelltypePlugin
     @@main_lib_rs_cleaned = false
     @@cargo_path = "#{$gen}/../#{$target}"
     @@diff_src_and_gen = Hash.new { |hash, key| hash[key] = [] }
+    @@rust_src_list = []
 
     #celltype::     Celltype        セルタイプ（インスタンス）
     def initialize( celltype, option )
@@ -395,8 +396,12 @@ class RustGenCelltypePlugin < CelltypePlugin
 
             trait_file.close
 
-            puts "#{@celltype.get_global_name.to_s}: copy #{snake_case(sig_name)}.rs to cargo\n"
-            copy_gen_files_to_cargo @@cargo_path, "#{$gen}/#{snake_case(sig_name)}.rs"
+            # 既に Cargo プロジェクトにファイルが存在する場合、コピーは行わない
+            # つまり、トレイトファイルは最適化の際に更新しない
+            if File.exist?("#{@@cargo_path}/src/#{snake_case(sig_name)}.rs") == false then
+                puts "#{@celltype.get_global_name.to_s}: copy #{snake_case(sig_name)}.rs to cargo\n"
+                copy_gen_files_to_cargo "#{snake_case(sig_name)}.rs"
+            end
         }
     end
 
@@ -1390,14 +1395,17 @@ class RustGenCelltypePlugin < CelltypePlugin
     end
 
     # 生成したファイルを Cargo にコピーする
-    def copy_gen_files_to_cargo cargo_path, gen_file_path
+    def copy_gen_files_to_cargo file_name
         require 'fileutils'
 
-        return if Dir.exist?(cargo_path) == false
+        gen_file_path = "#{$gen}/#{file_name}"
 
-        FileUtils.cp(gen_file_path, "#{cargo_path}/src")
+        # Cargo プロジェクトがあるかどうかを確認
+        return if Dir.exist?(@@cargo_path) == false
 
-        add_diff_to_new_cargo_src gen_file_path.split("/").last
+        FileUtils.cp(gen_file_path, "#{@@cargo_path}/src")
+
+        add_diff_to_new_cargo_src file_name
     end
 
     # src と gen の差分を取得する
@@ -1439,11 +1447,16 @@ class RustGenCelltypePlugin < CelltypePlugin
             diff_src = @@diff_src_and_gen[file_name]
 
             # puts "diff_src_value: #{diff_src}"
-
+            
             return if diff_src == nil
 
             diff_src.each do |diff|
                 last_line = nil
+
+                # puts "check diff: #{diff}"
+
+                # 既に src ファイルに差分がある場合、追加しない
+                next if src_file.include?(diff)
 
                 # 差分が use か mod かを判定
                 # TODO: もう少し厳格な判定をしてもいいかもしれない
@@ -1470,6 +1483,34 @@ class RustGenCelltypePlugin < CelltypePlugin
                 File.write(src_path, src_file)
             end
         end
+    end
+
+    def add_rust_src_list file_name
+        @@rust_src_list.push(file_name)
+    end
+
+    def gen_makefile
+        makefile = File.open("#{@@cargo_path}/Makefile", "w")
+
+        makefile.print "TARGET_BESE = #{$target}\n"
+        makefile.print "GEN_DIR = #{$gen}\n"
+        makefile.print "CARGO_BASE = #{@@cargo_path}\n"
+        makefile.print "SRC_DIR = $(CARGO_BASE)/src\n"
+        makefile.print "RUST_SRC = \\\n"
+        @@rust_src_list.each do |src|
+            if src == @@rust_src_list.last then
+                makefile.print "\t$(SRC_DIR)/#{src}\n"
+            else
+                makefile.print "\t$(SRC_DIR)/#{src} \\\n"
+            end
+        end
+        
+        makefile.print "\n"
+        makefile.print "TECSGEN_EXE = tecsgen\n"
+        
+        makefile.print "\n"
+        makefile.print "tecsflow : "
+
     end
 
     #=== tCelltype_factory.h に挿入するコードを生成する
@@ -1701,8 +1742,12 @@ class RustGenCelltypePlugin < CelltypePlugin
 
                 impl_file.close
 
-                puts "#{@celltype.get_global_name.to_s}: copy #{snake_case(@celltype.get_global_name.to_s)}_impl.rs to cargo\n"
-                copy_gen_files_to_cargo @@cargo_path, "#{$gen}/#{snake_case(@celltype.get_global_name.to_s)}_impl.rs"
+                # 既に Cargo プロジェクトにファイルがある場合、ユーザがコードを実装済みとして、コピーしない
+                # つまり、impl ファイルは最適化の際に更新しない
+                if File.exist?("#{@@cargo_path}/src/#{snake_case(@celltype.get_global_name.to_s)}_impl.rs") == false then
+                    puts "#{@celltype.get_global_name.to_s}: copy #{snake_case(@celltype.get_global_name.to_s)}_impl.rs to cargo\n"
+                    copy_gen_files_to_cargo "#{snake_case(@celltype.get_global_name.to_s)}_impl.rs"
+                end
 
                 break
             end
@@ -1716,10 +1761,10 @@ class RustGenCelltypePlugin < CelltypePlugin
         gen_trait_files @celltype
 
         puts "#{@celltype.get_global_name.to_s}: copy #{snake_case(@celltype.get_global_name.to_s)}.rs to cargo\n"
-        copy_gen_files_to_cargo @@cargo_path, "#{$gen}/#{snake_case(@celltype.get_global_name.to_s)}.rs"
+        copy_gen_files_to_cargo "#{snake_case(@celltype.get_global_name.to_s)}.rs"
 
         puts "#{@celltype.get_global_name.to_s}: copy #{check_option_main_or_lib}.rs to cargo\n"
-        copy_gen_files_to_cargo @@cargo_path, "#{$gen}/#{check_option_main_or_lib}.rs"
+        copy_gen_files_to_cargo "#{check_option_main_or_lib}.rs"
 
     end # gen_factory
 

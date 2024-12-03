@@ -20,11 +20,11 @@ struct tag_sSensor_VDES {
 
 /* signature function table #_SFT_# */
 struct tag_sSensor_VMT {
-    void           (*set_device_ref__T)( const struct tag_sSensor_VDES *edp );
-    void           (*get_distance__T)( const struct tag_sSensor_VDES *edp, int32_t* distance );
-    void           (*light_on__T)( const struct tag_sSensor_VDES *edp );
-    void           (*light_set__T)( const struct tag_sSensor_VDES *edp, int32_t bv1, int32_t bv2, int32_t bv3, int32_t bv4 );
-    void           (*light_off__T)( const struct tag_sSensor_VDES *edp );
+    void           (*setDeviceRef__T)( const struct tag_sSensor_VDES *edp );
+    void           (*getDistance__T)( const struct tag_sSensor_VDES *edp, int32_t* distance );
+    void           (*lightOn__T)( const struct tag_sSensor_VDES *edp );
+    void           (*lightSet__T)( const struct tag_sSensor_VDES *edp, int32_t bv1, int32_t bv2, int32_t bv3, int32_t bv4 );
+    void           (*lightOff__T)( const struct tag_sSensor_VDES *edp );
 };
 
 /* signature descriptor #_SDES_# for dynamic join */
@@ -35,10 +35,10 @@ typedef struct { struct tag_sSensor_VDES *vdes; } Descriptor( sSensor );
 #endif /* TOPPERS_MACRO_ONLY */
 
 /* function id */
-#define	FUNCID_SSENSOR_SET_DEVICE_REF          (1)
-#define	FUNCID_SSENSOR_GET_DISTANCE            (2)
-#define	FUNCID_SSENSOR_LIGHT_ON                (3)
-#define	FUNCID_SSENSOR_LIGHT_SET               (4)
-#define	FUNCID_SSENSOR_LIGHT_OFF               (5)
+#define	FUNCID_SSENSOR_SETDEVICEREF            (1)
+#define	FUNCID_SSENSOR_GETDISTANCE             (2)
+#define	FUNCID_SSENSOR_LIGHTON                 (3)
+#define	FUNCID_SSENSOR_LIGHTSET                (4)
+#define	FUNCID_SSENSOR_LIGHTOFF                (5)
 
 #endif /* sSensor_TECSGEN_H */

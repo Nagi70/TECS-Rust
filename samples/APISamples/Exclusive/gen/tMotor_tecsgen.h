@@ -49,9 +49,9 @@ typedef struct tag_tMotor_CB *tMotor_IDX;
 
 /* prototype declaration of entry port function #_EPP_# */
 /* sMotor */
-Inline void         tMotor_eMotor_set_motor_ref(tMotor_IDX idx);
+Inline void         tMotor_eMotor_setMotorRef(tMotor_IDX idx);
 Inline void         tMotor_eMotor_setup(tMotor_IDX idx, PbioDirectionT positive_direction, bool reset_count);
-Inline void         tMotor_eMotor_set_speed(tMotor_IDX idx, int32_t speed);
+Inline void         tMotor_eMotor_setSpeed(tMotor_IDX idx, int32_t speed);
 Inline void         tMotor_eMotor_stop(tMotor_IDX idx);
 #ifdef __cplusplus
 }
@@ -121,9 +121,9 @@ extern "C" {
 
 
 /* entry port function macro (abbrev) #_EPM_# */
-#define eMotor_set_motor_ref tMotor_eMotor_set_motor_ref
+#define eMotor_setMotorRef tMotor_eMotor_setMotorRef
 #define eMotor_setup     tMotor_eMotor_setup
-#define eMotor_set_speed tMotor_eMotor_set_speed
+#define eMotor_setSpeed  tMotor_eMotor_setSpeed
 #define eMotor_stop      tMotor_eMotor_stop
 
 /* iteration code (FOREACH_CELL) #_FEC_# */
@@ -166,9 +166,9 @@ extern "C" {
 #undef tMotor_VAR_motor
 #undef tMotor_GET_motor
 #undef tMotor_SET_motor
-#undef eMotor_set_motor_ref
+#undef eMotor_setMotorRef
 #undef eMotor_setup
-#undef eMotor_set_speed
+#undef eMotor_setSpeed
 #undef eMotor_stop
 #endif /* TOPPERS_CB_TYPE_ONLY */
 

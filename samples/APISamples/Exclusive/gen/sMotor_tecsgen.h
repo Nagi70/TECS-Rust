@@ -20,9 +20,9 @@ struct tag_sMotor_VDES {
 
 /* signature function table #_SFT_# */
 struct tag_sMotor_VMT {
-    void           (*set_motor_ref__T)( const struct tag_sMotor_VDES *edp );
+    void           (*setMotorRef__T)( const struct tag_sMotor_VDES *edp );
     void           (*setup__T)( const struct tag_sMotor_VDES *edp, PbioDirectionT positive_direction, bool reset_count );
-    void           (*set_speed__T)( const struct tag_sMotor_VDES *edp, int32_t speed );
+    void           (*setSpeed__T)( const struct tag_sMotor_VDES *edp, int32_t speed );
     void           (*stop__T)( const struct tag_sMotor_VDES *edp );
 };
 
@@ -34,9 +34,9 @@ typedef struct { struct tag_sMotor_VDES *vdes; } Descriptor( sMotor );
 #endif /* TOPPERS_MACRO_ONLY */
 
 /* function id */
-#define	FUNCID_SMOTOR_SET_MOTOR_REF            (1)
+#define	FUNCID_SMOTOR_SETMOTORREF              (1)
 #define	FUNCID_SMOTOR_SETUP                    (2)
-#define	FUNCID_SMOTOR_SET_SPEED                (3)
+#define	FUNCID_SMOTOR_SETSPEED                 (3)
 #define	FUNCID_SMOTOR_STOP                     (4)
 
 #endif /* sMotor_TECSGEN_H */

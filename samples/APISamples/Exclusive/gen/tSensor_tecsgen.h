@@ -49,11 +49,11 @@ typedef struct tag_tSensor_CB *tSensor_IDX;
 
 /* prototype declaration of entry port function #_EPP_# */
 /* sSensor */
-Inline void         tSensor_eSensor_set_device_ref(tSensor_IDX idx);
-Inline void         tSensor_eSensor_get_distance(tSensor_IDX idx, int32_t* distance);
-Inline void         tSensor_eSensor_light_on(tSensor_IDX idx);
-Inline void         tSensor_eSensor_light_set(tSensor_IDX idx, int32_t bv1, int32_t bv2, int32_t bv3, int32_t bv4);
-Inline void         tSensor_eSensor_light_off(tSensor_IDX idx);
+Inline void         tSensor_eSensor_setDeviceRef(tSensor_IDX idx);
+Inline void         tSensor_eSensor_getDistance(tSensor_IDX idx, int32_t* distance);
+Inline void         tSensor_eSensor_lightOn(tSensor_IDX idx);
+Inline void         tSensor_eSensor_lightSet(tSensor_IDX idx, int32_t bv1, int32_t bv2, int32_t bv3, int32_t bv4);
+Inline void         tSensor_eSensor_lightOff(tSensor_IDX idx);
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
@@ -122,11 +122,11 @@ extern "C" {
 
 
 /* entry port function macro (abbrev) #_EPM_# */
-#define eSensor_set_device_ref tSensor_eSensor_set_device_ref
-#define eSensor_get_distance tSensor_eSensor_get_distance
-#define eSensor_light_on tSensor_eSensor_light_on
-#define eSensor_light_set tSensor_eSensor_light_set
-#define eSensor_light_off tSensor_eSensor_light_off
+#define eSensor_setDeviceRef tSensor_eSensor_setDeviceRef
+#define eSensor_getDistance tSensor_eSensor_getDistance
+#define eSensor_lightOn  tSensor_eSensor_lightOn
+#define eSensor_lightSet tSensor_eSensor_lightSet
+#define eSensor_lightOff tSensor_eSensor_lightOff
 
 /* iteration code (FOREACH_CELL) #_FEC_# */
 #define FOREACH_CELL(i,p_cb)   \
@@ -168,11 +168,11 @@ extern "C" {
 #undef tSensor_VAR_ult
 #undef tSensor_GET_ult
 #undef tSensor_SET_ult
-#undef eSensor_set_device_ref
-#undef eSensor_get_distance
-#undef eSensor_light_on
-#undef eSensor_light_set
-#undef eSensor_light_off
+#undef eSensor_setDeviceRef
+#undef eSensor_getDistance
+#undef eSensor_lightOn
+#undef eSensor_lightSet
+#undef eSensor_lightOff
 #endif /* TOPPERS_CB_TYPE_ONLY */
 
 #endif /* tSensor_TECSGENH */

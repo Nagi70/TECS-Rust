@@ -1,3 +1,5 @@
+use itron::mutex::MutexRef;
+use itron::semaphore::SemaphoreRef;
 use crate::tecs_ex_ctrl::*;
 use core::cell::UnsafeCell;
 use core::num::NonZeroI32;

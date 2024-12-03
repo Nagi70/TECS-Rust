@@ -325,8 +325,8 @@ class Cell
     # タスク以外のアクティブセルの場合や、priority 属性が無い場合、0 とする
     task_priority = 0
     $flow_stack.first[0].get_celltype.get_attribute_list.each{ |attr|
-      if attr.get_name == :priority then
-        task_priority = attr.get_initializer
+      if attr.get_name.to_s == "priority" then
+        task_priority = $flow_stack.first[0].get_attr_initializer(:priority)
       end
     }
 

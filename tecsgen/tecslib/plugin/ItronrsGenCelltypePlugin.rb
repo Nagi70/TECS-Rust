@@ -44,6 +44,7 @@ class ItronrsGenCelltypePlugin < RustGenCelltypePlugin
     CLASS_NAME_SUFFIX = ""
     @@b_signature_header_generated = false
     @@module_generated = false
+    @@arm_none_eabi_nm_gen = false
 
     #celltype::     Celltype        セルタイプ（インスタンス）
     def initialize( celltype, option )
@@ -181,7 +182,17 @@ CODE
     end
 
     def gen_use_mutex file
-        # file.print "use itron::mutex::MutexRef;\n"
+
+        case check_gen_dyn_or_mutex_or_semaphore_for_celltype @celltype
+        when "mutex"
+            file.print "use itron::mutex::MutexRef;\n"
+        when "semaphore"
+            file.print "use itron::semaphore::SemaphoreRef;\n"
+        when "dyn" # TODO: ダミー+セマフォorミューテックスのケースでは、片方の生成だけでいい
+            file.print "use itron::mutex::MutexRef;\n"
+            file.print "use itron::semaphore::SemaphoreRef;\n"
+        end
+
         # file.print "use crate::tecs_mutex::*;\n"
         file.print "use crate::tecs_ex_ctrl::*;\n" # TODO: 本当に排他制御が必要なときのみ生成するようにする
         file.print "use core::cell::UnsafeCell;\n"
@@ -247,12 +258,12 @@ CODE
         when "dummy"
             # file.print "\tex_ctrl_ref: &'a TECSDummyMutexRef,\n"
         else
-            case check_gen_mutex_or_semaphore celltype
+            case check_gen_dyn_or_mutex_or_semaphore_for_celltype celltype
             when "mutex"
                 file.print "\tex_ctrl_ref: &'a TECSMutexRef<'a>,\n"
             when "semaphore"
                 file.print "\tex_ctrl_ref: &'a TECSSemaphoreRef<'a>,\n"
-            else
+            when "dyn"
                 # TODO: ミューテックスとセマフォの呼び分け自体にも動的ディスパッチを使うのは議論の余地あり
                 file.print "\tex_ctrl_ref: &'a (dyn LockManager + Sync + Send),\n"
             end
@@ -260,41 +271,54 @@ CODE
     end
 
     # ミューテックスを適用するセルとセマフォを適用するセルが混在するセルタイプかどうかを判断する
-    def check_gen_mutex_or_semaphore celltype
+    def check_gen_dyn_or_mutex_or_semaphore_for_celltype celltype
         check_semaphore = []
 
         celltype.get_cell_list.each{ |cell|
-            check_semaphore.push(check_gen_semaphore cell).uniq!
+            check_semaphore.push(check_gen_which_ex_ctrl cell).uniq!
         }
 
+        # 動的ディスパッチを使うのは以下のケース
+        # ・セマフォを適用するセルとミューテックスを適用するセルが混在する場合
+        # ・セマフォを適用するセルとダミーを利用するセルが混在する場合
+        # ・ミューテックスを適用するセルとダミーを利用するセルが混在する場合
         if check_semaphore.length >= 2 then
-            return "both"
-        elsif check_semaphore.first == true then
-            return "semaphore"
-        else
-            return "mutex"
+            return "dyn"
+        end
+
+        if check_semaphore.length == 1 then
+            return check_semaphore.first
         end
     end
 
     # セルの排他制御をセマフォにするかどうかを判断する
     # TODO: chg_pri があるか無いかを判定する必要がある
-    def check_gen_semaphore cell
+    def check_gen_which_ex_ctrl cell
         # JSONファイルがパースされていない場合は，セマフォにしない
         if @@json_parse_result.length == 0 then
-            return false
+            puts "JSONファイルがパースされていません"
+            return "mutex"
         end
 
         celltype = cell.get_celltype.get_global_name.to_s
         if @@json_parse_result[cell.get_global_name.to_s]["Celltype"] == celltype then
             # 優先度が同じタスクからのみアクセスされる場合は，セマフォにする
             if @@json_parse_result[cell.get_global_name.to_s]["ExclusiveControl"] == "true" && @@json_parse_result[cell.get_global_name.to_s]["PriorityList"].length == 1 then
-                return true
-            else
-                return false
+                # ターゲットトリプルを取得
+                target_triple = extract_target_triple @@cargo_path
+
+                # chg_pri がある場合は，ミューテックスにする
+                if target_triple != nil && check_call_chg_pri(@@cargo_path, target_triple) == true then
+                    return "mutex"
+                end
+                return "semaphore"
+
+            elsif @@json_parse_result[cell.get_global_name.to_s]["ExclusiveControl"] == "true" then
+                return "mutex"
             end
         end
 
-        return false
+        return "none"
     end
 
     # Sync変数構造体の定義を生成
@@ -359,12 +383,12 @@ CODE
         else
             file.print "pub struct LockGuardFor#{get_rust_celltype_name(celltype)}<'a>{\n"
             # セマフォを適用できるかを判断する
-            case check_gen_mutex_or_semaphore celltype
+            case check_gen_dyn_or_mutex_or_semaphore_for_celltype celltype
             when "mutex"
                 file.print "\tex_ctrl_ref: &'a TECSMutexRef<'a>,\n"
             when "semaphore"
                 file.print "\tex_ctrl_ref: &'a TECSSemaphoreRef<'a>,\n"
-            else
+            when "dyn"
                 file.print "\tex_ctrl_ref: &'a (dyn LockManager + Sync + Send),\n"
             end
         end
@@ -732,10 +756,10 @@ CODE
     def gen_comments_safe_reason file, cell
         case check_exclusive_control_for_cell cell
         when true
-            case check_gen_semaphore cell
-            when true
+            case check_gen_which_ex_ctrl cell
+            when "semaphore"
                 file.print "/// This UnsafeCell is accessed by multiple tasks, but is safe because it is operated exclusively by the semaphore object.\n"
-            else
+            when "mutex"
                 file.print "/// This UnsafeCell is accessed by multiple tasks, but is safe because it is operated exclusively by the mutex object.\n"
             end
         else
@@ -755,13 +779,13 @@ CODE
         multiple = check_exclusive_control_for_cell cell
         if multiple then
             file.print "#[link_section = \".rodata\"]\n"
-            case check_gen_semaphore cell
-            when true
+            case check_gen_which_ex_ctrl cell
+            when "semaphore"
                 file.print "pub static #{cell.get_global_name.to_s.upcase}_EX_CTRL_REF: TECSSemaphoreRef = TECSSemaphoreRef{\n"
                 file.print "\tinner: unsafe{SemaphoreRef::from_raw_nonnull(NonZeroI32::new(TECS_RUST_EX_CTRL_#{@@ex_ctrl_ref_id}).unwrap())},\n"
                 file.print "};\n\n"
                 gen_semaphore_static_api_for_configuration cell
-            else
+            when "mutex"
                 file.print "pub static #{cell.get_global_name.to_s.upcase}_EX_CTRL_REF: TECSMutexRef = TECSMutexRef{\n"
                 file.print "\tinner: unsafe{MutexRef::from_raw_nonnull(NonZeroI32::new(TECS_RUST_EX_CTRL_#{@@ex_ctrl_ref_id}).unwrap())},\n"
                 file.print "};\n\n"
@@ -925,14 +949,56 @@ CODE
         Dir.mkdir(config_toml_dir)
         File.open(comfig_toml_path, "w") do |file|
             file.puts "[build]"
-            file.puts "# target = \"thumbv6m-none-eabi\"        # Cortex-M0 and Cortex-M0+"
-            file.puts "# target = \"thumbv7m-none-eabi\"        # Cortex-M3"
-            file.puts "# target = \"thumbv7em-none-eabi\"       # Cortex-M4 and Cortex-M7 (no FPU)"
             file.puts "# target = \"thumbv7em-none-eabihf\"     # Cortex-M4F and Cortex-M7F (with FPU) (e.g., Spike-rt)"
-            file.puts "# target = \"thumbv8m.base-none-eabi\"   # Cortex-M23"
-            file.puts "# target = \"thumbv8m.main-none-eabi\"   # Cortex-M33 (no FPU)"
-            file.puts "# target = \"thumbv8m.main-none-eabihf\" # Cortex-M33 (with FPU)"
             file.puts "# target = \"armv7a-none-eabi\"          # Bare Armv7-A (e.g., Zynq-7000 (Xilinx))"
+        end
+    end
+
+    def extract_target_triple path
+        config_toml_path = "#{path}/.cargo/config.toml"
+        target_line = nil
+
+        File.foreach(config_toml_path) do |line|
+        # コメントされていない行かつ、"target =" を含む行を探す
+        # TODO: Rustコンパイラの生成物で上手く代用できそう
+            if line.strip.start_with?("target =")
+                target_line = line.strip
+                break
+            end
+        end
+        
+        # ターゲットトリプルを抽出
+        if target_line
+            match = target_line.match(/target = "(.*?)"/)
+            return match ? match[1] : nil
+        else
+            return nil
+        end
+    end
+
+    # TODO: 現在は、ライブラリとしてコンパイルすることを前提としている
+    def check_call_chg_pri cargo_path, target_triple
+
+        # TODO: ライブラリ名は itron に固定しており、ビルドも release に固定しているため、柔軟にする必要がある
+        binary_bath = "#{cargo_path}/target/#{target_triple}/release/libitron.a"
+
+        command = "arm-none-eabi-nm #{binary_bath} > #{$gen}/arm-none-eabi-nm.txt"
+
+        if File.exist?(binary_bath) && check_option_main_or_lib == "lib" then
+            if @@arm_none_eabi_nm_gen == false then
+                system(command)
+                @@arm_none_eabi_nm_gen = true
+            end
+
+            # chg_pri 関数が含まれているかを確認
+            if File.readlines("#{$gen}/arm-none-eabi-nm.txt").any?{ |line| line.include?("chg_pri") } then
+                return true
+            else
+                return false
+            end
+        else
+            puts "Error: #{binary_bath} does not exist"
+            return false
         end
     end
 
@@ -1146,7 +1212,7 @@ pub static DUMMY_LOCK_GUARD: TECSDummyLockGuard = 0;
 #[link_section = ".rodata"]
 pub static DUMMY_EX_CTRL_REF: TECSDummyExclusiveControlRef = TECSDummyExclusiveControlRef{};
 
-impl LockManager for TECSDummyExclusiveLockRef{
+impl LockManager for TECSDummyExclusiveControlRef{
     #[inline]
     fn lock(&self){}
     #[inline]
@@ -1299,7 +1365,7 @@ impl LockManager for TECSSemaphoreRef<'_>{
         ex_file.print contents
         ex_file.close
 
-        copy_gen_files_to_cargo @@cargo_path, "#{$gen}/tecs_ex_ctrl.rs"
+        copy_gen_files_to_cargo "tecs_ex_ctrl.rs"
     end
 
     # syslog の Rust ラップである print.rs を生成する
@@ -1373,7 +1439,7 @@ macro_rules! print{
         print_file.print contents
         print_file.close
 
-        copy_gen_files_to_cargo @@cargo_path, "#{$gen}/tecs_print.rs"
+        copy_gen_files_to_cargo "tecs_print.rs"
     end
         
     #=== tCelltype_factory.h に挿入するコードを生成する

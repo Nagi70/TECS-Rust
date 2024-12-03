@@ -68,28 +68,28 @@ void         tMotorbody_eMotorbody_main(tMotorbody_IDX idx);
 #define tMotorbody_GET_CELLCB(idx) ((void *)0)
 #ifndef TECSFLOW
  /* call port function macro #_CPM_# */
-#define tMotorbody_cMotor_set_motor_ref( p_that ) \
-	  tMotor_eMotor_set_motor_ref( \
+#define tMotorbody_cMotor_setMotorRef( p_that ) \
+	  tMotor_eMotor_setMotorRef( \
 	   &tMotor_CB_tab[0] )
 #define tMotorbody_cMotor_setup( p_that, positive_direction, reset_count ) \
 	  tMotor_eMotor_setup( \
 	   &tMotor_CB_tab[0], (positive_direction), (reset_count) )
-#define tMotorbody_cMotor_set_speed( p_that, speed ) \
-	  tMotor_eMotor_set_speed( \
+#define tMotorbody_cMotor_setSpeed( p_that, speed ) \
+	  tMotor_eMotor_setSpeed( \
 	   &tMotor_CB_tab[0], (speed) )
 #define tMotorbody_cMotor_stop( p_that ) \
 	  tMotor_eMotor_stop( \
 	   &tMotor_CB_tab[0] )
 
 #else  /* TECSFLOW */
-#define tMotorbody_cMotor_set_motor_ref( p_that ) \
-	  (p_that)->cMotor.set_motor_ref__T( \
+#define tMotorbody_cMotor_setMotorRef( p_that ) \
+	  (p_that)->cMotor.setMotorRef__T( \
  )
 #define tMotorbody_cMotor_setup( p_that, positive_direction, reset_count ) \
 	  (p_that)->cMotor.setup__T( \
  (positive_direction), (reset_count) )
-#define tMotorbody_cMotor_set_speed( p_that, speed ) \
-	  (p_that)->cMotor.set_speed__T( \
+#define tMotorbody_cMotor_setSpeed( p_that, speed ) \
+	  (p_that)->cMotor.setSpeed__T( \
  (speed) )
 #define tMotorbody_cMotor_stop( p_that ) \
 	  (p_that)->cMotor.stop__T( \
@@ -133,12 +133,12 @@ void           tMotorbody_eMotorbody_main_skel( const struct tag_sTaskBody_VDES 
 #define CELLIDX	tMotorbody_IDX
 
 /* call port function macro (abbrev) #_CPMA_# */
-#define cMotor_set_motor_ref( ) \
-          ((void)p_cellcb, tMotorbody_cMotor_set_motor_ref( p_cellcb ))
+#define cMotor_setMotorRef( ) \
+          ((void)p_cellcb, tMotorbody_cMotor_setMotorRef( p_cellcb ))
 #define cMotor_setup( positive_direction, reset_count ) \
           ((void)p_cellcb, tMotorbody_cMotor_setup( p_cellcb, positive_direction, reset_count ))
-#define cMotor_set_speed( speed ) \
-          ((void)p_cellcb, tMotorbody_cMotor_set_speed( p_cellcb, speed ))
+#define cMotor_setSpeed( speed ) \
+          ((void)p_cellcb, tMotorbody_cMotor_setSpeed( p_cellcb, speed ))
 #define cMotor_stop( ) \
           ((void)p_cellcb, tMotorbody_cMotor_stop( p_cellcb ))
 

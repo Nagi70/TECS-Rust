@@ -68,37 +68,37 @@ void         tSensorbody_eSensorbody_main(tSensorbody_IDX idx);
 #define tSensorbody_GET_CELLCB(idx) ((void *)0)
 #ifndef TECSFLOW
  /* call port function macro #_CPM_# */
-#define tSensorbody_cSensor_set_device_ref( p_that ) \
-	  tSensor_eSensor_set_device_ref( \
+#define tSensorbody_cSensor_setDeviceRef( p_that ) \
+	  tSensor_eSensor_setDeviceRef( \
 	   &tSensor_CB_tab[0] )
-#define tSensorbody_cSensor_get_distance( p_that, distance ) \
-	  tSensor_eSensor_get_distance( \
+#define tSensorbody_cSensor_getDistance( p_that, distance ) \
+	  tSensor_eSensor_getDistance( \
 	   &tSensor_CB_tab[0], (distance) )
-#define tSensorbody_cSensor_light_on( p_that ) \
-	  tSensor_eSensor_light_on( \
+#define tSensorbody_cSensor_lightOn( p_that ) \
+	  tSensor_eSensor_lightOn( \
 	   &tSensor_CB_tab[0] )
-#define tSensorbody_cSensor_light_set( p_that, bv1, bv2, bv3, bv4 ) \
-	  tSensor_eSensor_light_set( \
+#define tSensorbody_cSensor_lightSet( p_that, bv1, bv2, bv3, bv4 ) \
+	  tSensor_eSensor_lightSet( \
 	   &tSensor_CB_tab[0], (bv1), (bv2), (bv3), (bv4) )
-#define tSensorbody_cSensor_light_off( p_that ) \
-	  tSensor_eSensor_light_off( \
+#define tSensorbody_cSensor_lightOff( p_that ) \
+	  tSensor_eSensor_lightOff( \
 	   &tSensor_CB_tab[0] )
 
 #else  /* TECSFLOW */
-#define tSensorbody_cSensor_set_device_ref( p_that ) \
-	  (p_that)->cSensor.set_device_ref__T( \
+#define tSensorbody_cSensor_setDeviceRef( p_that ) \
+	  (p_that)->cSensor.setDeviceRef__T( \
  )
-#define tSensorbody_cSensor_get_distance( p_that, distance ) \
-	  (p_that)->cSensor.get_distance__T( \
+#define tSensorbody_cSensor_getDistance( p_that, distance ) \
+	  (p_that)->cSensor.getDistance__T( \
  (distance) )
-#define tSensorbody_cSensor_light_on( p_that ) \
-	  (p_that)->cSensor.light_on__T( \
+#define tSensorbody_cSensor_lightOn( p_that ) \
+	  (p_that)->cSensor.lightOn__T( \
  )
-#define tSensorbody_cSensor_light_set( p_that, bv1, bv2, bv3, bv4 ) \
-	  (p_that)->cSensor.light_set__T( \
+#define tSensorbody_cSensor_lightSet( p_that, bv1, bv2, bv3, bv4 ) \
+	  (p_that)->cSensor.lightSet__T( \
  (bv1), (bv2), (bv3), (bv4) )
-#define tSensorbody_cSensor_light_off( p_that ) \
-	  (p_that)->cSensor.light_off__T( \
+#define tSensorbody_cSensor_lightOff( p_that ) \
+	  (p_that)->cSensor.lightOff__T( \
  )
 
 #endif /* TECSFLOW */
@@ -139,16 +139,16 @@ void           tSensorbody_eSensorbody_main_skel( const struct tag_sTaskBody_VDE
 #define CELLIDX	tSensorbody_IDX
 
 /* call port function macro (abbrev) #_CPMA_# */
-#define cSensor_set_device_ref( ) \
-          ((void)p_cellcb, tSensorbody_cSensor_set_device_ref( p_cellcb ))
-#define cSensor_get_distance( distance ) \
-          ((void)p_cellcb, tSensorbody_cSensor_get_distance( p_cellcb, distance ))
-#define cSensor_light_on( ) \
-          ((void)p_cellcb, tSensorbody_cSensor_light_on( p_cellcb ))
-#define cSensor_light_set( bv1, bv2, bv3, bv4 ) \
-          ((void)p_cellcb, tSensorbody_cSensor_light_set( p_cellcb, bv1, bv2, bv3, bv4 ))
-#define cSensor_light_off( ) \
-          ((void)p_cellcb, tSensorbody_cSensor_light_off( p_cellcb ))
+#define cSensor_setDeviceRef( ) \
+          ((void)p_cellcb, tSensorbody_cSensor_setDeviceRef( p_cellcb ))
+#define cSensor_getDistance( distance ) \
+          ((void)p_cellcb, tSensorbody_cSensor_getDistance( p_cellcb, distance ))
+#define cSensor_lightOn( ) \
+          ((void)p_cellcb, tSensorbody_cSensor_lightOn( p_cellcb ))
+#define cSensor_lightSet( bv1, bv2, bv3, bv4 ) \
+          ((void)p_cellcb, tSensorbody_cSensor_lightSet( p_cellcb, bv1, bv2, bv3, bv4 ))
+#define cSensor_lightOff( ) \
+          ((void)p_cellcb, tSensorbody_cSensor_lightOff( p_cellcb ))
 
 
 

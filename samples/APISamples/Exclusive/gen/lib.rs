@@ -1,7 +1,7 @@
 #![no_std]
 #![feature(const_option)]
 mod kernel_cfg;
-mod tecs_mutex;
+mod tecs_ex_ctrl;
 mod tecs_print;
 mod t_task_rs;
 mod t_task_rs_impl;
@@ -19,6 +19,11 @@ mod t_motorbody;
 mod t_motorbody_impl;
 mod t_sensorbody;
 mod t_sensorbody_impl;
+
+#[panic_handler]
+fn panic(_panic: &core::panic::PanicInfo<'_>) -> ! {
+    loop {}
+}
 
 use crate::t_task_rs::*;
 use s_task_body::*;
