@@ -45,6 +45,7 @@ class ItronrsGenCelltypePlugin < RustGenCelltypePlugin
     @@b_signature_header_generated = false
     @@module_generated = false
     @@arm_none_eabi_nm_gen = false
+    @@kernel_cfg_rs_gen = false
 
     #celltype::     Celltype        セルタイプ（インスタンス）
     def initialize( celltype, option )
@@ -168,6 +169,25 @@ CODE
         end
     end
 
+    # ビルドのためのダミーオブジェクトIDを生成する
+    def add_dummy_id_to_kernel_cfg_rs name, id
+
+        # 初回のみファイルを生成する
+        if @@kernel_cfg_rs_gen == false then
+            File.write("#{$gen}/kernel_cfg.rs", "")
+            @@kernel_cfg_rs_gen = true
+        end
+
+        kernel_cfg_rs = File.open("#{$gen}/kernel_cfg.rs", "a")
+
+        if id > 0 then
+            kernel_cfg_rs.print "pub const #{name}: i32 = #{id};\t//Dummy id\n"
+        else
+            kernel_cfg_rs.print "pub const #{name}: i32 = 1;\t//Dummy id\n"
+        end
+        kernel_cfg_rs.close
+    end
+
     def gen_task_static_api_for_configuration cell
         file = AppFile.open( "#{$gen}/tecsgen.cfg" )
 
@@ -179,6 +199,10 @@ CODE
         # TODO: tTaskRs であることを前提としている
         file.print "CRE_TSK(#{id}, { #{attribute}, 0, tecs_rust_start_#{snake_case(cell.get_global_name.to_s)}, #{priority}, #{stack_size}, NULL });\n"
         file.close
+
+        # TODO: タスクオブジェクトのダミーIDはすべて0で生成しているが、変えてもいいかもしれない
+        add_dummy_id_to_kernel_cfg_rs "#{id}", 0
+
     end
 
     def gen_use_mutex file
@@ -691,6 +715,9 @@ CODE
         ceiling_priority = get_ceiling_priority cell
         file.print "CRE_MTX( TECS_RUST_EX_CTRL_#{@@ex_ctrl_ref_id}, { TA_CEILING, #{ceiling_priority} });\n"
         file.close
+
+        add_dummy_id_to_kernel_cfg_rs "TECS_RUST_EX_CTRL_#{@@ex_ctrl_ref_id}", @@ex_ctrl_ref_id
+
         @@ex_ctrl_ref_id += 1
     end
 
@@ -701,6 +728,9 @@ CODE
         # 資源数 1 でセマフォを生成
         file.print "CRE_SEM( TECS_RUST_EX_CTRL_#{@@ex_ctrl_ref_id}, { TA_NULL, 1, 1 });\n"
         file.close
+
+        add_dummy_id_to_kernel_cfg_rs "TECS_RUST_EX_CTRL_#{@@ex_ctrl_ref_id}", @@ex_ctrl_ref_id
+
         @@ex_ctrl_ref_id += 1
     end
 
@@ -997,8 +1027,9 @@ CODE
                 return false
             end
         else
+            # *.a ファイルが存在しない場合、保守的に chg_pri が含まれていると判断する
             puts "Error: #{binary_bath} does not exist"
-            return false
+            return true
         end
     end
 
@@ -1360,12 +1391,14 @@ impl LockManager for TECSSemaphoreRef<'_>{
 }
             EOS
 
-        get_diff_between_gen_and_src "tecs_ex_ctrl.rs"
+        # get_diff_between_gen_and_src "tecs_ex_ctrl.rs"
         ex_file = CFile.open( "#{$gen}/tecs_ex_ctrl.rs", "w" )
         ex_file.print contents
         ex_file.close
 
-        copy_gen_files_to_cargo "tecs_ex_ctrl.rs"
+        if File.exist?("#{$gen}/tecs_ex_ctrl.rs") == false then
+            copy_gen_files_to_cargo "tecs_ex_ctrl.rs"
+        end
     end
 
     # syslog の Rust ラップである print.rs を生成する
@@ -1434,12 +1467,14 @@ macro_rules! print{
 }
             EOS
 
-        get_diff_between_gen_and_src "tecs_print.rs"
+        # get_diff_between_gen_and_src "tecs_print.rs"
         print_file = CFile.open( "#{$gen}/tecs_print.rs", "w" )
         print_file.print contents
         print_file.close
 
-        copy_gen_files_to_cargo "tecs_print.rs"
+        if File.exist?("#{$gen}/tecs_print.rs") == false then
+            copy_gen_files_to_cargo "tecs_print.rs"
+        end
     end
         
     #=== tCelltype_factory.h に挿入するコードを生成する
@@ -1463,6 +1498,8 @@ macro_rules! print{
         # gen_tecs_semaphore_rs
 
         gen_tecs_print_rs
+
+        copy_gen_files_to_cargo "kernel_cfg.rs"
 
         # @celltype.get_cell_list.each{ |cell|
         #     if cell.is_generate? then

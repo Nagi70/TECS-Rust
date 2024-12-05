@@ -45,6 +45,32 @@ TIMESTAMP = $(GEN_DIR)/tecsgen.timestamp
 _TECS_OBJ_DIR = $(GEN_DIR)/
 
 
+RUST_PLUGIN_CELLTYPE_SRCS = \
+	$(GEN_DIR)/../$(TARGET_BASE)/src/t_task_rs_impl.rs \
+	$(GEN_DIR)/../$(TARGET_BASE)/src/t_motorbody_impl.rs \
+	$(GEN_DIR)/../$(TARGET_BASE)/src/t_sensorbody_impl.rs \
+	$(GEN_DIR)/../$(TARGET_BASE)/src/t_mmbody_impl.rs \
+	$(GEN_DIR)/../$(TARGET_BASE)/src/t_ssbody_impl.rs \
+	$(GEN_DIR)/../$(TARGET_BASE)/src/t_motor_impl.rs \
+	$(GEN_DIR)/../$(TARGET_BASE)/src/t_sensor_impl.rs
+
+RUST_PLUGIN_TECSGEN_SRCS = \
+	$(GEN_DIR)/../$(TARGET_BASE)/src/t_task_rs.rs \
+	$(GEN_DIR)/../$(TARGET_BASE)/src/t_motorbody.rs \
+	$(GEN_DIR)/../$(TARGET_BASE)/src/t_sensorbody.rs \
+	$(GEN_DIR)/../$(TARGET_BASE)/src/t_mmbody.rs \
+	$(GEN_DIR)/../$(TARGET_BASE)/src/t_ssbody.rs \
+	$(GEN_DIR)/../$(TARGET_BASE)/src/t_motor.rs \
+	$(GEN_DIR)/../$(TARGET_BASE)/src/t_sensor.rs \
+	$(GEN_DIR)/../$(TARGET_BASE)/src/s_task_body.rs \
+	$(GEN_DIR)/../$(TARGET_BASE)/src/s_task.rs \
+	$(GEN_DIR)/../$(TARGET_BASE)/src/si_notification_handler.rs \
+	$(GEN_DIR)/../$(TARGET_BASE)/src/si_task.rs \
+	$(GEN_DIR)/../$(TARGET_BASE)/src/s_motor.rs \
+	$(GEN_DIR)/../$(TARGET_BASE)/src/s_sensor.rs \
+	$(GEN_DIR)/../$(TARGET_BASE)/src/lib.rs \
+	$(GEN_DIR)/../$(TARGET_BASE)/src/tecs_ex_ctrl.rs \
+	$(GEN_DIR)/../$(TARGET_BASE)/src/tecs_print.rs
 
 # Pre-tecsgen target
 PRE_TECSGEN_TARGET =
@@ -89,9 +115,6 @@ tecsflow : $(GEN_DIR)/tecsgen.rbdmp tcflow
 tecsflow_u : $(GEN_DIR)/tecsgen.rbdmp tcflow
 	tecsflow -g $(GEN_DIR) -U
 
-tecsflow_rust : $(GEN_DIR)/tecsgen.rbdmp rustflow
-	tecsflow -g $(GEN_DIR) --rust=only
-
 $(GEN_DIR)/tecsgen.rbdmp : tecs
 
 tcflow : tecs
@@ -102,15 +125,29 @@ $(GEN_DIR)/tcflow.rbdmp : $(CELLTYPE_SRCS) $(PLUGIN_CELLTYPE_SRCS)
 	tcflow -g $(GEN_DIR) -c '$(CC) -E -DTECSFLOW $(CFLAGS) -I ./' $^
 	# add -DTECSGEN if many errors occur, especially in case using cygwin, linux
 
-rustflow : tecs cargo_build
+tecsflow_rust : $(GEN_DIR)/tecsgen.rbdmp rustflow
+	tecsflow -g $(GEN_DIR) --rust=only
+
+rustflow : tecs 
 	make rustflow_exec
 
 rustflow_exec : $(GEN_DIR)/rustflow.rbdmp
-$(GEN_DIR)/rustflow.rbdmp : $(RUST_CELLTYPE_SRCS)
+$(GEN_DIR)/rustflow.rbdmp : $(RUST_PLUGIN_CELLTYPE_SRCS)
 	rustflow.rb -g $(GEN_DIR) $^
 
-cargo_build:
-	cargo build --manifest-path $(BASE_DIR)/Cargo.toml
+toppers_cargo_build: bindgen $(RUST_PLUGIN_CELLTYPE_SRCS) $(RUST_PLUGIN_TECSGEN_SRCS)
+	cd $(GEN_DIR)/../$(TARGET_BASE) && cargo objcopy --release --lib -- --weaken
+
+$(KERNEL_DIR) = . # ユーザが指定する必要がある
+$(KERNEL_CFG_HEADER) = $(KERNEL_DIR)/kernel_cfg.h
+
+bindgen: $(KERNEL_CFG_HEADER)
+	bindgen $^ -o $(GEN_DIR)/../$(TARGET_BASE)/src/kernel_cfg.rs --default-enum-style rust --use-core --default-macro-constant-type signed
+
+toppers_cargo_build_opt: toppers_cargo_build
+	make tecsflow_rust
+	make tecs
+	make toppers_cargo_build
 
 #####  end TECSFlow targets  #####
 

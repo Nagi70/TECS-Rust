@@ -56,15 +56,15 @@ pub static MOTOR2: TMotor = TMotor {
 };
 
 pub static MOTOR2VAR: SyncTMotorVar = SyncTMotorVar {
-	/// This UnsafeCell is accessed by multiple tasks, but is safe because it is operated exclusively by the mutex object.
+	/// This UnsafeCell is accessed by multiple tasks, but is safe because it is operated exclusively by the semaphore object.
 	unsafe_var: UnsafeCell::new(TMotorVar {
 		motor: None,
 	}),
 };
 
 #[link_section = ".rodata"]
-pub static MOTOR2_EX_CTRL_REF: TECSMutexRef = TECSMutexRef{
-	inner: unsafe{MutexRef::from_raw_nonnull(NonZeroI32::new(TECS_RUST_EX_CTRL_1).unwrap())},
+pub static MOTOR2_EX_CTRL_REF: TECSSemaphoreRef = TECSSemaphoreRef{
+	inner: unsafe{SemaphoreRef::from_raw_nonnull(NonZeroI32::new(TECS_RUST_EX_CTRL_1).unwrap())},
 };
 
 #[link_section = ".rodata"]

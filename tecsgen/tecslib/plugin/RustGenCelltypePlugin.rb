@@ -1535,7 +1535,7 @@ class RustGenCelltypePlugin < CelltypePlugin
         cargo_new_project @@cargo_path
 
         # main.rs または lib.rs の gen ファイルと src ファイルの差分を取得する
-        get_diff_between_gen_and_src "#{check_option_main_or_lib}.rs"
+        # get_diff_between_gen_and_src "#{check_option_main_or_lib}.rs"
 
         if @@main_lib_rs_cleaned != true then
 
@@ -1760,12 +1760,15 @@ class RustGenCelltypePlugin < CelltypePlugin
         # これは，各セルタイプの呼び口につながっているシグニチャに対してのみ，トレイトファイルを生成する
         gen_trait_files @celltype
 
+        # セルタイプコードは、最適化の際に更新するため、最適化後のファイルを生成する
         puts "#{@celltype.get_global_name.to_s}: copy #{snake_case(@celltype.get_global_name.to_s)}.rs to cargo\n"
         copy_gen_files_to_cargo "#{snake_case(@celltype.get_global_name.to_s)}.rs"
 
-        puts "#{@celltype.get_global_name.to_s}: copy #{check_option_main_or_lib}.rs to cargo\n"
-        copy_gen_files_to_cargo "#{check_option_main_or_lib}.rs"
-
+        # main.rs または lib.rs は最適化の際に更新しない
+        if File.exist?("#{@@cargo_path}/src/#{check_option_main_or_lib}.rs") == false then
+            puts "#{@celltype.get_global_name.to_s}: copy #{check_option_main_or_lib}.rs to cargo\n"
+            copy_gen_files_to_cargo "#{check_option_main_or_lib}.rs"
+        end
     end # gen_factory
 
 end

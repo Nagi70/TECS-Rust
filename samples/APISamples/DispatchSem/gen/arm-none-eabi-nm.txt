@@ -21,13 +21,13 @@ itron-240f3f5fada6cd4e.itron.5c361b3367b1bf7f-cgu.0.rcgu.o:
 00000000 b _ZN5itron8t_sensor10SENSOR2VAR17hc3cfe21b4a1751f0E.0
          U _ZN60_$LT$itron..error..ErrorCode$u20$as$u20$core..fmt..Debug$GT$3fmt17h01562f4fa0018992E
 00000000 t _ZN68_$LT$itron..error..Error$LT$Kind$GT$$u20$as$u20$core..fmt..Debug$GT$3fmt17hf0ed4b50eb3726daE
-         U chg_pri
          U dis_dsp
          U dly_tsk
          U ena_dsp
          U get_current_us
          U hub_system_shutdown
          U loc_cpu
+         U loc_mtx
          U pup_motor_get_device
          U pup_motor_set_speed
          U pup_motor_setup
@@ -35,14 +35,13 @@ itron-240f3f5fada6cd4e.itron.5c361b3367b1bf7f-cgu.0.rcgu.o:
          U pup_ultrasonic_sensor_distance
          U pup_ultrasonic_sensor_get_device
 00000000 W rust_begin_unwind
-         U sig_sem
          U syslog_wri_log
 00000000 W tecs_rust_start_task1
 00000000 W tecs_rust_start_task2
 00000000 W tecs_rust_start_task3
 00000000 W tecs_rust_start_task4
          U unl_cpu
-         U wai_sem
+         U unl_mtx
 
 itron-738e1b67130e51fa.itron.862a5609e40eceb5-cgu.0.rcgu.o:
 00000000 r .Lanon.7a16f1507c0435436ca58e7712addd55.0
