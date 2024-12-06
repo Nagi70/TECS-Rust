@@ -46,6 +46,8 @@ class ItronrsGenCelltypePlugin < RustGenCelltypePlugin
     @@module_generated = false
     @@arm_none_eabi_nm_gen = false
     @@kernel_cfg_rs_gen = false
+    @@rust_task_func_list = []
+    @@rust_tecs_header_include = false
 
     #celltype::     Celltype        セルタイプ（インスタンス）
     def initialize( celltype, option )
@@ -188,6 +190,27 @@ CODE
         kernel_cfg_rs.close
     end
 
+    def gen_rust_tecs_h function_name
+
+        @@rust_task_func_list.push("#{function_name}")
+
+        rust_tecs_h = CFile.open( "#{$gen}/rust_tecs.h", "w")
+
+        rust_tecs_h.print "\#ifndef RUST_TECS_H\n"
+        rust_tecs_h.print "\#define RUST_TECS_H\n"
+        rust_tecs_h.print "\#include <kernel.h>\n"
+        rust_tecs_h.print "\n"
+
+        @@rust_task_func_list.each{ |func|
+            rust_tecs_h.print "extern void #{func}(intptr_t exinf);\n"
+        }
+
+        rust_tecs_h.print "\n"
+        rust_tecs_h.print "#endif\n"
+
+        rust_tecs_h.close
+    end
+
     def gen_task_static_api_for_configuration cell
         file = AppFile.open( "#{$gen}/tecsgen.cfg" )
 
@@ -196,9 +219,17 @@ CODE
         priority = cell.get_attr_initializer("priority".to_sym)
         stack_size = cell.get_attr_initializer("stackSize".to_sym)
         
+        # TODO: Rust のタスク関数を呼び出すための extern 宣言をインクルードするための生成であり、将来的には削除できるかも
+        if @@rust_tecs_header_include == false then
+            file.print "#include \"rust_tecs.h\"\n"
+            @@rust_tecs_header_include = true
+        end
+
         # TODO: tTaskRs であることを前提としている
         file.print "CRE_TSK(#{id}, { #{attribute}, 0, tecs_rust_start_#{snake_case(cell.get_global_name.to_s)}, #{priority}, #{stack_size}, NULL });\n"
         file.close
+
+        gen_rust_tecs_h "tecs_rust_start_#{snake_case(cell.get_global_name.to_s)}"
 
         # TODO: タスクオブジェクトのダミーIDはすべて0で生成しているが、変えてもいいかもしれない
         add_dummy_id_to_kernel_cfg_rs "#{id}", 0
