@@ -1258,7 +1258,7 @@ pub trait LockManager {
 
 pub type TECSDummyLockGuard = u32;
 
-pub struct TECSDummyExclusiveControlRef{}
+pub struct TECSDummyExCtrlRef{}
 
 pub struct TECSMutexRef<'a>{
 	pub inner: MutexRef<'a>,
@@ -1272,9 +1272,9 @@ pub struct TECSSemaphoreRef<'a>{
 pub static DUMMY_LOCK_GUARD: TECSDummyLockGuard = 0;
 
 #[link_section = ".rodata"]
-pub static DUMMY_EX_CTRL_REF: TECSDummyExclusiveControlRef = TECSDummyExclusiveControlRef{};
+pub static DUMMY_EX_CTRL_REF: TECSDummyExCtrlRef = TECSDummyExCtrlRef{};
 
-impl LockManager for TECSDummyExclusiveControlRef{
+impl LockManager for TECSDummyExCtrlRef{
     #[inline]
     fn lock(&self){}
     #[inline]
@@ -1427,7 +1427,7 @@ impl LockManager for TECSSemaphoreRef<'_>{
         ex_file.print contents
         ex_file.close
 
-        if File.exist?("#{$gen}/tecs_ex_ctrl.rs") == false then
+        if File.exist?("#{@@cargo_path}}/tecs_ex_ctrl.rs") == false then
             copy_gen_files_to_cargo "tecs_ex_ctrl.rs"
         end
     end
@@ -1503,15 +1503,18 @@ macro_rules! print{
         print_file.print contents
         print_file.close
 
-        if File.exist?("#{$gen}/tecs_print.rs") == false then
+        if File.exist?("#{@@cargo_path}/tecs_print.rs") == false then
             copy_gen_files_to_cargo "tecs_print.rs"
         end
     end
-        
+
     #=== tCelltype_factory.h に挿入するコードを生成する
     # file 以外の他のファイルにファクトリコードを生成してもよい
     # セルタイププラグインが指定されたセルタイプのみ呼び出される
     def gen_factory file
+
+        # temp = File.readlines("#{@@cargo_path}/src/lib.rs")
+        # puts temp
 
         # @celltype.get_cell_list.each{ |cell|
         #     gen_mod_in_lib_rs_for_cell cell

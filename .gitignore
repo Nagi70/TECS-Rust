@@ -1,2 +1,5 @@
 /samples/APISamples/DispatchSem/DispatchSem
 /samples/APISamples/Exclusive/Exclusive
+/samples/APISamples/Dispatch/Dispatch
+/samples/APISamples/GenerateSample/GenerateSample
+/samples/APISamples/ManytoMany/ManytoMany

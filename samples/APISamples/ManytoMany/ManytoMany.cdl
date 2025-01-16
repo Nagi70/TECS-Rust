@@ -1,0 +1,57 @@
+import(<kernel_rs.cdl>);
+
+signature sSensor {
+    void test(void);
+};
+
+[generate (ItronrsGenPlugin, "lib")]
+celltype tSensorA {
+    entry sSensor eSensor;
+};
+
+[generate (ItronrsGenPlugin, "lib")]
+celltype tSensorB {
+    entry sSensor eSensor;
+};
+
+[generate (ItronrsGenPlugin, "lib")]
+celltype tTaskbody {
+    entry sTaskBody eTaskbody;
+    call sSensor cSensor;
+};
+
+cell tSensorA SensorA {
+
+};
+
+cell tSensorB SensorB {
+
+};
+
+cell tTaskbody Taskbody1 {
+    cSensor = SensorA.eSensor;
+};
+
+cell tTaskbody Taskbody2 {
+    cSensor = SensorB.eSensor;
+};
+
+[generate( ItronrsGenPlugin, "lib, TASK")]
+cell tTaskRs Task1{
+    cTaskBody = Taskbody1.eTaskbody;
+    id = C_EXP("TECS_RUST_TASK1");
+	task_ref = C_EXP("unsafe{TaskRef::from_raw_nonnull(NonZeroI32::new(TECS_RUST_TASK1).unwrap())}");
+    attribute = C_EXP("TA_ACT");
+    stackSize = 1024;
+    priority = 7;
+};
+
+[generate( ItronrsGenPlugin, "lib, TASK")]
+cell tTaskRs Task2{
+    cTaskBody = Taskbody2.eTaskbody;
+    id = C_EXP("TECS_RUST_TASK2");
+	task_ref = C_EXP("unsafe{TaskRef::from_raw_nonnull(NonZeroI32::new(TECS_RUST_TASK2).unwrap())}");
+    attribute = C_EXP("TA_ACT");
+    stackSize = 1024;
+    priority = 7;
+};

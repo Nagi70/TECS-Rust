@@ -1119,9 +1119,10 @@ class RustGenCelltypePlugin < CelltypePlugin
             use_list.push("#{snake_case(port.get_signature.get_global_name.to_s)}")
         }
         use_list.uniq!
-        if @celltype.get_var_list.length != 0 then
-            gen_use_mutex file
-        end
+        # implファイルに対して、排他制御に関するuse文は生成する必要がない
+        # if @celltype.get_var_list.length != 0 then
+        #     gen_use_mutex file
+        # end
         file.print "use crate::{"
         use_list.each{ |use_str|
             if use_str == use_list.last then
@@ -1362,9 +1363,11 @@ class RustGenCelltypePlugin < CelltypePlugin
         when "main"
             output = `cargo new #{path}`
             puts output
+            File.delete("#{path}/src/main.rs")
         when "lib"
             output = `cargo new --lib #{path}`
             puts output
+            File.delete("#{path}/src/lib.rs")
         else
             puts "Error: --main or --lib option is not set"
         end
@@ -1421,8 +1424,6 @@ class RustGenCelltypePlugin < CelltypePlugin
             src_line = File.readlines(src_file)
             gen_line = File.readlines(gen_file)
 
-            # puts "src_line: #{src_line}"
-
             # src のみに存在する行を取得
             diff_src = src_line - gen_line
 
@@ -1434,6 +1435,10 @@ class RustGenCelltypePlugin < CelltypePlugin
             end
 
             # puts "diff_src_and_gen: #{@@diff_src_and_gen}"
+        elsif File.exist?(src_file) && File.exist?(gen_file) == false then # Cargo を残したまま、make cleanするケース
+            src_line = File.readlines(src_file)
+            src_line = src_line.select { |line| line.strip.start_with?("mod ", "use ") }
+            @@diff_src_and_gen[file_name].concat(src_line)
         end
     end
 
@@ -1535,7 +1540,7 @@ class RustGenCelltypePlugin < CelltypePlugin
         cargo_new_project @@cargo_path
 
         # main.rs または lib.rs の gen ファイルと src ファイルの差分を取得する
-        # get_diff_between_gen_and_src "#{check_option_main_or_lib}.rs"
+        get_diff_between_gen_and_src "#{check_option_main_or_lib}.rs"
 
         if @@main_lib_rs_cleaned != true then
 
@@ -1764,11 +1769,13 @@ class RustGenCelltypePlugin < CelltypePlugin
         puts "#{@celltype.get_global_name.to_s}: copy #{snake_case(@celltype.get_global_name.to_s)}.rs to cargo\n"
         copy_gen_files_to_cargo "#{snake_case(@celltype.get_global_name.to_s)}.rs"
 
-        # main.rs または lib.rs は最適化の際に更新しない
-        if File.exist?("#{@@cargo_path}/src/#{check_option_main_or_lib}.rs") == false then
+        # main.rs または lib.rs は最適化の際に更新しない <- セルタイプの度に更新するため、以下のコピーは必要
+        # if File.exist?("#{@@cargo_path}/src/#{check_option_main_or_lib}.rs") == false then
             puts "#{@celltype.get_global_name.to_s}: copy #{check_option_main_or_lib}.rs to cargo\n"
             copy_gen_files_to_cargo "#{check_option_main_or_lib}.rs"
-        end
+        # end
+
+        puts "#{@@diff_src_and_gen}"
     end # gen_factory
 
 end

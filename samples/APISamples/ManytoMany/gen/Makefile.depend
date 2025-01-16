@@ -1,0 +1,20 @@
+# Celltype: tTaskRs  #_MDEP_#
+$(_TECS_OBJ_DIR)tTaskRs_tecsgen.o : tTaskRs_tecsgen.c  $(GEN_DIR)/tTaskbody_tecsgen.h $(GEN_DIR)/global_tecsgen.h $(GEN_DIR)/sTaskBody_tecsgen.h $(GEN_DIR)/sTask_tecsgen.h $(GEN_DIR)/siTask_tecsgen.h $(GEN_DIR)/tTaskRs_factory.h $(GEN_DIR)/tTaskRs_tecsgen.h tTaskRs_inline.h
+$(_TECS_OBJ_DIR)tTaskRs_templ.o : tTaskRs_templ.c  $(GEN_DIR)/tTaskbody_tecsgen.h $(GEN_DIR)/global_tecsgen.h $(GEN_DIR)/sTaskBody_tecsgen.h $(GEN_DIR)/sTask_tecsgen.h $(GEN_DIR)/siTask_tecsgen.h $(GEN_DIR)/tTaskRs_factory.h $(GEN_DIR)/tTaskRs_tecsgen.h tTaskRs_inline.h
+$(_TECS_OBJ_DIR)tTaskRs.o : tTaskRs.c  $(GEN_DIR)/tTaskbody_tecsgen.h $(GEN_DIR)/global_tecsgen.h $(GEN_DIR)/sTaskBody_tecsgen.h $(GEN_DIR)/sTask_tecsgen.h $(GEN_DIR)/siTask_tecsgen.h $(GEN_DIR)/tTaskRs_factory.h $(GEN_DIR)/tTaskRs_tecsgen.h tTaskRs_inline.h
+
+# Celltype: tSensorA  #_MDEP_#
+$(_TECS_OBJ_DIR)tSensorA_tecsgen.o : tSensorA_tecsgen.c $(GEN_DIR)/global_tecsgen.h $(GEN_DIR)/sSensor_tecsgen.h $(GEN_DIR)/tSensorA_factory.h $(GEN_DIR)/tSensorA_tecsgen.h
+$(_TECS_OBJ_DIR)tSensorA_templ.o : tSensorA_templ.c $(GEN_DIR)/global_tecsgen.h $(GEN_DIR)/sSensor_tecsgen.h $(GEN_DIR)/tSensorA_factory.h $(GEN_DIR)/tSensorA_tecsgen.h
+$(_TECS_OBJ_DIR)tSensorA.o : tSensorA.c $(GEN_DIR)/global_tecsgen.h $(GEN_DIR)/sSensor_tecsgen.h $(GEN_DIR)/tSensorA_factory.h $(GEN_DIR)/tSensorA_tecsgen.h
+
+# Celltype: tSensorB  #_MDEP_#
+$(_TECS_OBJ_DIR)tSensorB_tecsgen.o : tSensorB_tecsgen.c $(GEN_DIR)/global_tecsgen.h $(GEN_DIR)/sSensor_tecsgen.h $(GEN_DIR)/tSensorB_factory.h $(GEN_DIR)/tSensorB_tecsgen.h
+$(_TECS_OBJ_DIR)tSensorB_templ.o : tSensorB_templ.c $(GEN_DIR)/global_tecsgen.h $(GEN_DIR)/sSensor_tecsgen.h $(GEN_DIR)/tSensorB_factory.h $(GEN_DIR)/tSensorB_tecsgen.h
+$(_TECS_OBJ_DIR)tSensorB.o : tSensorB.c $(GEN_DIR)/global_tecsgen.h $(GEN_DIR)/sSensor_tecsgen.h $(GEN_DIR)/tSensorB_factory.h $(GEN_DIR)/tSensorB_tecsgen.h
+
+# Celltype: tTaskbody  #_MDEP_#
+$(_TECS_OBJ_DIR)tTaskbody_tecsgen.o : tTaskbody_tecsgen.c $(GEN_DIR)/global_tecsgen.h $(GEN_DIR)/sSensor_tecsgen.h $(GEN_DIR)/sTaskBody_tecsgen.h $(GEN_DIR)/tTaskbody_factory.h $(GEN_DIR)/tTaskbody_tecsgen.h
+$(_TECS_OBJ_DIR)tTaskbody_templ.o : tTaskbody_templ.c $(GEN_DIR)/global_tecsgen.h $(GEN_DIR)/sSensor_tecsgen.h $(GEN_DIR)/sTaskBody_tecsgen.h $(GEN_DIR)/tTaskbody_factory.h $(GEN_DIR)/tTaskbody_tecsgen.h
+$(_TECS_OBJ_DIR)tTaskbody.o : tTaskbody.c $(GEN_DIR)/global_tecsgen.h $(GEN_DIR)/sSensor_tecsgen.h $(GEN_DIR)/sTaskBody_tecsgen.h $(GEN_DIR)/tTaskbody_factory.h $(GEN_DIR)/tTaskbody_tecsgen.h
+

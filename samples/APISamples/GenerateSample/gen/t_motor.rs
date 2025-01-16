@@ -1,5 +1,4 @@
-use itron::mutex::MutexRef;
-use crate::tecs_mutex::*;
+use crate::tecs_ex_ctrl::*;
 use core::cell::UnsafeCell;
 use core::num::NonZeroI32;
 use crate::kernel_cfg::*;
@@ -30,6 +29,7 @@ pub static MOTORA: TMotor = TMotor {
 };
 
 pub static MOTORAVAR: SyncTMotorVar = SyncTMotorVar {
+	/// This UnsafeCell is safe because it is only accessed by one task due to the call flow and component structure of TECS.
 	unsafe_var: UnsafeCell::new(TMotorVar {
 		motor: None,
 	}),
@@ -47,6 +47,7 @@ pub static MOTORB: TMotor = TMotor {
 };
 
 pub static MOTORBVAR: SyncTMotorVar = SyncTMotorVar {
+	/// This UnsafeCell is safe because it is only accessed by one task due to the call flow and component structure of TECS.
 	unsafe_var: UnsafeCell::new(TMotorVar {
 		motor: None,
 	}),

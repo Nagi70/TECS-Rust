@@ -1,5 +1,6 @@
 use itron::mutex::MutexRef;
-use crate::tecs_mutex::*;
+use itron::semaphore::SemaphoreRef;
+use crate::tecs_ex_ctrl::*;
 use core::cell::UnsafeCell;
 use core::num::NonZeroI32;
 use crate::kernel_cfg::*;
@@ -7,7 +8,7 @@ pub struct TMotor<'a>
 {
 	port: PbioPortIdT,
 	variable: &'a SyncTMotorVar<'a>,
-	mutex_ref: &'a (dyn LockableForMutex + Sync + Send),
+	ex_ctrl_ref: &'a (dyn LockManager + Sync + Send),
 }
 
 pub struct TMotorVar<'a>{
@@ -25,17 +26,18 @@ pub struct EMotorForTMotor<'a>{
 }
 
 pub struct LockGuardForTMotor<'a>{
-	mutex_ref: &'a (dyn LockableForMutex + Sync + Send),
+	ex_ctrl_ref: &'a (dyn LockManager + Sync + Send),
 }
 
 #[link_section = ".rodata"]
 pub static MOTOR1: TMotor = TMotor {
 	port: PbioPortIdT::PbioPortIdA,
 	variable: &MOTOR1VAR,
-	mutex_ref: &DUMMY_MUTEX_REF,
+	ex_ctrl_ref: &DUMMY_EX_CTRL_REF,
 };
 
 pub static MOTOR1VAR: SyncTMotorVar = SyncTMotorVar {
+	/// This UnsafeCell is safe because it is only accessed by one task due to the call flow and component structure of TECS.
 	unsafe_var: UnsafeCell::new(TMotorVar {
 		motor: None,
 	}),
@@ -50,18 +52,19 @@ pub static EMOTORFORMOTOR1: EMotorForTMotor = EMotorForTMotor {
 pub static MOTOR2: TMotor = TMotor {
 	port: PbioPortIdT::PbioPortIdB,
 	variable: &MOTOR2VAR,
-	mutex_ref: &MOTOR2_MUTEX_REF,
+	ex_ctrl_ref: &MOTOR2_EX_CTRL_REF,
 };
 
 pub static MOTOR2VAR: SyncTMotorVar = SyncTMotorVar {
+	/// This UnsafeCell is accessed by multiple tasks, but is safe because it is operated exclusively by the semaphore object.
 	unsafe_var: UnsafeCell::new(TMotorVar {
 		motor: None,
 	}),
 };
 
 #[link_section = ".rodata"]
-pub static MOTOR2_MUTEX_REF: TECSMutexRef = TECSMutexRef{
-	inner: unsafe{MutexRef::from_raw_nonnull(NonZeroI32::new(TECS_RUST_MUTEX_1).unwrap())},
+pub static MOTOR2_EX_CTRL_REF: TECSSemaphoreRef = TECSSemaphoreRef{
+	inner: unsafe{SemaphoreRef::from_raw_nonnull(NonZeroI32::new(TECS_RUST_EX_CTRL_1).unwrap())},
 };
 
 #[link_section = ".rodata"]
@@ -71,19 +74,19 @@ pub static EMOTORFORMOTOR2: EMotorForTMotor = EMotorForTMotor {
 
 impl<'a> Drop for LockGuardForTMotor<'a> {
 	fn drop(&mut self){
-		self.mutex_ref.unlock();
+		self.ex_ctrl_ref.unlock();
 	}
 }
 
 impl<'a> TMotor<'a> {
 	#[inline]
 	pub fn get_cell_ref(&'static self) -> (&'static PbioPortIdT, &'static mut TMotorVar, LockGuardForTMotor) {
-		self.mutex_ref.lock();
+		self.ex_ctrl_ref.lock();
 		(
 			&self.port,
 			unsafe{&mut *self.variable.unsafe_var.get()},
 			LockGuardForTMotor{
-				mutex_ref: self.mutex_ref,
+				ex_ctrl_ref: self.ex_ctrl_ref,
 			}
 		)
 	}

@@ -1,0 +1,2200 @@
+tTaskRs: json_parse
+tTaskRs: get_diff_between_gen_and_src
+tTaskRs: gen_use_for_entry_port
+tTaskRs: gen_use_header
+tTaskRs: get_callport_list
+tTaskRs: get_jenerics_alphabet_list
+tTaskRs: gen_rust_cell_structure_header
+tTaskRs: gen_rust_cell_structure_jenerics
+tTaskRs: gen_rust_cell_structure_callport
+tTaskRs: gen_rust_cell_structure_attribute
+tTaskRs: gen_rust_cell_structure_variable
+tTaskRs: gen_rust_cell_structure_ex_ctrl_ref
+tTaskRs: gen_rust_variable_structure
+tTaskRs: gen_rust_sync_variable_structure
+tTaskRs: gen_rust_impl_sync_trait_for_sync_variable_structure
+tTaskRs: gen_rust_entry_structure
+tTaskRs: gen_rust_entryport_structure_initialize
+tTaskRs: gen_mod_in_main_lib_rs_for_celltype
+tTaskRs: gen_rust_cell_structure_header_initialize
+tTaskRs: gen_rust_cell_structure_jenerics_initialize
+tTaskRs: gen_rust_cell_structure_callport_initialize
+tTaskRs: gen_rust_cell_structure_attribute_initialize
+tTaskRs: gen_rust_cell_structure_variable_initialize
+tTaskRs: gen_rust_cell_structure_ex_ctrl_ref_initialize
+tTaskRs: gen_rust_variable_structure_initialize
+tTaskRs: gen_rust_ex_ctrl_ref_initialize
+tTaskRs: gen_rust_entryport_structure_initialize
+tTaskRs: gen_rust_cell_structure_header_initialize
+tTaskRs: gen_rust_cell_structure_jenerics_initialize
+tTaskRs: gen_rust_cell_structure_callport_initialize
+tTaskRs: gen_rust_cell_structure_attribute_initialize
+tTaskRs: gen_rust_cell_structure_variable_initialize
+tTaskRs: gen_rust_cell_structure_ex_ctrl_ref_initialize
+tTaskRs: gen_rust_variable_structure_initialize
+tTaskRs: gen_rust_ex_ctrl_ref_initialize
+tTaskRs: gen_rust_entryport_structure_initialize
+tTaskRs: gen_rust_cell_structure_header_initialize
+tTaskRs: gen_rust_cell_structure_jenerics_initialize
+tTaskRs: gen_rust_cell_structure_callport_initialize
+tTaskRs: gen_rust_cell_structure_attribute_initialize
+tTaskRs: gen_rust_cell_structure_variable_initialize
+tTaskRs: gen_rust_cell_structure_ex_ctrl_ref_initialize
+tTaskRs: gen_rust_variable_structure_initialize
+tTaskRs: gen_rust_ex_ctrl_ref_initialize
+tTaskRs: gen_rust_entryport_structure_initialize
+tTaskRs: gen_rust_cell_structure_header_initialize
+tTaskRs: gen_rust_cell_structure_jenerics_initialize
+tTaskRs: gen_rust_cell_structure_callport_initialize
+tTaskRs: gen_rust_cell_structure_attribute_initialize
+tTaskRs: gen_rust_cell_structure_variable_initialize
+tTaskRs: gen_rust_cell_structure_ex_ctrl_ref_initialize
+tTaskRs: gen_rust_variable_structure_initialize
+tTaskRs: gen_rust_ex_ctrl_ref_initialize
+tTaskRs: gen_rust_entryport_structure_initialize
+tTaskRs: gen_rust_impl_drop_for_lock_guard_structure
+tTaskRs: gen_rust_get_cell_ref
+tTaskRs: gen_use_for_impl_file
+tTaskRs: gen_rust_entryport_function
+tTaskRs: gen_trait_files
+tTaskRs: copy t_task_rs.rs to cargo
+tTaskRs: copy lib.rs to cargo
+# generated automatically by tecsgen.
+# This file is not intended to modify.
+#
+# Makefile variables below are defined.
+#  TECS_IMPORT_CDLS          .cdl files improted by import statement
+#  SIGNATURE_HEADERS         .h files of signature
+#  CELLTYPE_TECSGEN_HEADERS  .h files of celltype
+#  CELLTYPE_FACTORY_HEADERS  .h files of celltype's factory
+#  TECS_HEADERS              summary of .h files above
+#  TECS_INLINE_HEADERS       .h files of celltype inline header
+#  PLUGIN_INLINE_HEADERS     .h files of plugin generated inline header
+#
+#  TECS_COBJS                .o files of TECS
+#                            = $(TECSGEN_COBJS)+$(PLUGIN_COBJS)+$(CELLTYPE_COBJS)
+#                            = $(TECS_KERNEL_COBJS)+$(TECS_USER_COBJS)+$(TECS_OUTOFDOMAIN_COBJS)
+#                            = $(TECSGEN_domain_COBJS)+$(PLUGIN_domain_COBJS)+$(CELLTYPE_domain_COBJS) for each domain
+#
+#  TECSGEN_COBJS             .o files of celltype_tecsgen.c
+#  CELLTYPE_COBJS            .o files of celltype.c (celltype code)
+#  PLUGIN_COBJS              .o files of plugin generated .c files
+#
+#  TECSGEN_SRCS              .c files of celltype_tecsgen.c
+#  CELLTYPE_SRCS             .c files of celltype.c (celltype code)
+#  PLUGIN_SRCS               .c files of plugin generated
+#  PLUGIN_CELLTYPE_SRCS      .c files of plugin generated celltype.c (celltype code)
+#  PLUGIN_TECSGEN_SRCS       .c files of plugin generated celltype_tecsgen.c
+#
+# Variables for domain (These are defined if domain is specified)
+#  TECS_DOMAINS             domain names
+#  TECS_KERNEL_COBJS        .o files of kernel domain (tecsgen, celltype, plugin)
+#  TECS_USER_COBJS          .o files of user domain (tecsgen, celltype, plugin)
+#  TECS_OUTOFDOMAIN_COBJS   .o files of OutOfDomain (tecsgen, celltype, plugin)
+#  TECSGEN_domain_COBJS     .o files of celltype_tecsgen.c files for each domain
+#  PLUGIN_domain_COBJS      .o files of plugin generated .c files for each domain
+#  CELLTYPE_domain_COBJS    .o files of celltype.c files for each domain
+#  TECSGEN_domain_SRCS      .c files of celltype_domain_tecsgen.c
+#  PLUGIN_domain_SRCS       .c files of plugin generated .c files for each domain
+#  CELLTYPE_domain_SRCS     .c files of celltype.c files for each domain
+
+TECS_IMPORT_CDLS = DispatchSem.cdl ../spikert.cdl ./../kernel_rs.cdl gen/tmp_ItronrsGenCelltypePlugin_post_code.cdl gen/tmp_ItronrsGenCellPlugin_post_code.cdl
+TECS_IMPORT_HEADERS = ./../tecs_kernel/tecs_kernel.h
+TECS_IMPORTS = $(TECS_IMPORT_CDLS) $(TECS_IMPORT_HEADERS)
+
+SIGNATURE_HEADERS = \
+	$(GEN_DIR)/sTaskBody_tecsgen.h \
+	$(GEN_DIR)/sTask_tecsgen.h \
+	$(GEN_DIR)/siTask_tecsgen.h \
+	$(GEN_DIR)/siNotificationHandler_tecsgen.h \
+	$(GEN_DIR)/sMotor_tecsgen.h \
+	$(GEN_DIR)/sSensor_tecsgen.h \
+	$(GEN_DIR)/sPowerdown_tecsgen.h \
+# SIGNATURE_HEADERS terminator
+
+CELLTYPE_TECSGEN_HEADERS = \
+ 	$(GEN_DIR)/tTaskRs_tecsgen.h \
+ 	$(GEN_DIR)/tMotor_tecsgen.h \
+ 	$(GEN_DIR)/tSensor_tecsgen.h \
+ 	$(GEN_DIR)/tMotorbody_tecsgen.h \
+ 	$(GEN_DIR)/tSensorbody_tecsgen.h \
+ 	$(GEN_DIR)/tMMbody_tecsgen.h \
+ 	$(GEN_DIR)/tSSbody_tecsgen.h \
+# CELLTYPE_TECSGEN_HEADERS terminator
+
+CELLTYPE_FACTORY_HEADERS = \
+ 	$(GEN_DIR)/tTaskRs_factory.h \
+ 	$(GEN_DIR)/tMotor_factory.h \
+ 	$(GEN_DIR)/tSensor_factory.h \
+ 	$(GEN_DIR)/tMotorbody_factory.h \
+ 	$(GEN_DIR)/tSensorbody_factory.h \
+ 	$(GEN_DIR)/tMMbody_factory.h \
+ 	$(GEN_DIR)/tSSbody_factory.h \
+# CELLTYPE_FACTORY_HEADERS terminator
+
+# TECS_HEADERS:  headers generated by tecsgen
+TECS_HEADERS = $(SIGNATURE_HEADERS) $(CELLTYPE_TECSGEN_HEADERS) $(CELLTYPE_FACTORY_HEADERS)
+
+TECS_INLINE_HEADERS = \
+ 	tTaskRs_tecsgen.h \
+ 	tMotor_tecsgen.h \
+ 	tSensor_tecsgen.h \
+ 	tMotorbody_tecsgen.h \
+ 	tSensorbody_tecsgen.h \
+ 	tMMbody_tecsgen.h \
+ 	tSSbody_tecsgen.h \
+# TECS_INLINE_HEADERS terminator
+
+PLUGIN_INLINE_HEADERS = \
+# PLUGIN_INLINE_HEADERS terminator
+
+# TECS_COBJS: all objects of TECS, include both user written code and tecsgen automatically generated code
+TECS_COBJS = $(TECSGEN_COBJS) $(PLUGIN_COBJS) $(CELLTYPE_COBJS)
+
+# TECSGEN_COBJS: objects from sources which are automatically generated by tecsgen
+TECSGEN_COBJS = \
+ 	$(_TECS_OBJ_DIR)tTaskRs_tecsgen.o \
+ 	$(_TECS_OBJ_DIR)tMotor_tecsgen.o \
+ 	$(_TECS_OBJ_DIR)tSensor_tecsgen.o \
+ 	$(_TECS_OBJ_DIR)tMotorbody_tecsgen.o \
+ 	$(_TECS_OBJ_DIR)tSensorbody_tecsgen.o \
+ 	$(_TECS_OBJ_DIR)tMMbody_tecsgen.o \
+ 	$(_TECS_OBJ_DIR)tSSbody_tecsgen.o \
+# TECSGEN_COBJS terminator
+
+# PLUGIN_COBJS: objects from sources which are automatically generated by plugin(s)
+PLUGIN_COBJS = \
+# PLUGIN_COBJS terminator
+
+# CELLTYPE_COBJS: objects of celltype code written by user
+CELLTYPE_COBJS = \
+ 	$(_TECS_OBJ_DIR)tTaskRs.o \
+ 	$(_TECS_OBJ_DIR)tMotorbody.o \
+ 	$(_TECS_OBJ_DIR)tSensorbody.o \
+ 	$(_TECS_OBJ_DIR)tMMbody.o \
+ 	$(_TECS_OBJ_DIR)tSSbody.o \
+# CELLTYPE_COBJS terminator
+
+# TECSGEN_SRCS: sources automatically generated by tecsgen
+TECSGEN_SRCS = \
+ 	$(GEN_DIR)/tTaskRs_tecsgen.c \
+ 	$(GEN_DIR)/tMotor_tecsgen.c \
+ 	$(GEN_DIR)/tSensor_tecsgen.c \
+ 	$(GEN_DIR)/tMotorbody_tecsgen.c \
+ 	$(GEN_DIR)/tSensorbody_tecsgen.c \
+ 	$(GEN_DIR)/tMMbody_tecsgen.c \
+ 	$(GEN_DIR)/tSSbody_tecsgen.c \
+# TECSGEN_SRCS terminator
+
+# PLUGIN_SRCS: sources automatically generated by plugin
+PLUGIN_CELLTYPE_SRCS = \
+  $(PLUGIN_CELLTYPE_SRCS)\
+# PLUGIN_CELLTYPE_SRCS terminator
+
+PLUGIN_TECSGEN_SRCS = \
+  $(PLUGIN_TECSGEN_SRCS)\
+# PLUGIN_TECSGEN_SRCS terminator
+
+PLUGIN_SRCS = $(PLUGIN_CELLTYPE_SRCS) $(PLUGIN_TECSGEN_SRCS)
+
+PLUGIN_CELLTYPE_SRCS = \
+# PLUGIN_CELLTYPE_SRCS terminator
+
+PLUGIN_TECSGEN_SRCS = \
+# PLUGIN_TECSGEN_SRCS terminator
+
+# CELLTYPE_SRCS: sources of celltype code written by user
+CELLTYPE_SRCS = \
+ 	tTaskRs.c \
+ 	tMotorbody.c \
+ 	tSensorbody.c \
+ 	tMMbody.c \
+ 	tSSbody.c \
+# CELLTYPE_SRCS terminator
+
+tTaskRs: get_diff_between_gen_and_src
+tTaskRs: gen_use_for_entry_port
+tTaskRs: gen_use_header
+tTaskRs: get_callport_list
+tTaskRs: get_jenerics_alphabet_list
+tTaskRs: gen_rust_cell_structure_header
+tTaskRs: gen_rust_cell_structure_jenerics
+tTaskRs: gen_rust_cell_structure_callport
+tTaskRs: gen_rust_cell_structure_attribute
+tTaskRs: gen_rust_cell_structure_variable
+tTaskRs: gen_rust_cell_structure_ex_ctrl_ref
+tTaskRs: gen_rust_variable_structure
+tTaskRs: gen_rust_sync_variable_structure
+tTaskRs: gen_rust_impl_sync_trait_for_sync_variable_structure
+tTaskRs: gen_rust_entry_structure
+tTaskRs: gen_rust_entryport_structure_initialize
+tTaskRs: gen_mod_in_main_lib_rs_for_celltype
+tTaskRs: gen_rust_cell_structure_header_initialize
+tTaskRs: gen_rust_cell_structure_jenerics_initialize
+tTaskRs: gen_rust_cell_structure_callport_initialize
+tTaskRs: gen_rust_cell_structure_attribute_initialize
+tTaskRs: gen_rust_cell_structure_variable_initialize
+tTaskRs: gen_rust_cell_structure_ex_ctrl_ref_initialize
+tTaskRs: gen_rust_variable_structure_initialize
+tTaskRs: gen_rust_ex_ctrl_ref_initialize
+tTaskRs: gen_rust_entryport_structure_initialize
+tTaskRs: gen_rust_cell_structure_header_initialize
+tTaskRs: gen_rust_cell_structure_jenerics_initialize
+tTaskRs: gen_rust_cell_structure_callport_initialize
+tTaskRs: gen_rust_cell_structure_attribute_initialize
+tTaskRs: gen_rust_cell_structure_variable_initialize
+tTaskRs: gen_rust_cell_structure_ex_ctrl_ref_initialize
+tTaskRs: gen_rust_variable_structure_initialize
+tTaskRs: gen_rust_ex_ctrl_ref_initialize
+tTaskRs: gen_rust_entryport_structure_initialize
+tTaskRs: gen_rust_cell_structure_header_initialize
+tTaskRs: gen_rust_cell_structure_jenerics_initialize
+tTaskRs: gen_rust_cell_structure_callport_initialize
+tTaskRs: gen_rust_cell_structure_attribute_initialize
+tTaskRs: gen_rust_cell_structure_variable_initialize
+tTaskRs: gen_rust_cell_structure_ex_ctrl_ref_initialize
+tTaskRs: gen_rust_variable_structure_initialize
+tTaskRs: gen_rust_ex_ctrl_ref_initialize
+tTaskRs: gen_rust_entryport_structure_initialize
+tTaskRs: gen_rust_cell_structure_header_initialize
+tTaskRs: gen_rust_cell_structure_jenerics_initialize
+tTaskRs: gen_rust_cell_structure_callport_initialize
+tTaskRs: gen_rust_cell_structure_attribute_initialize
+tTaskRs: gen_rust_cell_structure_variable_initialize
+tTaskRs: gen_rust_cell_structure_ex_ctrl_ref_initialize
+tTaskRs: gen_rust_variable_structure_initialize
+tTaskRs: gen_rust_ex_ctrl_ref_initialize
+tTaskRs: gen_rust_entryport_structure_initialize
+tTaskRs: gen_rust_impl_drop_for_lock_guard_structure
+tTaskRs: gen_rust_get_cell_ref
+tTaskRs: gen_use_for_impl_file
+tTaskRs: gen_rust_entryport_function
+tTaskRs: gen_trait_files
+tTaskRs: copy t_task_rs.rs to cargo
+tTaskRs: copy lib.rs to cargo
+# generated automatically by tecsgen.
+# This file is not intended to modify.
+#
+# Makefile variables below are defined.
+#  TECS_IMPORT_CDLS          .cdl files improted by import statement
+#  SIGNATURE_HEADERS         .h files of signature
+#  CELLTYPE_TECSGEN_HEADERS  .h files of celltype
+#  CELLTYPE_FACTORY_HEADERS  .h files of celltype's factory
+#  TECS_HEADERS              summary of .h files above
+#  TECS_INLINE_HEADERS       .h files of celltype inline header
+#  PLUGIN_INLINE_HEADERS     .h files of plugin generated inline header
+#
+#  TECS_COBJS                .o files of TECS
+#                            = $(TECSGEN_COBJS)+$(PLUGIN_COBJS)+$(CELLTYPE_COBJS)
+#                            = $(TECS_KERNEL_COBJS)+$(TECS_USER_COBJS)+$(TECS_OUTOFDOMAIN_COBJS)
+#                            = $(TECSGEN_domain_COBJS)+$(PLUGIN_domain_COBJS)+$(CELLTYPE_domain_COBJS) for each domain
+#
+#  TECSGEN_COBJS             .o files of celltype_tecsgen.c
+#  CELLTYPE_COBJS            .o files of celltype.c (celltype code)
+#  PLUGIN_COBJS              .o files of plugin generated .c files
+#
+#  TECSGEN_SRCS              .c files of celltype_tecsgen.c
+#  CELLTYPE_SRCS             .c files of celltype.c (celltype code)
+#  PLUGIN_SRCS               .c files of plugin generated
+#  PLUGIN_CELLTYPE_SRCS      .c files of plugin generated celltype.c (celltype code)
+#  PLUGIN_TECSGEN_SRCS       .c files of plugin generated celltype_tecsgen.c
+#
+# Variables for domain (These are defined if domain is specified)
+#  TECS_DOMAINS             domain names
+#  TECS_KERNEL_COBJS        .o files of kernel domain (tecsgen, celltype, plugin)
+#  TECS_USER_COBJS          .o files of user domain (tecsgen, celltype, plugin)
+#  TECS_OUTOFDOMAIN_COBJS   .o files of OutOfDomain (tecsgen, celltype, plugin)
+#  TECSGEN_domain_COBJS     .o files of celltype_tecsgen.c files for each domain
+#  PLUGIN_domain_COBJS      .o files of plugin generated .c files for each domain
+#  CELLTYPE_domain_COBJS    .o files of celltype.c files for each domain
+#  TECSGEN_domain_SRCS      .c files of celltype_domain_tecsgen.c
+#  PLUGIN_domain_SRCS       .c files of plugin generated .c files for each domain
+#  CELLTYPE_domain_SRCS     .c files of celltype.c files for each domain
+
+TECS_IMPORT_CDLS = DispatchSem.cdl ../spikert.cdl ./../kernel_rs.cdl gen/tmp_ItronrsGenCelltypePlugin_post_code.cdl gen/tmp_ItronrsGenCellPlugin_post_code.cdl
+TECS_IMPORT_HEADERS = ./../tecs_kernel/tecs_kernel.h
+TECS_IMPORTS = $(TECS_IMPORT_CDLS) $(TECS_IMPORT_HEADERS)
+
+SIGNATURE_HEADERS = \
+	$(GEN_DIR)/sTaskBody_tecsgen.h \
+	$(GEN_DIR)/sTask_tecsgen.h \
+	$(GEN_DIR)/siTask_tecsgen.h \
+	$(GEN_DIR)/siNotificationHandler_tecsgen.h \
+	$(GEN_DIR)/sMotor_tecsgen.h \
+	$(GEN_DIR)/sSensor_tecsgen.h \
+	$(GEN_DIR)/sPowerdown_tecsgen.h \
+# SIGNATURE_HEADERS terminator
+
+CELLTYPE_TECSGEN_HEADERS = \
+ 	$(GEN_DIR)/tTaskRs_tecsgen.h \
+ 	$(GEN_DIR)/tMotor_tecsgen.h \
+ 	$(GEN_DIR)/tSensor_tecsgen.h \
+ 	$(GEN_DIR)/tMotorbody_tecsgen.h \
+ 	$(GEN_DIR)/tSensorbody_tecsgen.h \
+ 	$(GEN_DIR)/tMMbody_tecsgen.h \
+ 	$(GEN_DIR)/tSSbody_tecsgen.h \
+# CELLTYPE_TECSGEN_HEADERS terminator
+
+CELLTYPE_FACTORY_HEADERS = \
+ 	$(GEN_DIR)/tTaskRs_factory.h \
+ 	$(GEN_DIR)/tMotor_factory.h \
+ 	$(GEN_DIR)/tSensor_factory.h \
+ 	$(GEN_DIR)/tMotorbody_factory.h \
+ 	$(GEN_DIR)/tSensorbody_factory.h \
+ 	$(GEN_DIR)/tMMbody_factory.h \
+ 	$(GEN_DIR)/tSSbody_factory.h \
+# CELLTYPE_FACTORY_HEADERS terminator
+
+# TECS_HEADERS:  headers generated by tecsgen
+TECS_HEADERS = $(SIGNATURE_HEADERS) $(CELLTYPE_TECSGEN_HEADERS) $(CELLTYPE_FACTORY_HEADERS)
+
+TECS_INLINE_HEADERS = \
+ 	tTaskRs_tecsgen.h \
+ 	tMotor_tecsgen.h \
+ 	tSensor_tecsgen.h \
+ 	tMotorbody_tecsgen.h \
+ 	tSensorbody_tecsgen.h \
+ 	tMMbody_tecsgen.h \
+ 	tSSbody_tecsgen.h \
+# TECS_INLINE_HEADERS terminator
+
+PLUGIN_INLINE_HEADERS = \
+# PLUGIN_INLINE_HEADERS terminator
+
+# TECS_COBJS: all objects of TECS, include both user written code and tecsgen automatically generated code
+TECS_COBJS = $(TECSGEN_COBJS) $(PLUGIN_COBJS) $(CELLTYPE_COBJS)
+
+# TECSGEN_COBJS: objects from sources which are automatically generated by tecsgen
+TECSGEN_COBJS = \
+ 	$(_TECS_OBJ_DIR)tTaskRs_tecsgen.o \
+ 	$(_TECS_OBJ_DIR)tMotor_tecsgen.o \
+ 	$(_TECS_OBJ_DIR)tSensor_tecsgen.o \
+ 	$(_TECS_OBJ_DIR)tMotorbody_tecsgen.o \
+ 	$(_TECS_OBJ_DIR)tSensorbody_tecsgen.o \
+ 	$(_TECS_OBJ_DIR)tMMbody_tecsgen.o \
+ 	$(_TECS_OBJ_DIR)tSSbody_tecsgen.o \
+# TECSGEN_COBJS terminator
+
+# PLUGIN_COBJS: objects from sources which are automatically generated by plugin(s)
+PLUGIN_COBJS = \
+# PLUGIN_COBJS terminator
+
+# CELLTYPE_COBJS: objects of celltype code written by user
+CELLTYPE_COBJS = \
+ 	$(_TECS_OBJ_DIR)tTaskRs.o \
+ 	$(_TECS_OBJ_DIR)tMotorbody.o \
+ 	$(_TECS_OBJ_DIR)tSensorbody.o \
+ 	$(_TECS_OBJ_DIR)tMMbody.o \
+ 	$(_TECS_OBJ_DIR)tSSbody.o \
+# CELLTYPE_COBJS terminator
+
+# TECSGEN_SRCS: sources automatically generated by tecsgen
+TECSGEN_SRCS = \
+ 	$(GEN_DIR)/tTaskRs_tecsgen.c \
+ 	$(GEN_DIR)/tMotor_tecsgen.c \
+ 	$(GEN_DIR)/tSensor_tecsgen.c \
+ 	$(GEN_DIR)/tMotorbody_tecsgen.c \
+ 	$(GEN_DIR)/tSensorbody_tecsgen.c \
+ 	$(GEN_DIR)/tMMbody_tecsgen.c \
+ 	$(GEN_DIR)/tSSbody_tecsgen.c \
+# TECSGEN_SRCS terminator
+
+# PLUGIN_SRCS: sources automatically generated by plugin
+PLUGIN_CELLTYPE_SRCS = \
+  $(PLUGIN_CELLTYPE_SRCS)\
+# PLUGIN_CELLTYPE_SRCS terminator
+
+PLUGIN_TECSGEN_SRCS = \
+  $(PLUGIN_TECSGEN_SRCS)\
+# PLUGIN_TECSGEN_SRCS terminator
+
+PLUGIN_SRCS = $(PLUGIN_CELLTYPE_SRCS) $(PLUGIN_TECSGEN_SRCS)
+
+PLUGIN_CELLTYPE_SRCS = \
+# PLUGIN_CELLTYPE_SRCS terminator
+
+PLUGIN_TECSGEN_SRCS = \
+# PLUGIN_TECSGEN_SRCS terminator
+
+# CELLTYPE_SRCS: sources of celltype code written by user
+CELLTYPE_SRCS = \
+ 	tTaskRs.c \
+ 	tMotorbody.c \
+ 	tSensorbody.c \
+ 	tMMbody.c \
+ 	tSSbody.c \
+# CELLTYPE_SRCS terminator
+
+tTaskRs: get_diff_between_gen_and_src
+tTaskRs: gen_use_for_entry_port
+tTaskRs: gen_use_header
+tTaskRs: get_callport_list
+tTaskRs: get_jenerics_alphabet_list
+tTaskRs: gen_rust_cell_structure_header
+tTaskRs: gen_rust_cell_structure_jenerics
+tTaskRs: gen_rust_cell_structure_callport
+tTaskRs: gen_rust_cell_structure_attribute
+tTaskRs: gen_rust_cell_structure_variable
+tTaskRs: gen_rust_cell_structure_ex_ctrl_ref
+tTaskRs: gen_rust_variable_structure
+tTaskRs: gen_rust_sync_variable_structure
+tTaskRs: gen_rust_impl_sync_trait_for_sync_variable_structure
+tTaskRs: gen_rust_entry_structure
+tTaskRs: gen_rust_entryport_structure_initialize
+tTaskRs: gen_mod_in_main_lib_rs_for_celltype
+tTaskRs: gen_rust_cell_structure_header_initialize
+tTaskRs: gen_rust_cell_structure_jenerics_initialize
+tTaskRs: gen_rust_cell_structure_callport_initialize
+tTaskRs: gen_rust_cell_structure_attribute_initialize
+tTaskRs: gen_rust_cell_structure_variable_initialize
+tTaskRs: gen_rust_cell_structure_ex_ctrl_ref_initialize
+tTaskRs: gen_rust_variable_structure_initialize
+tTaskRs: gen_rust_ex_ctrl_ref_initialize
+tTaskRs: gen_rust_entryport_structure_initialize
+tTaskRs: gen_rust_cell_structure_header_initialize
+tTaskRs: gen_rust_cell_structure_jenerics_initialize
+tTaskRs: gen_rust_cell_structure_callport_initialize
+tTaskRs: gen_rust_cell_structure_attribute_initialize
+tTaskRs: gen_rust_cell_structure_variable_initialize
+tTaskRs: gen_rust_cell_structure_ex_ctrl_ref_initialize
+tTaskRs: gen_rust_variable_structure_initialize
+tTaskRs: gen_rust_ex_ctrl_ref_initialize
+tTaskRs: gen_rust_entryport_structure_initialize
+tTaskRs: gen_rust_cell_structure_header_initialize
+tTaskRs: gen_rust_cell_structure_jenerics_initialize
+tTaskRs: gen_rust_cell_structure_callport_initialize
+tTaskRs: gen_rust_cell_structure_attribute_initialize
+tTaskRs: gen_rust_cell_structure_variable_initialize
+tTaskRs: gen_rust_cell_structure_ex_ctrl_ref_initialize
+tTaskRs: gen_rust_variable_structure_initialize
+tTaskRs: gen_rust_ex_ctrl_ref_initialize
+tTaskRs: gen_rust_entryport_structure_initialize
+tTaskRs: gen_rust_cell_structure_header_initialize
+tTaskRs: gen_rust_cell_structure_jenerics_initialize
+tTaskRs: gen_rust_cell_structure_callport_initialize
+tTaskRs: gen_rust_cell_structure_attribute_initialize
+tTaskRs: gen_rust_cell_structure_variable_initialize
+tTaskRs: gen_rust_cell_structure_ex_ctrl_ref_initialize
+tTaskRs: gen_rust_variable_structure_initialize
+tTaskRs: gen_rust_ex_ctrl_ref_initialize
+tTaskRs: gen_rust_entryport_structure_initialize
+tTaskRs: gen_rust_impl_drop_for_lock_guard_structure
+tTaskRs: gen_rust_get_cell_ref
+tTaskRs: gen_use_for_impl_file
+tTaskRs: gen_rust_entryport_function
+tTaskRs: gen_trait_files
+tTaskRs: copy t_task_rs.rs to cargo
+tTaskRs: copy lib.rs to cargo
+# generated automatically by tecsgen.
+# This file is not intended to modify.
+#
+# Makefile variables below are defined.
+#  TECS_IMPORT_CDLS          .cdl files improted by import statement
+#  SIGNATURE_HEADERS         .h files of signature
+#  CELLTYPE_TECSGEN_HEADERS  .h files of celltype
+#  CELLTYPE_FACTORY_HEADERS  .h files of celltype's factory
+#  TECS_HEADERS              summary of .h files above
+#  TECS_INLINE_HEADERS       .h files of celltype inline header
+#  PLUGIN_INLINE_HEADERS     .h files of plugin generated inline header
+#
+#  TECS_COBJS                .o files of TECS
+#                            = $(TECSGEN_COBJS)+$(PLUGIN_COBJS)+$(CELLTYPE_COBJS)
+#                            = $(TECS_KERNEL_COBJS)+$(TECS_USER_COBJS)+$(TECS_OUTOFDOMAIN_COBJS)
+#                            = $(TECSGEN_domain_COBJS)+$(PLUGIN_domain_COBJS)+$(CELLTYPE_domain_COBJS) for each domain
+#
+#  TECSGEN_COBJS             .o files of celltype_tecsgen.c
+#  CELLTYPE_COBJS            .o files of celltype.c (celltype code)
+#  PLUGIN_COBJS              .o files of plugin generated .c files
+#
+#  TECSGEN_SRCS              .c files of celltype_tecsgen.c
+#  CELLTYPE_SRCS             .c files of celltype.c (celltype code)
+#  PLUGIN_SRCS               .c files of plugin generated
+#  PLUGIN_CELLTYPE_SRCS      .c files of plugin generated celltype.c (celltype code)
+#  PLUGIN_TECSGEN_SRCS       .c files of plugin generated celltype_tecsgen.c
+#
+# Variables for domain (These are defined if domain is specified)
+#  TECS_DOMAINS             domain names
+#  TECS_KERNEL_COBJS        .o files of kernel domain (tecsgen, celltype, plugin)
+#  TECS_USER_COBJS          .o files of user domain (tecsgen, celltype, plugin)
+#  TECS_OUTOFDOMAIN_COBJS   .o files of OutOfDomain (tecsgen, celltype, plugin)
+#  TECSGEN_domain_COBJS     .o files of celltype_tecsgen.c files for each domain
+#  PLUGIN_domain_COBJS      .o files of plugin generated .c files for each domain
+#  CELLTYPE_domain_COBJS    .o files of celltype.c files for each domain
+#  TECSGEN_domain_SRCS      .c files of celltype_domain_tecsgen.c
+#  PLUGIN_domain_SRCS       .c files of plugin generated .c files for each domain
+#  CELLTYPE_domain_SRCS     .c files of celltype.c files for each domain
+
+TECS_IMPORT_CDLS = DispatchSem.cdl ../spikert.cdl ./../kernel_rs.cdl gen/tmp_ItronrsGenCelltypePlugin_post_code.cdl gen/tmp_ItronrsGenCellPlugin_post_code.cdl
+TECS_IMPORT_HEADERS = ./../tecs_kernel/tecs_kernel.h
+TECS_IMPORTS = $(TECS_IMPORT_CDLS) $(TECS_IMPORT_HEADERS)
+
+SIGNATURE_HEADERS = \
+	$(GEN_DIR)/sTaskBody_tecsgen.h \
+	$(GEN_DIR)/sTask_tecsgen.h \
+	$(GEN_DIR)/siTask_tecsgen.h \
+	$(GEN_DIR)/siNotificationHandler_tecsgen.h \
+	$(GEN_DIR)/sMotor_tecsgen.h \
+	$(GEN_DIR)/sSensor_tecsgen.h \
+	$(GEN_DIR)/sPowerdown_tecsgen.h \
+# SIGNATURE_HEADERS terminator
+
+CELLTYPE_TECSGEN_HEADERS = \
+ 	$(GEN_DIR)/tTaskRs_tecsgen.h \
+ 	$(GEN_DIR)/tMotor_tecsgen.h \
+ 	$(GEN_DIR)/tSensor_tecsgen.h \
+ 	$(GEN_DIR)/tMotorbody_tecsgen.h \
+ 	$(GEN_DIR)/tSensorbody_tecsgen.h \
+ 	$(GEN_DIR)/tMMbody_tecsgen.h \
+ 	$(GEN_DIR)/tSSbody_tecsgen.h \
+# CELLTYPE_TECSGEN_HEADERS terminator
+
+CELLTYPE_FACTORY_HEADERS = \
+ 	$(GEN_DIR)/tTaskRs_factory.h \
+ 	$(GEN_DIR)/tMotor_factory.h \
+ 	$(GEN_DIR)/tSensor_factory.h \
+ 	$(GEN_DIR)/tMotorbody_factory.h \
+ 	$(GEN_DIR)/tSensorbody_factory.h \
+ 	$(GEN_DIR)/tMMbody_factory.h \
+ 	$(GEN_DIR)/tSSbody_factory.h \
+# CELLTYPE_FACTORY_HEADERS terminator
+
+# TECS_HEADERS:  headers generated by tecsgen
+TECS_HEADERS = $(SIGNATURE_HEADERS) $(CELLTYPE_TECSGEN_HEADERS) $(CELLTYPE_FACTORY_HEADERS)
+
+TECS_INLINE_HEADERS = \
+ 	tTaskRs_tecsgen.h \
+ 	tMotor_tecsgen.h \
+ 	tSensor_tecsgen.h \
+ 	tMotorbody_tecsgen.h \
+ 	tSensorbody_tecsgen.h \
+ 	tMMbody_tecsgen.h \
+ 	tSSbody_tecsgen.h \
+# TECS_INLINE_HEADERS terminator
+
+PLUGIN_INLINE_HEADERS = \
+# PLUGIN_INLINE_HEADERS terminator
+
+# TECS_COBJS: all objects of TECS, include both user written code and tecsgen automatically generated code
+TECS_COBJS = $(TECSGEN_COBJS) $(PLUGIN_COBJS) $(CELLTYPE_COBJS)
+
+# TECSGEN_COBJS: objects from sources which are automatically generated by tecsgen
+TECSGEN_COBJS = \
+ 	$(_TECS_OBJ_DIR)tTaskRs_tecsgen.o \
+ 	$(_TECS_OBJ_DIR)tMotor_tecsgen.o \
+ 	$(_TECS_OBJ_DIR)tSensor_tecsgen.o \
+ 	$(_TECS_OBJ_DIR)tMotorbody_tecsgen.o \
+ 	$(_TECS_OBJ_DIR)tSensorbody_tecsgen.o \
+ 	$(_TECS_OBJ_DIR)tMMbody_tecsgen.o \
+ 	$(_TECS_OBJ_DIR)tSSbody_tecsgen.o \
+# TECSGEN_COBJS terminator
+
+# PLUGIN_COBJS: objects from sources which are automatically generated by plugin(s)
+PLUGIN_COBJS = \
+# PLUGIN_COBJS terminator
+
+# CELLTYPE_COBJS: objects of celltype code written by user
+CELLTYPE_COBJS = \
+ 	$(_TECS_OBJ_DIR)tTaskRs.o \
+ 	$(_TECS_OBJ_DIR)tMotorbody.o \
+ 	$(_TECS_OBJ_DIR)tSensorbody.o \
+ 	$(_TECS_OBJ_DIR)tMMbody.o \
+ 	$(_TECS_OBJ_DIR)tSSbody.o \
+# CELLTYPE_COBJS terminator
+
+# TECSGEN_SRCS: sources automatically generated by tecsgen
+TECSGEN_SRCS = \
+ 	$(GEN_DIR)/tTaskRs_tecsgen.c \
+ 	$(GEN_DIR)/tMotor_tecsgen.c \
+ 	$(GEN_DIR)/tSensor_tecsgen.c \
+ 	$(GEN_DIR)/tMotorbody_tecsgen.c \
+ 	$(GEN_DIR)/tSensorbody_tecsgen.c \
+ 	$(GEN_DIR)/tMMbody_tecsgen.c \
+ 	$(GEN_DIR)/tSSbody_tecsgen.c \
+# TECSGEN_SRCS terminator
+
+# PLUGIN_SRCS: sources automatically generated by plugin
+PLUGIN_CELLTYPE_SRCS = \
+  $(PLUGIN_CELLTYPE_SRCS)\
+# PLUGIN_CELLTYPE_SRCS terminator
+
+PLUGIN_TECSGEN_SRCS = \
+  $(PLUGIN_TECSGEN_SRCS)\
+# PLUGIN_TECSGEN_SRCS terminator
+
+PLUGIN_SRCS = $(PLUGIN_CELLTYPE_SRCS) $(PLUGIN_TECSGEN_SRCS)
+
+PLUGIN_CELLTYPE_SRCS = \
+# PLUGIN_CELLTYPE_SRCS terminator
+
+PLUGIN_TECSGEN_SRCS = \
+# PLUGIN_TECSGEN_SRCS terminator
+
+# CELLTYPE_SRCS: sources of celltype code written by user
+CELLTYPE_SRCS = \
+ 	tTaskRs.c \
+ 	tMotorbody.c \
+ 	tSensorbody.c \
+ 	tMMbody.c \
+ 	tSSbody.c \
+# CELLTYPE_SRCS terminator
+
+tTaskRs: get_diff_between_gen_and_src
+tTaskRs: gen_use_for_entry_port
+tTaskRs: gen_use_header
+tTaskRs: get_callport_list
+tTaskRs: get_jenerics_alphabet_list
+tTaskRs: gen_rust_cell_structure_header
+tTaskRs: gen_rust_cell_structure_jenerics
+tTaskRs: gen_rust_cell_structure_callport
+tTaskRs: gen_rust_cell_structure_attribute
+tTaskRs: gen_rust_cell_structure_variable
+tTaskRs: gen_rust_cell_structure_ex_ctrl_ref
+tTaskRs: gen_rust_variable_structure
+tTaskRs: gen_rust_sync_variable_structure
+tTaskRs: gen_rust_impl_sync_trait_for_sync_variable_structure
+tTaskRs: gen_rust_entry_structure
+tTaskRs: gen_rust_entryport_structure_initialize
+tTaskRs: gen_mod_in_main_lib_rs_for_celltype
+tTaskRs: gen_rust_cell_structure_header_initialize
+tTaskRs: gen_rust_cell_structure_jenerics_initialize
+tTaskRs: gen_rust_cell_structure_callport_initialize
+tTaskRs: gen_rust_cell_structure_attribute_initialize
+tTaskRs: gen_rust_cell_structure_variable_initialize
+tTaskRs: gen_rust_cell_structure_ex_ctrl_ref_initialize
+tTaskRs: gen_rust_variable_structure_initialize
+tTaskRs: gen_rust_ex_ctrl_ref_initialize
+tTaskRs: gen_rust_entryport_structure_initialize
+tTaskRs: gen_rust_cell_structure_header_initialize
+tTaskRs: gen_rust_cell_structure_jenerics_initialize
+tTaskRs: gen_rust_cell_structure_callport_initialize
+tTaskRs: gen_rust_cell_structure_attribute_initialize
+tTaskRs: gen_rust_cell_structure_variable_initialize
+tTaskRs: gen_rust_cell_structure_ex_ctrl_ref_initialize
+tTaskRs: gen_rust_variable_structure_initialize
+tTaskRs: gen_rust_ex_ctrl_ref_initialize
+tTaskRs: gen_rust_entryport_structure_initialize
+tTaskRs: gen_rust_cell_structure_header_initialize
+tTaskRs: gen_rust_cell_structure_jenerics_initialize
+tTaskRs: gen_rust_cell_structure_callport_initialize
+tTaskRs: gen_rust_cell_structure_attribute_initialize
+tTaskRs: gen_rust_cell_structure_variable_initialize
+tTaskRs: gen_rust_cell_structure_ex_ctrl_ref_initialize
+tTaskRs: gen_rust_variable_structure_initialize
+tTaskRs: gen_rust_ex_ctrl_ref_initialize
+tTaskRs: gen_rust_entryport_structure_initialize
+tTaskRs: gen_rust_cell_structure_header_initialize
+tTaskRs: gen_rust_cell_structure_jenerics_initialize
+tTaskRs: gen_rust_cell_structure_callport_initialize
+tTaskRs: gen_rust_cell_structure_attribute_initialize
+tTaskRs: gen_rust_cell_structure_variable_initialize
+tTaskRs: gen_rust_cell_structure_ex_ctrl_ref_initialize
+tTaskRs: gen_rust_variable_structure_initialize
+tTaskRs: gen_rust_ex_ctrl_ref_initialize
+tTaskRs: gen_rust_entryport_structure_initialize
+tTaskRs: gen_rust_impl_drop_for_lock_guard_structure
+tTaskRs: gen_rust_get_cell_ref
+tTaskRs: gen_use_for_impl_file
+tTaskRs: gen_rust_entryport_function
+tTaskRs: gen_trait_files
+tTaskRs: copy t_task_rs.rs to cargo
+tTaskRs: copy lib.rs to cargo
+# generated automatically by tecsgen.
+# This file is not intended to modify.
+#
+# Makefile variables below are defined.
+#  TECS_IMPORT_CDLS          .cdl files improted by import statement
+#  SIGNATURE_HEADERS         .h files of signature
+#  CELLTYPE_TECSGEN_HEADERS  .h files of celltype
+#  CELLTYPE_FACTORY_HEADERS  .h files of celltype's factory
+#  TECS_HEADERS              summary of .h files above
+#  TECS_INLINE_HEADERS       .h files of celltype inline header
+#  PLUGIN_INLINE_HEADERS     .h files of plugin generated inline header
+#
+#  TECS_COBJS                .o files of TECS
+#                            = $(TECSGEN_COBJS)+$(PLUGIN_COBJS)+$(CELLTYPE_COBJS)
+#                            = $(TECS_KERNEL_COBJS)+$(TECS_USER_COBJS)+$(TECS_OUTOFDOMAIN_COBJS)
+#                            = $(TECSGEN_domain_COBJS)+$(PLUGIN_domain_COBJS)+$(CELLTYPE_domain_COBJS) for each domain
+#
+#  TECSGEN_COBJS             .o files of celltype_tecsgen.c
+#  CELLTYPE_COBJS            .o files of celltype.c (celltype code)
+#  PLUGIN_COBJS              .o files of plugin generated .c files
+#
+#  TECSGEN_SRCS              .c files of celltype_tecsgen.c
+#  CELLTYPE_SRCS             .c files of celltype.c (celltype code)
+#  PLUGIN_SRCS               .c files of plugin generated
+#  PLUGIN_CELLTYPE_SRCS      .c files of plugin generated celltype.c (celltype code)
+#  PLUGIN_TECSGEN_SRCS       .c files of plugin generated celltype_tecsgen.c
+#
+# Variables for domain (These are defined if domain is specified)
+#  TECS_DOMAINS             domain names
+#  TECS_KERNEL_COBJS        .o files of kernel domain (tecsgen, celltype, plugin)
+#  TECS_USER_COBJS          .o files of user domain (tecsgen, celltype, plugin)
+#  TECS_OUTOFDOMAIN_COBJS   .o files of OutOfDomain (tecsgen, celltype, plugin)
+#  TECSGEN_domain_COBJS     .o files of celltype_tecsgen.c files for each domain
+#  PLUGIN_domain_COBJS      .o files of plugin generated .c files for each domain
+#  CELLTYPE_domain_COBJS    .o files of celltype.c files for each domain
+#  TECSGEN_domain_SRCS      .c files of celltype_domain_tecsgen.c
+#  PLUGIN_domain_SRCS       .c files of plugin generated .c files for each domain
+#  CELLTYPE_domain_SRCS     .c files of celltype.c files for each domain
+
+TECS_IMPORT_CDLS = DispatchSem.cdl ../spikert.cdl ./../kernel_rs.cdl gen/tmp_ItronrsGenCelltypePlugin_post_code.cdl gen/tmp_ItronrsGenCellPlugin_post_code.cdl
+TECS_IMPORT_HEADERS = ./../tecs_kernel/tecs_kernel.h
+TECS_IMPORTS = $(TECS_IMPORT_CDLS) $(TECS_IMPORT_HEADERS)
+
+SIGNATURE_HEADERS = \
+	$(GEN_DIR)/sTaskBody_tecsgen.h \
+	$(GEN_DIR)/sTask_tecsgen.h \
+	$(GEN_DIR)/siTask_tecsgen.h \
+	$(GEN_DIR)/siNotificationHandler_tecsgen.h \
+	$(GEN_DIR)/sMotor_tecsgen.h \
+	$(GEN_DIR)/sSensor_tecsgen.h \
+	$(GEN_DIR)/sPowerdown_tecsgen.h \
+# SIGNATURE_HEADERS terminator
+
+CELLTYPE_TECSGEN_HEADERS = \
+ 	$(GEN_DIR)/tTaskRs_tecsgen.h \
+ 	$(GEN_DIR)/tMotor_tecsgen.h \
+ 	$(GEN_DIR)/tSensor_tecsgen.h \
+ 	$(GEN_DIR)/tMotorbody_tecsgen.h \
+ 	$(GEN_DIR)/tSensorbody_tecsgen.h \
+ 	$(GEN_DIR)/tMMbody_tecsgen.h \
+ 	$(GEN_DIR)/tSSbody_tecsgen.h \
+# CELLTYPE_TECSGEN_HEADERS terminator
+
+CELLTYPE_FACTORY_HEADERS = \
+ 	$(GEN_DIR)/tTaskRs_factory.h \
+ 	$(GEN_DIR)/tMotor_factory.h \
+ 	$(GEN_DIR)/tSensor_factory.h \
+ 	$(GEN_DIR)/tMotorbody_factory.h \
+ 	$(GEN_DIR)/tSensorbody_factory.h \
+ 	$(GEN_DIR)/tMMbody_factory.h \
+ 	$(GEN_DIR)/tSSbody_factory.h \
+# CELLTYPE_FACTORY_HEADERS terminator
+
+# TECS_HEADERS:  headers generated by tecsgen
+TECS_HEADERS = $(SIGNATURE_HEADERS) $(CELLTYPE_TECSGEN_HEADERS) $(CELLTYPE_FACTORY_HEADERS)
+
+TECS_INLINE_HEADERS = \
+ 	tTaskRs_tecsgen.h \
+ 	tMotor_tecsgen.h \
+ 	tSensor_tecsgen.h \
+ 	tMotorbody_tecsgen.h \
+ 	tSensorbody_tecsgen.h \
+ 	tMMbody_tecsgen.h \
+ 	tSSbody_tecsgen.h \
+# TECS_INLINE_HEADERS terminator
+
+PLUGIN_INLINE_HEADERS = \
+# PLUGIN_INLINE_HEADERS terminator
+
+# TECS_COBJS: all objects of TECS, include both user written code and tecsgen automatically generated code
+TECS_COBJS = $(TECSGEN_COBJS) $(PLUGIN_COBJS) $(CELLTYPE_COBJS)
+
+# TECSGEN_COBJS: objects from sources which are automatically generated by tecsgen
+TECSGEN_COBJS = \
+ 	$(_TECS_OBJ_DIR)tTaskRs_tecsgen.o \
+ 	$(_TECS_OBJ_DIR)tMotor_tecsgen.o \
+ 	$(_TECS_OBJ_DIR)tSensor_tecsgen.o \
+ 	$(_TECS_OBJ_DIR)tMotorbody_tecsgen.o \
+ 	$(_TECS_OBJ_DIR)tSensorbody_tecsgen.o \
+ 	$(_TECS_OBJ_DIR)tMMbody_tecsgen.o \
+ 	$(_TECS_OBJ_DIR)tSSbody_tecsgen.o \
+# TECSGEN_COBJS terminator
+
+# PLUGIN_COBJS: objects from sources which are automatically generated by plugin(s)
+PLUGIN_COBJS = \
+# PLUGIN_COBJS terminator
+
+# CELLTYPE_COBJS: objects of celltype code written by user
+CELLTYPE_COBJS = \
+ 	$(_TECS_OBJ_DIR)tTaskRs.o \
+ 	$(_TECS_OBJ_DIR)tMotorbody.o \
+ 	$(_TECS_OBJ_DIR)tSensorbody.o \
+ 	$(_TECS_OBJ_DIR)tMMbody.o \
+ 	$(_TECS_OBJ_DIR)tSSbody.o \
+# CELLTYPE_COBJS terminator
+
+# TECSGEN_SRCS: sources automatically generated by tecsgen
+TECSGEN_SRCS = \
+ 	$(GEN_DIR)/tTaskRs_tecsgen.c \
+ 	$(GEN_DIR)/tMotor_tecsgen.c \
+ 	$(GEN_DIR)/tSensor_tecsgen.c \
+ 	$(GEN_DIR)/tMotorbody_tecsgen.c \
+ 	$(GEN_DIR)/tSensorbody_tecsgen.c \
+ 	$(GEN_DIR)/tMMbody_tecsgen.c \
+ 	$(GEN_DIR)/tSSbody_tecsgen.c \
+# TECSGEN_SRCS terminator
+
+# PLUGIN_SRCS: sources automatically generated by plugin
+PLUGIN_CELLTYPE_SRCS = \
+  $(PLUGIN_CELLTYPE_SRCS)\
+# PLUGIN_CELLTYPE_SRCS terminator
+
+PLUGIN_TECSGEN_SRCS = \
+  $(PLUGIN_TECSGEN_SRCS)\
+# PLUGIN_TECSGEN_SRCS terminator
+
+PLUGIN_SRCS = $(PLUGIN_CELLTYPE_SRCS) $(PLUGIN_TECSGEN_SRCS)
+
+PLUGIN_CELLTYPE_SRCS = \
+# PLUGIN_CELLTYPE_SRCS terminator
+
+PLUGIN_TECSGEN_SRCS = \
+# PLUGIN_TECSGEN_SRCS terminator
+
+# CELLTYPE_SRCS: sources of celltype code written by user
+CELLTYPE_SRCS = \
+ 	tTaskRs.c \
+ 	tMotorbody.c \
+ 	tSensorbody.c \
+ 	tMMbody.c \
+ 	tSSbody.c \
+# CELLTYPE_SRCS terminator
+
+tTaskRs: get_diff_between_gen_and_src
+tTaskRs: gen_use_for_entry_port
+tTaskRs: gen_use_header
+tTaskRs: get_callport_list
+tTaskRs: get_jenerics_alphabet_list
+tTaskRs: gen_rust_cell_structure_header
+tTaskRs: gen_rust_cell_structure_jenerics
+tTaskRs: gen_rust_cell_structure_callport
+tTaskRs: gen_rust_cell_structure_attribute
+tTaskRs: gen_rust_cell_structure_variable
+tTaskRs: gen_rust_cell_structure_ex_ctrl_ref
+tTaskRs: gen_rust_variable_structure
+tTaskRs: gen_rust_sync_variable_structure
+tTaskRs: gen_rust_impl_sync_trait_for_sync_variable_structure
+tTaskRs: gen_rust_entry_structure
+tTaskRs: gen_rust_entryport_structure_initialize
+tTaskRs: gen_mod_in_main_lib_rs_for_celltype
+tTaskRs: gen_rust_cell_structure_header_initialize
+tTaskRs: gen_rust_cell_structure_jenerics_initialize
+tTaskRs: gen_rust_cell_structure_callport_initialize
+tTaskRs: gen_rust_cell_structure_attribute_initialize
+tTaskRs: gen_rust_cell_structure_variable_initialize
+tTaskRs: gen_rust_cell_structure_ex_ctrl_ref_initialize
+tTaskRs: gen_rust_variable_structure_initialize
+tTaskRs: gen_rust_ex_ctrl_ref_initialize
+tTaskRs: gen_rust_entryport_structure_initialize
+tTaskRs: gen_rust_cell_structure_header_initialize
+tTaskRs: gen_rust_cell_structure_jenerics_initialize
+tTaskRs: gen_rust_cell_structure_callport_initialize
+tTaskRs: gen_rust_cell_structure_attribute_initialize
+tTaskRs: gen_rust_cell_structure_variable_initialize
+tTaskRs: gen_rust_cell_structure_ex_ctrl_ref_initialize
+tTaskRs: gen_rust_variable_structure_initialize
+tTaskRs: gen_rust_ex_ctrl_ref_initialize
+tTaskRs: gen_rust_entryport_structure_initialize
+tTaskRs: gen_rust_cell_structure_header_initialize
+tTaskRs: gen_rust_cell_structure_jenerics_initialize
+tTaskRs: gen_rust_cell_structure_callport_initialize
+tTaskRs: gen_rust_cell_structure_attribute_initialize
+tTaskRs: gen_rust_cell_structure_variable_initialize
+tTaskRs: gen_rust_cell_structure_ex_ctrl_ref_initialize
+tTaskRs: gen_rust_variable_structure_initialize
+tTaskRs: gen_rust_ex_ctrl_ref_initialize
+tTaskRs: gen_rust_entryport_structure_initialize
+tTaskRs: gen_rust_cell_structure_header_initialize
+tTaskRs: gen_rust_cell_structure_jenerics_initialize
+tTaskRs: gen_rust_cell_structure_callport_initialize
+tTaskRs: gen_rust_cell_structure_attribute_initialize
+tTaskRs: gen_rust_cell_structure_variable_initialize
+tTaskRs: gen_rust_cell_structure_ex_ctrl_ref_initialize
+tTaskRs: gen_rust_variable_structure_initialize
+tTaskRs: gen_rust_ex_ctrl_ref_initialize
+tTaskRs: gen_rust_entryport_structure_initialize
+tTaskRs: gen_rust_impl_drop_for_lock_guard_structure
+tTaskRs: gen_rust_get_cell_ref
+tTaskRs: gen_use_for_impl_file
+tTaskRs: gen_rust_entryport_function
+tTaskRs: gen_trait_files
+tTaskRs: copy t_task_rs.rs to cargo
+tTaskRs: copy lib.rs to cargo
+# generated automatically by tecsgen.
+# This file is not intended to modify.
+#
+# Makefile variables below are defined.
+#  TECS_IMPORT_CDLS          .cdl files improted by import statement
+#  SIGNATURE_HEADERS         .h files of signature
+#  CELLTYPE_TECSGEN_HEADERS  .h files of celltype
+#  CELLTYPE_FACTORY_HEADERS  .h files of celltype's factory
+#  TECS_HEADERS              summary of .h files above
+#  TECS_INLINE_HEADERS       .h files of celltype inline header
+#  PLUGIN_INLINE_HEADERS     .h files of plugin generated inline header
+#
+#  TECS_COBJS                .o files of TECS
+#                            = $(TECSGEN_COBJS)+$(PLUGIN_COBJS)+$(CELLTYPE_COBJS)
+#                            = $(TECS_KERNEL_COBJS)+$(TECS_USER_COBJS)+$(TECS_OUTOFDOMAIN_COBJS)
+#                            = $(TECSGEN_domain_COBJS)+$(PLUGIN_domain_COBJS)+$(CELLTYPE_domain_COBJS) for each domain
+#
+#  TECSGEN_COBJS             .o files of celltype_tecsgen.c
+#  CELLTYPE_COBJS            .o files of celltype.c (celltype code)
+#  PLUGIN_COBJS              .o files of plugin generated .c files
+#
+#  TECSGEN_SRCS              .c files of celltype_tecsgen.c
+#  CELLTYPE_SRCS             .c files of celltype.c (celltype code)
+#  PLUGIN_SRCS               .c files of plugin generated
+#  PLUGIN_CELLTYPE_SRCS      .c files of plugin generated celltype.c (celltype code)
+#  PLUGIN_TECSGEN_SRCS       .c files of plugin generated celltype_tecsgen.c
+#
+# Variables for domain (These are defined if domain is specified)
+#  TECS_DOMAINS             domain names
+#  TECS_KERNEL_COBJS        .o files of kernel domain (tecsgen, celltype, plugin)
+#  TECS_USER_COBJS          .o files of user domain (tecsgen, celltype, plugin)
+#  TECS_OUTOFDOMAIN_COBJS   .o files of OutOfDomain (tecsgen, celltype, plugin)
+#  TECSGEN_domain_COBJS     .o files of celltype_tecsgen.c files for each domain
+#  PLUGIN_domain_COBJS      .o files of plugin generated .c files for each domain
+#  CELLTYPE_domain_COBJS    .o files of celltype.c files for each domain
+#  TECSGEN_domain_SRCS      .c files of celltype_domain_tecsgen.c
+#  PLUGIN_domain_SRCS       .c files of plugin generated .c files for each domain
+#  CELLTYPE_domain_SRCS     .c files of celltype.c files for each domain
+
+TECS_IMPORT_CDLS = DispatchSem.cdl ../spikert.cdl ./../kernel_rs.cdl gen/tmp_ItronrsGenCelltypePlugin_post_code.cdl gen/tmp_ItronrsGenCellPlugin_post_code.cdl
+TECS_IMPORT_HEADERS = ./../tecs_kernel/tecs_kernel.h
+TECS_IMPORTS = $(TECS_IMPORT_CDLS) $(TECS_IMPORT_HEADERS)
+
+SIGNATURE_HEADERS = \
+	$(GEN_DIR)/sTaskBody_tecsgen.h \
+	$(GEN_DIR)/sTask_tecsgen.h \
+	$(GEN_DIR)/siTask_tecsgen.h \
+	$(GEN_DIR)/siNotificationHandler_tecsgen.h \
+	$(GEN_DIR)/sMotor_tecsgen.h \
+	$(GEN_DIR)/sSensor_tecsgen.h \
+	$(GEN_DIR)/sPowerdown_tecsgen.h \
+# SIGNATURE_HEADERS terminator
+
+CELLTYPE_TECSGEN_HEADERS = \
+ 	$(GEN_DIR)/tTaskRs_tecsgen.h \
+ 	$(GEN_DIR)/tMotor_tecsgen.h \
+ 	$(GEN_DIR)/tSensor_tecsgen.h \
+ 	$(GEN_DIR)/tMotorbody_tecsgen.h \
+ 	$(GEN_DIR)/tSensorbody_tecsgen.h \
+ 	$(GEN_DIR)/tMMbody_tecsgen.h \
+ 	$(GEN_DIR)/tSSbody_tecsgen.h \
+# CELLTYPE_TECSGEN_HEADERS terminator
+
+CELLTYPE_FACTORY_HEADERS = \
+ 	$(GEN_DIR)/tTaskRs_factory.h \
+ 	$(GEN_DIR)/tMotor_factory.h \
+ 	$(GEN_DIR)/tSensor_factory.h \
+ 	$(GEN_DIR)/tMotorbody_factory.h \
+ 	$(GEN_DIR)/tSensorbody_factory.h \
+ 	$(GEN_DIR)/tMMbody_factory.h \
+ 	$(GEN_DIR)/tSSbody_factory.h \
+# CELLTYPE_FACTORY_HEADERS terminator
+
+# TECS_HEADERS:  headers generated by tecsgen
+TECS_HEADERS = $(SIGNATURE_HEADERS) $(CELLTYPE_TECSGEN_HEADERS) $(CELLTYPE_FACTORY_HEADERS)
+
+TECS_INLINE_HEADERS = \
+ 	tTaskRs_tecsgen.h \
+ 	tMotor_tecsgen.h \
+ 	tSensor_tecsgen.h \
+ 	tMotorbody_tecsgen.h \
+ 	tSensorbody_tecsgen.h \
+ 	tMMbody_tecsgen.h \
+ 	tSSbody_tecsgen.h \
+# TECS_INLINE_HEADERS terminator
+
+PLUGIN_INLINE_HEADERS = \
+# PLUGIN_INLINE_HEADERS terminator
+
+# TECS_COBJS: all objects of TECS, include both user written code and tecsgen automatically generated code
+TECS_COBJS = $(TECSGEN_COBJS) $(PLUGIN_COBJS) $(CELLTYPE_COBJS)
+
+# TECSGEN_COBJS: objects from sources which are automatically generated by tecsgen
+TECSGEN_COBJS = \
+ 	$(_TECS_OBJ_DIR)tTaskRs_tecsgen.o \
+ 	$(_TECS_OBJ_DIR)tMotor_tecsgen.o \
+ 	$(_TECS_OBJ_DIR)tSensor_tecsgen.o \
+ 	$(_TECS_OBJ_DIR)tMotorbody_tecsgen.o \
+ 	$(_TECS_OBJ_DIR)tSensorbody_tecsgen.o \
+ 	$(_TECS_OBJ_DIR)tMMbody_tecsgen.o \
+ 	$(_TECS_OBJ_DIR)tSSbody_tecsgen.o \
+# TECSGEN_COBJS terminator
+
+# PLUGIN_COBJS: objects from sources which are automatically generated by plugin(s)
+PLUGIN_COBJS = \
+# PLUGIN_COBJS terminator
+
+# CELLTYPE_COBJS: objects of celltype code written by user
+CELLTYPE_COBJS = \
+ 	$(_TECS_OBJ_DIR)tTaskRs.o \
+ 	$(_TECS_OBJ_DIR)tMotorbody.o \
+ 	$(_TECS_OBJ_DIR)tSensorbody.o \
+ 	$(_TECS_OBJ_DIR)tMMbody.o \
+ 	$(_TECS_OBJ_DIR)tSSbody.o \
+# CELLTYPE_COBJS terminator
+
+# TECSGEN_SRCS: sources automatically generated by tecsgen
+TECSGEN_SRCS = \
+ 	$(GEN_DIR)/tTaskRs_tecsgen.c \
+ 	$(GEN_DIR)/tMotor_tecsgen.c \
+ 	$(GEN_DIR)/tSensor_tecsgen.c \
+ 	$(GEN_DIR)/tMotorbody_tecsgen.c \
+ 	$(GEN_DIR)/tSensorbody_tecsgen.c \
+ 	$(GEN_DIR)/tMMbody_tecsgen.c \
+ 	$(GEN_DIR)/tSSbody_tecsgen.c \
+# TECSGEN_SRCS terminator
+
+# PLUGIN_SRCS: sources automatically generated by plugin
+PLUGIN_CELLTYPE_SRCS = \
+  $(PLUGIN_CELLTYPE_SRCS)\
+# PLUGIN_CELLTYPE_SRCS terminator
+
+PLUGIN_TECSGEN_SRCS = \
+  $(PLUGIN_TECSGEN_SRCS)\
+# PLUGIN_TECSGEN_SRCS terminator
+
+PLUGIN_SRCS = $(PLUGIN_CELLTYPE_SRCS) $(PLUGIN_TECSGEN_SRCS)
+
+PLUGIN_CELLTYPE_SRCS = \
+# PLUGIN_CELLTYPE_SRCS terminator
+
+PLUGIN_TECSGEN_SRCS = \
+# PLUGIN_TECSGEN_SRCS terminator
+
+# CELLTYPE_SRCS: sources of celltype code written by user
+CELLTYPE_SRCS = \
+ 	tTaskRs.c \
+ 	tMotorbody.c \
+ 	tSensorbody.c \
+ 	tMMbody.c \
+ 	tSSbody.c \
+# CELLTYPE_SRCS terminator
+
+tMotor: get_diff_between_gen_and_src
+tMotor: gen_use_for_entry_port
+tMotor: gen_use_header
+tMotor: get_callport_list
+tMotor: get_jenerics_alphabet_list
+tMotor: gen_rust_cell_structure_header
+tMotor: gen_rust_cell_structure_jenerics
+tMotor: gen_rust_cell_structure_callport
+tMotor: gen_rust_cell_structure_attribute
+tMotor: gen_rust_cell_structure_variable
+tMotor: gen_rust_cell_structure_ex_ctrl_ref
+tMotor: gen_rust_variable_structure
+tMotor: gen_rust_sync_variable_structure
+tMotor: gen_rust_impl_sync_trait_for_sync_variable_structure
+tMotor: gen_rust_entry_structure
+tMotor: gen_rust_entryport_structure_initialize
+tMotor: gen_mod_in_main_lib_rs_for_celltype
+tMotor: gen_rust_cell_structure_header_initialize
+tMotor: gen_rust_cell_structure_jenerics_initialize
+tMotor: gen_rust_cell_structure_callport_initialize
+tMotor: gen_rust_cell_structure_attribute_initialize
+tMotor: gen_rust_cell_structure_variable_initialize
+tMotor: gen_rust_cell_structure_ex_ctrl_ref_initialize
+tMotor: gen_rust_variable_structure_initialize
+tMotor: gen_rust_ex_ctrl_ref_initialize
+tMotor: gen_rust_entryport_structure_initialize
+tMotor: gen_rust_cell_structure_header_initialize
+tMotor: gen_rust_cell_structure_jenerics_initialize
+tMotor: gen_rust_cell_structure_callport_initialize
+tMotor: gen_rust_cell_structure_attribute_initialize
+tMotor: gen_rust_cell_structure_variable_initialize
+tMotor: gen_rust_cell_structure_ex_ctrl_ref_initialize
+tMotor: gen_rust_variable_structure_initialize
+tMotor: gen_rust_ex_ctrl_ref_initialize
+tMotor: gen_rust_entryport_structure_initialize
+tMotor: gen_rust_impl_drop_for_lock_guard_structure
+tMotor: gen_rust_get_cell_ref
+tMotor: gen_use_for_impl_file
+tMotor: gen_rust_entryport_function
+tMotor: gen_trait_files
+tMotor: copy t_motor.rs to cargo
+tMotor: copy lib.rs to cargo
+# generated automatically by tecsgen.
+# This file is not intended to modify.
+#
+# Makefile variables below are defined.
+#  TECS_IMPORT_CDLS          .cdl files improted by import statement
+#  SIGNATURE_HEADERS         .h files of signature
+#  CELLTYPE_TECSGEN_HEADERS  .h files of celltype
+#  CELLTYPE_FACTORY_HEADERS  .h files of celltype's factory
+#  TECS_HEADERS              summary of .h files above
+#  TECS_INLINE_HEADERS       .h files of celltype inline header
+#  PLUGIN_INLINE_HEADERS     .h files of plugin generated inline header
+#
+#  TECS_COBJS                .o files of TECS
+#                            = $(TECSGEN_COBJS)+$(PLUGIN_COBJS)+$(CELLTYPE_COBJS)
+#                            = $(TECS_KERNEL_COBJS)+$(TECS_USER_COBJS)+$(TECS_OUTOFDOMAIN_COBJS)
+#                            = $(TECSGEN_domain_COBJS)+$(PLUGIN_domain_COBJS)+$(CELLTYPE_domain_COBJS) for each domain
+#
+#  TECSGEN_COBJS             .o files of celltype_tecsgen.c
+#  CELLTYPE_COBJS            .o files of celltype.c (celltype code)
+#  PLUGIN_COBJS              .o files of plugin generated .c files
+#
+#  TECSGEN_SRCS              .c files of celltype_tecsgen.c
+#  CELLTYPE_SRCS             .c files of celltype.c (celltype code)
+#  PLUGIN_SRCS               .c files of plugin generated
+#  PLUGIN_CELLTYPE_SRCS      .c files of plugin generated celltype.c (celltype code)
+#  PLUGIN_TECSGEN_SRCS       .c files of plugin generated celltype_tecsgen.c
+#
+# Variables for domain (These are defined if domain is specified)
+#  TECS_DOMAINS             domain names
+#  TECS_KERNEL_COBJS        .o files of kernel domain (tecsgen, celltype, plugin)
+#  TECS_USER_COBJS          .o files of user domain (tecsgen, celltype, plugin)
+#  TECS_OUTOFDOMAIN_COBJS   .o files of OutOfDomain (tecsgen, celltype, plugin)
+#  TECSGEN_domain_COBJS     .o files of celltype_tecsgen.c files for each domain
+#  PLUGIN_domain_COBJS      .o files of plugin generated .c files for each domain
+#  CELLTYPE_domain_COBJS    .o files of celltype.c files for each domain
+#  TECSGEN_domain_SRCS      .c files of celltype_domain_tecsgen.c
+#  PLUGIN_domain_SRCS       .c files of plugin generated .c files for each domain
+#  CELLTYPE_domain_SRCS     .c files of celltype.c files for each domain
+
+TECS_IMPORT_CDLS = DispatchSem.cdl ../spikert.cdl ./../kernel_rs.cdl gen/tmp_ItronrsGenCelltypePlugin_post_code.cdl gen/tmp_ItronrsGenCellPlugin_post_code.cdl
+TECS_IMPORT_HEADERS = ./../tecs_kernel/tecs_kernel.h
+TECS_IMPORTS = $(TECS_IMPORT_CDLS) $(TECS_IMPORT_HEADERS)
+
+SIGNATURE_HEADERS = \
+	$(GEN_DIR)/sTaskBody_tecsgen.h \
+	$(GEN_DIR)/sTask_tecsgen.h \
+	$(GEN_DIR)/siTask_tecsgen.h \
+	$(GEN_DIR)/siNotificationHandler_tecsgen.h \
+	$(GEN_DIR)/sMotor_tecsgen.h \
+	$(GEN_DIR)/sSensor_tecsgen.h \
+	$(GEN_DIR)/sPowerdown_tecsgen.h \
+# SIGNATURE_HEADERS terminator
+
+CELLTYPE_TECSGEN_HEADERS = \
+ 	$(GEN_DIR)/tTaskRs_tecsgen.h \
+ 	$(GEN_DIR)/tMotor_tecsgen.h \
+ 	$(GEN_DIR)/tSensor_tecsgen.h \
+ 	$(GEN_DIR)/tMotorbody_tecsgen.h \
+ 	$(GEN_DIR)/tSensorbody_tecsgen.h \
+ 	$(GEN_DIR)/tMMbody_tecsgen.h \
+ 	$(GEN_DIR)/tSSbody_tecsgen.h \
+# CELLTYPE_TECSGEN_HEADERS terminator
+
+CELLTYPE_FACTORY_HEADERS = \
+ 	$(GEN_DIR)/tTaskRs_factory.h \
+ 	$(GEN_DIR)/tMotor_factory.h \
+ 	$(GEN_DIR)/tSensor_factory.h \
+ 	$(GEN_DIR)/tMotorbody_factory.h \
+ 	$(GEN_DIR)/tSensorbody_factory.h \
+ 	$(GEN_DIR)/tMMbody_factory.h \
+ 	$(GEN_DIR)/tSSbody_factory.h \
+# CELLTYPE_FACTORY_HEADERS terminator
+
+# TECS_HEADERS:  headers generated by tecsgen
+TECS_HEADERS = $(SIGNATURE_HEADERS) $(CELLTYPE_TECSGEN_HEADERS) $(CELLTYPE_FACTORY_HEADERS)
+
+TECS_INLINE_HEADERS = \
+ 	tTaskRs_tecsgen.h \
+ 	tMotor_tecsgen.h \
+ 	tSensor_tecsgen.h \
+ 	tMotorbody_tecsgen.h \
+ 	tSensorbody_tecsgen.h \
+ 	tMMbody_tecsgen.h \
+ 	tSSbody_tecsgen.h \
+# TECS_INLINE_HEADERS terminator
+
+PLUGIN_INLINE_HEADERS = \
+# PLUGIN_INLINE_HEADERS terminator
+
+# TECS_COBJS: all objects of TECS, include both user written code and tecsgen automatically generated code
+TECS_COBJS = $(TECSGEN_COBJS) $(PLUGIN_COBJS) $(CELLTYPE_COBJS)
+
+# TECSGEN_COBJS: objects from sources which are automatically generated by tecsgen
+TECSGEN_COBJS = \
+ 	$(_TECS_OBJ_DIR)tTaskRs_tecsgen.o \
+ 	$(_TECS_OBJ_DIR)tMotor_tecsgen.o \
+ 	$(_TECS_OBJ_DIR)tSensor_tecsgen.o \
+ 	$(_TECS_OBJ_DIR)tMotorbody_tecsgen.o \
+ 	$(_TECS_OBJ_DIR)tSensorbody_tecsgen.o \
+ 	$(_TECS_OBJ_DIR)tMMbody_tecsgen.o \
+ 	$(_TECS_OBJ_DIR)tSSbody_tecsgen.o \
+# TECSGEN_COBJS terminator
+
+# PLUGIN_COBJS: objects from sources which are automatically generated by plugin(s)
+PLUGIN_COBJS = \
+# PLUGIN_COBJS terminator
+
+# CELLTYPE_COBJS: objects of celltype code written by user
+CELLTYPE_COBJS = \
+ 	$(_TECS_OBJ_DIR)tTaskRs.o \
+ 	$(_TECS_OBJ_DIR)tMotorbody.o \
+ 	$(_TECS_OBJ_DIR)tSensorbody.o \
+ 	$(_TECS_OBJ_DIR)tMMbody.o \
+ 	$(_TECS_OBJ_DIR)tSSbody.o \
+# CELLTYPE_COBJS terminator
+
+# TECSGEN_SRCS: sources automatically generated by tecsgen
+TECSGEN_SRCS = \
+ 	$(GEN_DIR)/tTaskRs_tecsgen.c \
+ 	$(GEN_DIR)/tMotor_tecsgen.c \
+ 	$(GEN_DIR)/tSensor_tecsgen.c \
+ 	$(GEN_DIR)/tMotorbody_tecsgen.c \
+ 	$(GEN_DIR)/tSensorbody_tecsgen.c \
+ 	$(GEN_DIR)/tMMbody_tecsgen.c \
+ 	$(GEN_DIR)/tSSbody_tecsgen.c \
+# TECSGEN_SRCS terminator
+
+# PLUGIN_SRCS: sources automatically generated by plugin
+PLUGIN_CELLTYPE_SRCS = \
+  $(PLUGIN_CELLTYPE_SRCS)\
+# PLUGIN_CELLTYPE_SRCS terminator
+
+PLUGIN_TECSGEN_SRCS = \
+  $(PLUGIN_TECSGEN_SRCS)\
+# PLUGIN_TECSGEN_SRCS terminator
+
+PLUGIN_SRCS = $(PLUGIN_CELLTYPE_SRCS) $(PLUGIN_TECSGEN_SRCS)
+
+PLUGIN_CELLTYPE_SRCS = \
+# PLUGIN_CELLTYPE_SRCS terminator
+
+PLUGIN_TECSGEN_SRCS = \
+# PLUGIN_TECSGEN_SRCS terminator
+
+# CELLTYPE_SRCS: sources of celltype code written by user
+CELLTYPE_SRCS = \
+ 	tTaskRs.c \
+ 	tMotorbody.c \
+ 	tSensorbody.c \
+ 	tMMbody.c \
+ 	tSSbody.c \
+# CELLTYPE_SRCS terminator
+
+tSensor: get_diff_between_gen_and_src
+tSensor: gen_use_for_entry_port
+tSensor: gen_use_header
+tSensor: get_callport_list
+tSensor: get_jenerics_alphabet_list
+tSensor: gen_rust_cell_structure_header
+tSensor: gen_rust_cell_structure_jenerics
+tSensor: gen_rust_cell_structure_callport
+tSensor: gen_rust_cell_structure_attribute
+tSensor: gen_rust_cell_structure_variable
+tSensor: gen_rust_cell_structure_ex_ctrl_ref
+tSensor: gen_rust_variable_structure
+tSensor: gen_rust_sync_variable_structure
+tSensor: gen_rust_impl_sync_trait_for_sync_variable_structure
+tSensor: gen_rust_entry_structure
+tSensor: gen_rust_entryport_structure_initialize
+tSensor: gen_mod_in_main_lib_rs_for_celltype
+tSensor: gen_rust_cell_structure_header_initialize
+tSensor: gen_rust_cell_structure_jenerics_initialize
+tSensor: gen_rust_cell_structure_callport_initialize
+tSensor: gen_rust_cell_structure_attribute_initialize
+tSensor: gen_rust_cell_structure_variable_initialize
+tSensor: gen_rust_cell_structure_ex_ctrl_ref_initialize
+tSensor: gen_rust_variable_structure_initialize
+tSensor: gen_rust_ex_ctrl_ref_initialize
+tSensor: gen_rust_entryport_structure_initialize
+tSensor: gen_rust_cell_structure_header_initialize
+tSensor: gen_rust_cell_structure_jenerics_initialize
+tSensor: gen_rust_cell_structure_callport_initialize
+tSensor: gen_rust_cell_structure_attribute_initialize
+tSensor: gen_rust_cell_structure_variable_initialize
+tSensor: gen_rust_cell_structure_ex_ctrl_ref_initialize
+tSensor: gen_rust_variable_structure_initialize
+tSensor: gen_rust_ex_ctrl_ref_initialize
+tSensor: gen_rust_entryport_structure_initialize
+tSensor: gen_rust_impl_drop_for_lock_guard_structure
+tSensor: gen_rust_get_cell_ref
+tSensor: gen_use_for_impl_file
+tSensor: gen_rust_entryport_function
+tSensor: gen_trait_files
+tSensor: copy t_sensor.rs to cargo
+tSensor: copy lib.rs to cargo
+# generated automatically by tecsgen.
+# This file is not intended to modify.
+#
+# Makefile variables below are defined.
+#  TECS_IMPORT_CDLS          .cdl files improted by import statement
+#  SIGNATURE_HEADERS         .h files of signature
+#  CELLTYPE_TECSGEN_HEADERS  .h files of celltype
+#  CELLTYPE_FACTORY_HEADERS  .h files of celltype's factory
+#  TECS_HEADERS              summary of .h files above
+#  TECS_INLINE_HEADERS       .h files of celltype inline header
+#  PLUGIN_INLINE_HEADERS     .h files of plugin generated inline header
+#
+#  TECS_COBJS                .o files of TECS
+#                            = $(TECSGEN_COBJS)+$(PLUGIN_COBJS)+$(CELLTYPE_COBJS)
+#                            = $(TECS_KERNEL_COBJS)+$(TECS_USER_COBJS)+$(TECS_OUTOFDOMAIN_COBJS)
+#                            = $(TECSGEN_domain_COBJS)+$(PLUGIN_domain_COBJS)+$(CELLTYPE_domain_COBJS) for each domain
+#
+#  TECSGEN_COBJS             .o files of celltype_tecsgen.c
+#  CELLTYPE_COBJS            .o files of celltype.c (celltype code)
+#  PLUGIN_COBJS              .o files of plugin generated .c files
+#
+#  TECSGEN_SRCS              .c files of celltype_tecsgen.c
+#  CELLTYPE_SRCS             .c files of celltype.c (celltype code)
+#  PLUGIN_SRCS               .c files of plugin generated
+#  PLUGIN_CELLTYPE_SRCS      .c files of plugin generated celltype.c (celltype code)
+#  PLUGIN_TECSGEN_SRCS       .c files of plugin generated celltype_tecsgen.c
+#
+# Variables for domain (These are defined if domain is specified)
+#  TECS_DOMAINS             domain names
+#  TECS_KERNEL_COBJS        .o files of kernel domain (tecsgen, celltype, plugin)
+#  TECS_USER_COBJS          .o files of user domain (tecsgen, celltype, plugin)
+#  TECS_OUTOFDOMAIN_COBJS   .o files of OutOfDomain (tecsgen, celltype, plugin)
+#  TECSGEN_domain_COBJS     .o files of celltype_tecsgen.c files for each domain
+#  PLUGIN_domain_COBJS      .o files of plugin generated .c files for each domain
+#  CELLTYPE_domain_COBJS    .o files of celltype.c files for each domain
+#  TECSGEN_domain_SRCS      .c files of celltype_domain_tecsgen.c
+#  PLUGIN_domain_SRCS       .c files of plugin generated .c files for each domain
+#  CELLTYPE_domain_SRCS     .c files of celltype.c files for each domain
+
+TECS_IMPORT_CDLS = DispatchSem.cdl ../spikert.cdl ./../kernel_rs.cdl gen/tmp_ItronrsGenCelltypePlugin_post_code.cdl gen/tmp_ItronrsGenCellPlugin_post_code.cdl
+TECS_IMPORT_HEADERS = ./../tecs_kernel/tecs_kernel.h
+TECS_IMPORTS = $(TECS_IMPORT_CDLS) $(TECS_IMPORT_HEADERS)
+
+SIGNATURE_HEADERS = \
+	$(GEN_DIR)/sTaskBody_tecsgen.h \
+	$(GEN_DIR)/sTask_tecsgen.h \
+	$(GEN_DIR)/siTask_tecsgen.h \
+	$(GEN_DIR)/siNotificationHandler_tecsgen.h \
+	$(GEN_DIR)/sMotor_tecsgen.h \
+	$(GEN_DIR)/sSensor_tecsgen.h \
+	$(GEN_DIR)/sPowerdown_tecsgen.h \
+# SIGNATURE_HEADERS terminator
+
+CELLTYPE_TECSGEN_HEADERS = \
+ 	$(GEN_DIR)/tTaskRs_tecsgen.h \
+ 	$(GEN_DIR)/tMotor_tecsgen.h \
+ 	$(GEN_DIR)/tSensor_tecsgen.h \
+ 	$(GEN_DIR)/tMotorbody_tecsgen.h \
+ 	$(GEN_DIR)/tSensorbody_tecsgen.h \
+ 	$(GEN_DIR)/tMMbody_tecsgen.h \
+ 	$(GEN_DIR)/tSSbody_tecsgen.h \
+# CELLTYPE_TECSGEN_HEADERS terminator
+
+CELLTYPE_FACTORY_HEADERS = \
+ 	$(GEN_DIR)/tTaskRs_factory.h \
+ 	$(GEN_DIR)/tMotor_factory.h \
+ 	$(GEN_DIR)/tSensor_factory.h \
+ 	$(GEN_DIR)/tMotorbody_factory.h \
+ 	$(GEN_DIR)/tSensorbody_factory.h \
+ 	$(GEN_DIR)/tMMbody_factory.h \
+ 	$(GEN_DIR)/tSSbody_factory.h \
+# CELLTYPE_FACTORY_HEADERS terminator
+
+# TECS_HEADERS:  headers generated by tecsgen
+TECS_HEADERS = $(SIGNATURE_HEADERS) $(CELLTYPE_TECSGEN_HEADERS) $(CELLTYPE_FACTORY_HEADERS)
+
+TECS_INLINE_HEADERS = \
+ 	tTaskRs_tecsgen.h \
+ 	tMotor_tecsgen.h \
+ 	tSensor_tecsgen.h \
+ 	tMotorbody_tecsgen.h \
+ 	tSensorbody_tecsgen.h \
+ 	tMMbody_tecsgen.h \
+ 	tSSbody_tecsgen.h \
+# TECS_INLINE_HEADERS terminator
+
+PLUGIN_INLINE_HEADERS = \
+# PLUGIN_INLINE_HEADERS terminator
+
+# TECS_COBJS: all objects of TECS, include both user written code and tecsgen automatically generated code
+TECS_COBJS = $(TECSGEN_COBJS) $(PLUGIN_COBJS) $(CELLTYPE_COBJS)
+
+# TECSGEN_COBJS: objects from sources which are automatically generated by tecsgen
+TECSGEN_COBJS = \
+ 	$(_TECS_OBJ_DIR)tTaskRs_tecsgen.o \
+ 	$(_TECS_OBJ_DIR)tMotor_tecsgen.o \
+ 	$(_TECS_OBJ_DIR)tSensor_tecsgen.o \
+ 	$(_TECS_OBJ_DIR)tMotorbody_tecsgen.o \
+ 	$(_TECS_OBJ_DIR)tSensorbody_tecsgen.o \
+ 	$(_TECS_OBJ_DIR)tMMbody_tecsgen.o \
+ 	$(_TECS_OBJ_DIR)tSSbody_tecsgen.o \
+# TECSGEN_COBJS terminator
+
+# PLUGIN_COBJS: objects from sources which are automatically generated by plugin(s)
+PLUGIN_COBJS = \
+# PLUGIN_COBJS terminator
+
+# CELLTYPE_COBJS: objects of celltype code written by user
+CELLTYPE_COBJS = \
+ 	$(_TECS_OBJ_DIR)tTaskRs.o \
+ 	$(_TECS_OBJ_DIR)tMotorbody.o \
+ 	$(_TECS_OBJ_DIR)tSensorbody.o \
+ 	$(_TECS_OBJ_DIR)tMMbody.o \
+ 	$(_TECS_OBJ_DIR)tSSbody.o \
+# CELLTYPE_COBJS terminator
+
+# TECSGEN_SRCS: sources automatically generated by tecsgen
+TECSGEN_SRCS = \
+ 	$(GEN_DIR)/tTaskRs_tecsgen.c \
+ 	$(GEN_DIR)/tMotor_tecsgen.c \
+ 	$(GEN_DIR)/tSensor_tecsgen.c \
+ 	$(GEN_DIR)/tMotorbody_tecsgen.c \
+ 	$(GEN_DIR)/tSensorbody_tecsgen.c \
+ 	$(GEN_DIR)/tMMbody_tecsgen.c \
+ 	$(GEN_DIR)/tSSbody_tecsgen.c \
+# TECSGEN_SRCS terminator
+
+# PLUGIN_SRCS: sources automatically generated by plugin
+PLUGIN_CELLTYPE_SRCS = \
+  $(PLUGIN_CELLTYPE_SRCS)\
+# PLUGIN_CELLTYPE_SRCS terminator
+
+PLUGIN_TECSGEN_SRCS = \
+  $(PLUGIN_TECSGEN_SRCS)\
+# PLUGIN_TECSGEN_SRCS terminator
+
+PLUGIN_SRCS = $(PLUGIN_CELLTYPE_SRCS) $(PLUGIN_TECSGEN_SRCS)
+
+PLUGIN_CELLTYPE_SRCS = \
+# PLUGIN_CELLTYPE_SRCS terminator
+
+PLUGIN_TECSGEN_SRCS = \
+# PLUGIN_TECSGEN_SRCS terminator
+
+# CELLTYPE_SRCS: sources of celltype code written by user
+CELLTYPE_SRCS = \
+ 	tTaskRs.c \
+ 	tMotorbody.c \
+ 	tSensorbody.c \
+ 	tMMbody.c \
+ 	tSSbody.c \
+# CELLTYPE_SRCS terminator
+
+tMotorbody: get_diff_between_gen_and_src
+tMotorbody: gen_use_for_entry_port
+tMotorbody: gen_use_header
+tMotorbody: get_callport_list
+tMotorbody: get_jenerics_alphabet_list
+tMotorbody: gen_rust_cell_structure_header
+tMotorbody: gen_rust_cell_structure_jenerics
+tMotorbody: gen_rust_cell_structure_callport
+tMotorbody: gen_rust_cell_structure_attribute
+tMotorbody: gen_rust_cell_structure_variable
+tMotorbody: gen_rust_cell_structure_ex_ctrl_ref
+tMotorbody: gen_rust_variable_structure
+tMotorbody: gen_rust_sync_variable_structure
+tMotorbody: gen_rust_impl_sync_trait_for_sync_variable_structure
+tMotorbody: gen_rust_entry_structure
+tMotorbody: gen_rust_entryport_structure_initialize
+tMotorbody: gen_mod_in_main_lib_rs_for_celltype
+tMotorbody: gen_rust_cell_structure_header_initialize
+tMotorbody: gen_rust_cell_structure_jenerics_initialize
+tMotorbody: gen_rust_cell_structure_callport_initialize
+tMotorbody: gen_rust_cell_structure_attribute_initialize
+tMotorbody: gen_rust_cell_structure_variable_initialize
+tMotorbody: gen_rust_cell_structure_ex_ctrl_ref_initialize
+tMotorbody: gen_rust_variable_structure_initialize
+tMotorbody: gen_rust_ex_ctrl_ref_initialize
+tMotorbody: gen_rust_entryport_structure_initialize
+tMotorbody: gen_rust_impl_drop_for_lock_guard_structure
+tMotorbody: gen_rust_get_cell_ref
+tMotorbody: gen_use_for_impl_file
+tMotorbody: gen_rust_entryport_function
+tMotorbody: gen_trait_files
+tMotorbody: copy t_motorbody.rs to cargo
+tMotorbody: copy lib.rs to cargo
+# generated automatically by tecsgen.
+# This file is not intended to modify.
+#
+# Makefile variables below are defined.
+#  TECS_IMPORT_CDLS          .cdl files improted by import statement
+#  SIGNATURE_HEADERS         .h files of signature
+#  CELLTYPE_TECSGEN_HEADERS  .h files of celltype
+#  CELLTYPE_FACTORY_HEADERS  .h files of celltype's factory
+#  TECS_HEADERS              summary of .h files above
+#  TECS_INLINE_HEADERS       .h files of celltype inline header
+#  PLUGIN_INLINE_HEADERS     .h files of plugin generated inline header
+#
+#  TECS_COBJS                .o files of TECS
+#                            = $(TECSGEN_COBJS)+$(PLUGIN_COBJS)+$(CELLTYPE_COBJS)
+#                            = $(TECS_KERNEL_COBJS)+$(TECS_USER_COBJS)+$(TECS_OUTOFDOMAIN_COBJS)
+#                            = $(TECSGEN_domain_COBJS)+$(PLUGIN_domain_COBJS)+$(CELLTYPE_domain_COBJS) for each domain
+#
+#  TECSGEN_COBJS             .o files of celltype_tecsgen.c
+#  CELLTYPE_COBJS            .o files of celltype.c (celltype code)
+#  PLUGIN_COBJS              .o files of plugin generated .c files
+#
+#  TECSGEN_SRCS              .c files of celltype_tecsgen.c
+#  CELLTYPE_SRCS             .c files of celltype.c (celltype code)
+#  PLUGIN_SRCS               .c files of plugin generated
+#  PLUGIN_CELLTYPE_SRCS      .c files of plugin generated celltype.c (celltype code)
+#  PLUGIN_TECSGEN_SRCS       .c files of plugin generated celltype_tecsgen.c
+#
+# Variables for domain (These are defined if domain is specified)
+#  TECS_DOMAINS             domain names
+#  TECS_KERNEL_COBJS        .o files of kernel domain (tecsgen, celltype, plugin)
+#  TECS_USER_COBJS          .o files of user domain (tecsgen, celltype, plugin)
+#  TECS_OUTOFDOMAIN_COBJS   .o files of OutOfDomain (tecsgen, celltype, plugin)
+#  TECSGEN_domain_COBJS     .o files of celltype_tecsgen.c files for each domain
+#  PLUGIN_domain_COBJS      .o files of plugin generated .c files for each domain
+#  CELLTYPE_domain_COBJS    .o files of celltype.c files for each domain
+#  TECSGEN_domain_SRCS      .c files of celltype_domain_tecsgen.c
+#  PLUGIN_domain_SRCS       .c files of plugin generated .c files for each domain
+#  CELLTYPE_domain_SRCS     .c files of celltype.c files for each domain
+
+TECS_IMPORT_CDLS = DispatchSem.cdl ../spikert.cdl ./../kernel_rs.cdl gen/tmp_ItronrsGenCelltypePlugin_post_code.cdl gen/tmp_ItronrsGenCellPlugin_post_code.cdl
+TECS_IMPORT_HEADERS = ./../tecs_kernel/tecs_kernel.h
+TECS_IMPORTS = $(TECS_IMPORT_CDLS) $(TECS_IMPORT_HEADERS)
+
+SIGNATURE_HEADERS = \
+	$(GEN_DIR)/sTaskBody_tecsgen.h \
+	$(GEN_DIR)/sTask_tecsgen.h \
+	$(GEN_DIR)/siTask_tecsgen.h \
+	$(GEN_DIR)/siNotificationHandler_tecsgen.h \
+	$(GEN_DIR)/sMotor_tecsgen.h \
+	$(GEN_DIR)/sSensor_tecsgen.h \
+	$(GEN_DIR)/sPowerdown_tecsgen.h \
+# SIGNATURE_HEADERS terminator
+
+CELLTYPE_TECSGEN_HEADERS = \
+ 	$(GEN_DIR)/tTaskRs_tecsgen.h \
+ 	$(GEN_DIR)/tMotor_tecsgen.h \
+ 	$(GEN_DIR)/tSensor_tecsgen.h \
+ 	$(GEN_DIR)/tMotorbody_tecsgen.h \
+ 	$(GEN_DIR)/tSensorbody_tecsgen.h \
+ 	$(GEN_DIR)/tMMbody_tecsgen.h \
+ 	$(GEN_DIR)/tSSbody_tecsgen.h \
+# CELLTYPE_TECSGEN_HEADERS terminator
+
+CELLTYPE_FACTORY_HEADERS = \
+ 	$(GEN_DIR)/tTaskRs_factory.h \
+ 	$(GEN_DIR)/tMotor_factory.h \
+ 	$(GEN_DIR)/tSensor_factory.h \
+ 	$(GEN_DIR)/tMotorbody_factory.h \
+ 	$(GEN_DIR)/tSensorbody_factory.h \
+ 	$(GEN_DIR)/tMMbody_factory.h \
+ 	$(GEN_DIR)/tSSbody_factory.h \
+# CELLTYPE_FACTORY_HEADERS terminator
+
+# TECS_HEADERS:  headers generated by tecsgen
+TECS_HEADERS = $(SIGNATURE_HEADERS) $(CELLTYPE_TECSGEN_HEADERS) $(CELLTYPE_FACTORY_HEADERS)
+
+TECS_INLINE_HEADERS = \
+ 	tTaskRs_tecsgen.h \
+ 	tMotor_tecsgen.h \
+ 	tSensor_tecsgen.h \
+ 	tMotorbody_tecsgen.h \
+ 	tSensorbody_tecsgen.h \
+ 	tMMbody_tecsgen.h \
+ 	tSSbody_tecsgen.h \
+# TECS_INLINE_HEADERS terminator
+
+PLUGIN_INLINE_HEADERS = \
+# PLUGIN_INLINE_HEADERS terminator
+
+# TECS_COBJS: all objects of TECS, include both user written code and tecsgen automatically generated code
+TECS_COBJS = $(TECSGEN_COBJS) $(PLUGIN_COBJS) $(CELLTYPE_COBJS)
+
+# TECSGEN_COBJS: objects from sources which are automatically generated by tecsgen
+TECSGEN_COBJS = \
+ 	$(_TECS_OBJ_DIR)tTaskRs_tecsgen.o \
+ 	$(_TECS_OBJ_DIR)tMotor_tecsgen.o \
+ 	$(_TECS_OBJ_DIR)tSensor_tecsgen.o \
+ 	$(_TECS_OBJ_DIR)tMotorbody_tecsgen.o \
+ 	$(_TECS_OBJ_DIR)tSensorbody_tecsgen.o \
+ 	$(_TECS_OBJ_DIR)tMMbody_tecsgen.o \
+ 	$(_TECS_OBJ_DIR)tSSbody_tecsgen.o \
+# TECSGEN_COBJS terminator
+
+# PLUGIN_COBJS: objects from sources which are automatically generated by plugin(s)
+PLUGIN_COBJS = \
+# PLUGIN_COBJS terminator
+
+# CELLTYPE_COBJS: objects of celltype code written by user
+CELLTYPE_COBJS = \
+ 	$(_TECS_OBJ_DIR)tTaskRs.o \
+ 	$(_TECS_OBJ_DIR)tMotorbody.o \
+ 	$(_TECS_OBJ_DIR)tSensorbody.o \
+ 	$(_TECS_OBJ_DIR)tMMbody.o \
+ 	$(_TECS_OBJ_DIR)tSSbody.o \
+# CELLTYPE_COBJS terminator
+
+# TECSGEN_SRCS: sources automatically generated by tecsgen
+TECSGEN_SRCS = \
+ 	$(GEN_DIR)/tTaskRs_tecsgen.c \
+ 	$(GEN_DIR)/tMotor_tecsgen.c \
+ 	$(GEN_DIR)/tSensor_tecsgen.c \
+ 	$(GEN_DIR)/tMotorbody_tecsgen.c \
+ 	$(GEN_DIR)/tSensorbody_tecsgen.c \
+ 	$(GEN_DIR)/tMMbody_tecsgen.c \
+ 	$(GEN_DIR)/tSSbody_tecsgen.c \
+# TECSGEN_SRCS terminator
+
+# PLUGIN_SRCS: sources automatically generated by plugin
+PLUGIN_CELLTYPE_SRCS = \
+  $(PLUGIN_CELLTYPE_SRCS)\
+# PLUGIN_CELLTYPE_SRCS terminator
+
+PLUGIN_TECSGEN_SRCS = \
+  $(PLUGIN_TECSGEN_SRCS)\
+# PLUGIN_TECSGEN_SRCS terminator
+
+PLUGIN_SRCS = $(PLUGIN_CELLTYPE_SRCS) $(PLUGIN_TECSGEN_SRCS)
+
+PLUGIN_CELLTYPE_SRCS = \
+# PLUGIN_CELLTYPE_SRCS terminator
+
+PLUGIN_TECSGEN_SRCS = \
+# PLUGIN_TECSGEN_SRCS terminator
+
+# CELLTYPE_SRCS: sources of celltype code written by user
+CELLTYPE_SRCS = \
+ 	tTaskRs.c \
+ 	tMotorbody.c \
+ 	tSensorbody.c \
+ 	tMMbody.c \
+ 	tSSbody.c \
+# CELLTYPE_SRCS terminator
+
+tSensorbody: get_diff_between_gen_and_src
+tSensorbody: gen_use_for_entry_port
+tSensorbody: gen_use_header
+tSensorbody: get_callport_list
+tSensorbody: get_jenerics_alphabet_list
+tSensorbody: gen_rust_cell_structure_header
+tSensorbody: gen_rust_cell_structure_jenerics
+tSensorbody: gen_rust_cell_structure_callport
+tSensorbody: gen_rust_cell_structure_attribute
+tSensorbody: gen_rust_cell_structure_variable
+tSensorbody: gen_rust_cell_structure_ex_ctrl_ref
+tSensorbody: gen_rust_variable_structure
+tSensorbody: gen_rust_sync_variable_structure
+tSensorbody: gen_rust_impl_sync_trait_for_sync_variable_structure
+tSensorbody: gen_rust_entry_structure
+tSensorbody: gen_rust_entryport_structure_initialize
+tSensorbody: gen_mod_in_main_lib_rs_for_celltype
+tSensorbody: gen_rust_cell_structure_header_initialize
+tSensorbody: gen_rust_cell_structure_jenerics_initialize
+tSensorbody: gen_rust_cell_structure_callport_initialize
+tSensorbody: gen_rust_cell_structure_attribute_initialize
+tSensorbody: gen_rust_cell_structure_variable_initialize
+tSensorbody: gen_rust_cell_structure_ex_ctrl_ref_initialize
+tSensorbody: gen_rust_variable_structure_initialize
+tSensorbody: gen_rust_ex_ctrl_ref_initialize
+tSensorbody: gen_rust_entryport_structure_initialize
+tSensorbody: gen_rust_impl_drop_for_lock_guard_structure
+tSensorbody: gen_rust_get_cell_ref
+tSensorbody: gen_use_for_impl_file
+tSensorbody: gen_rust_entryport_function
+tSensorbody: gen_trait_files
+tSensorbody: copy t_sensorbody.rs to cargo
+tSensorbody: copy lib.rs to cargo
+# generated automatically by tecsgen.
+# This file is not intended to modify.
+#
+# Makefile variables below are defined.
+#  TECS_IMPORT_CDLS          .cdl files improted by import statement
+#  SIGNATURE_HEADERS         .h files of signature
+#  CELLTYPE_TECSGEN_HEADERS  .h files of celltype
+#  CELLTYPE_FACTORY_HEADERS  .h files of celltype's factory
+#  TECS_HEADERS              summary of .h files above
+#  TECS_INLINE_HEADERS       .h files of celltype inline header
+#  PLUGIN_INLINE_HEADERS     .h files of plugin generated inline header
+#
+#  TECS_COBJS                .o files of TECS
+#                            = $(TECSGEN_COBJS)+$(PLUGIN_COBJS)+$(CELLTYPE_COBJS)
+#                            = $(TECS_KERNEL_COBJS)+$(TECS_USER_COBJS)+$(TECS_OUTOFDOMAIN_COBJS)
+#                            = $(TECSGEN_domain_COBJS)+$(PLUGIN_domain_COBJS)+$(CELLTYPE_domain_COBJS) for each domain
+#
+#  TECSGEN_COBJS             .o files of celltype_tecsgen.c
+#  CELLTYPE_COBJS            .o files of celltype.c (celltype code)
+#  PLUGIN_COBJS              .o files of plugin generated .c files
+#
+#  TECSGEN_SRCS              .c files of celltype_tecsgen.c
+#  CELLTYPE_SRCS             .c files of celltype.c (celltype code)
+#  PLUGIN_SRCS               .c files of plugin generated
+#  PLUGIN_CELLTYPE_SRCS      .c files of plugin generated celltype.c (celltype code)
+#  PLUGIN_TECSGEN_SRCS       .c files of plugin generated celltype_tecsgen.c
+#
+# Variables for domain (These are defined if domain is specified)
+#  TECS_DOMAINS             domain names
+#  TECS_KERNEL_COBJS        .o files of kernel domain (tecsgen, celltype, plugin)
+#  TECS_USER_COBJS          .o files of user domain (tecsgen, celltype, plugin)
+#  TECS_OUTOFDOMAIN_COBJS   .o files of OutOfDomain (tecsgen, celltype, plugin)
+#  TECSGEN_domain_COBJS     .o files of celltype_tecsgen.c files for each domain
+#  PLUGIN_domain_COBJS      .o files of plugin generated .c files for each domain
+#  CELLTYPE_domain_COBJS    .o files of celltype.c files for each domain
+#  TECSGEN_domain_SRCS      .c files of celltype_domain_tecsgen.c
+#  PLUGIN_domain_SRCS       .c files of plugin generated .c files for each domain
+#  CELLTYPE_domain_SRCS     .c files of celltype.c files for each domain
+
+TECS_IMPORT_CDLS = DispatchSem.cdl ../spikert.cdl ./../kernel_rs.cdl gen/tmp_ItronrsGenCelltypePlugin_post_code.cdl gen/tmp_ItronrsGenCellPlugin_post_code.cdl
+TECS_IMPORT_HEADERS = ./../tecs_kernel/tecs_kernel.h
+TECS_IMPORTS = $(TECS_IMPORT_CDLS) $(TECS_IMPORT_HEADERS)
+
+SIGNATURE_HEADERS = \
+	$(GEN_DIR)/sTaskBody_tecsgen.h \
+	$(GEN_DIR)/sTask_tecsgen.h \
+	$(GEN_DIR)/siTask_tecsgen.h \
+	$(GEN_DIR)/siNotificationHandler_tecsgen.h \
+	$(GEN_DIR)/sMotor_tecsgen.h \
+	$(GEN_DIR)/sSensor_tecsgen.h \
+	$(GEN_DIR)/sPowerdown_tecsgen.h \
+# SIGNATURE_HEADERS terminator
+
+CELLTYPE_TECSGEN_HEADERS = \
+ 	$(GEN_DIR)/tTaskRs_tecsgen.h \
+ 	$(GEN_DIR)/tMotor_tecsgen.h \
+ 	$(GEN_DIR)/tSensor_tecsgen.h \
+ 	$(GEN_DIR)/tMotorbody_tecsgen.h \
+ 	$(GEN_DIR)/tSensorbody_tecsgen.h \
+ 	$(GEN_DIR)/tMMbody_tecsgen.h \
+ 	$(GEN_DIR)/tSSbody_tecsgen.h \
+# CELLTYPE_TECSGEN_HEADERS terminator
+
+CELLTYPE_FACTORY_HEADERS = \
+ 	$(GEN_DIR)/tTaskRs_factory.h \
+ 	$(GEN_DIR)/tMotor_factory.h \
+ 	$(GEN_DIR)/tSensor_factory.h \
+ 	$(GEN_DIR)/tMotorbody_factory.h \
+ 	$(GEN_DIR)/tSensorbody_factory.h \
+ 	$(GEN_DIR)/tMMbody_factory.h \
+ 	$(GEN_DIR)/tSSbody_factory.h \
+# CELLTYPE_FACTORY_HEADERS terminator
+
+# TECS_HEADERS:  headers generated by tecsgen
+TECS_HEADERS = $(SIGNATURE_HEADERS) $(CELLTYPE_TECSGEN_HEADERS) $(CELLTYPE_FACTORY_HEADERS)
+
+TECS_INLINE_HEADERS = \
+ 	tTaskRs_tecsgen.h \
+ 	tMotor_tecsgen.h \
+ 	tSensor_tecsgen.h \
+ 	tMotorbody_tecsgen.h \
+ 	tSensorbody_tecsgen.h \
+ 	tMMbody_tecsgen.h \
+ 	tSSbody_tecsgen.h \
+# TECS_INLINE_HEADERS terminator
+
+PLUGIN_INLINE_HEADERS = \
+# PLUGIN_INLINE_HEADERS terminator
+
+# TECS_COBJS: all objects of TECS, include both user written code and tecsgen automatically generated code
+TECS_COBJS = $(TECSGEN_COBJS) $(PLUGIN_COBJS) $(CELLTYPE_COBJS)
+
+# TECSGEN_COBJS: objects from sources which are automatically generated by tecsgen
+TECSGEN_COBJS = \
+ 	$(_TECS_OBJ_DIR)tTaskRs_tecsgen.o \
+ 	$(_TECS_OBJ_DIR)tMotor_tecsgen.o \
+ 	$(_TECS_OBJ_DIR)tSensor_tecsgen.o \
+ 	$(_TECS_OBJ_DIR)tMotorbody_tecsgen.o \
+ 	$(_TECS_OBJ_DIR)tSensorbody_tecsgen.o \
+ 	$(_TECS_OBJ_DIR)tMMbody_tecsgen.o \
+ 	$(_TECS_OBJ_DIR)tSSbody_tecsgen.o \
+# TECSGEN_COBJS terminator
+
+# PLUGIN_COBJS: objects from sources which are automatically generated by plugin(s)
+PLUGIN_COBJS = \
+# PLUGIN_COBJS terminator
+
+# CELLTYPE_COBJS: objects of celltype code written by user
+CELLTYPE_COBJS = \
+ 	$(_TECS_OBJ_DIR)tTaskRs.o \
+ 	$(_TECS_OBJ_DIR)tMotorbody.o \
+ 	$(_TECS_OBJ_DIR)tSensorbody.o \
+ 	$(_TECS_OBJ_DIR)tMMbody.o \
+ 	$(_TECS_OBJ_DIR)tSSbody.o \
+# CELLTYPE_COBJS terminator
+
+# TECSGEN_SRCS: sources automatically generated by tecsgen
+TECSGEN_SRCS = \
+ 	$(GEN_DIR)/tTaskRs_tecsgen.c \
+ 	$(GEN_DIR)/tMotor_tecsgen.c \
+ 	$(GEN_DIR)/tSensor_tecsgen.c \
+ 	$(GEN_DIR)/tMotorbody_tecsgen.c \
+ 	$(GEN_DIR)/tSensorbody_tecsgen.c \
+ 	$(GEN_DIR)/tMMbody_tecsgen.c \
+ 	$(GEN_DIR)/tSSbody_tecsgen.c \
+# TECSGEN_SRCS terminator
+
+# PLUGIN_SRCS: sources automatically generated by plugin
+PLUGIN_CELLTYPE_SRCS = \
+  $(PLUGIN_CELLTYPE_SRCS)\
+# PLUGIN_CELLTYPE_SRCS terminator
+
+PLUGIN_TECSGEN_SRCS = \
+  $(PLUGIN_TECSGEN_SRCS)\
+# PLUGIN_TECSGEN_SRCS terminator
+
+PLUGIN_SRCS = $(PLUGIN_CELLTYPE_SRCS) $(PLUGIN_TECSGEN_SRCS)
+
+PLUGIN_CELLTYPE_SRCS = \
+# PLUGIN_CELLTYPE_SRCS terminator
+
+PLUGIN_TECSGEN_SRCS = \
+# PLUGIN_TECSGEN_SRCS terminator
+
+# CELLTYPE_SRCS: sources of celltype code written by user
+CELLTYPE_SRCS = \
+ 	tTaskRs.c \
+ 	tMotorbody.c \
+ 	tSensorbody.c \
+ 	tMMbody.c \
+ 	tSSbody.c \
+# CELLTYPE_SRCS terminator
+
+tMMbody: get_diff_between_gen_and_src
+tMMbody: gen_use_for_entry_port
+tMMbody: gen_use_header
+tMMbody: get_callport_list
+tMMbody: get_jenerics_alphabet_list
+tMMbody: gen_rust_cell_structure_header
+tMMbody: gen_rust_cell_structure_jenerics
+tMMbody: gen_rust_cell_structure_callport
+tMMbody: gen_rust_cell_structure_attribute
+tMMbody: gen_rust_cell_structure_variable
+tMMbody: gen_rust_cell_structure_ex_ctrl_ref
+tMMbody: gen_rust_variable_structure
+tMMbody: gen_rust_sync_variable_structure
+tMMbody: gen_rust_impl_sync_trait_for_sync_variable_structure
+tMMbody: gen_rust_entry_structure
+tMMbody: gen_rust_entryport_structure_initialize
+tMMbody: gen_mod_in_main_lib_rs_for_celltype
+tMMbody: gen_rust_cell_structure_header_initialize
+tMMbody: gen_rust_cell_structure_jenerics_initialize
+tMMbody: gen_rust_cell_structure_callport_initialize
+tMMbody: gen_rust_cell_structure_attribute_initialize
+tMMbody: gen_rust_cell_structure_variable_initialize
+tMMbody: gen_rust_cell_structure_ex_ctrl_ref_initialize
+tMMbody: gen_rust_variable_structure_initialize
+tMMbody: gen_rust_ex_ctrl_ref_initialize
+tMMbody: gen_rust_entryport_structure_initialize
+tMMbody: gen_rust_impl_drop_for_lock_guard_structure
+tMMbody: gen_rust_get_cell_ref
+tMMbody: gen_use_for_impl_file
+tMMbody: gen_rust_entryport_function
+tMMbody: gen_trait_files
+tMMbody: copy t_mmbody.rs to cargo
+tMMbody: copy lib.rs to cargo
+# generated automatically by tecsgen.
+# This file is not intended to modify.
+#
+# Makefile variables below are defined.
+#  TECS_IMPORT_CDLS          .cdl files improted by import statement
+#  SIGNATURE_HEADERS         .h files of signature
+#  CELLTYPE_TECSGEN_HEADERS  .h files of celltype
+#  CELLTYPE_FACTORY_HEADERS  .h files of celltype's factory
+#  TECS_HEADERS              summary of .h files above
+#  TECS_INLINE_HEADERS       .h files of celltype inline header
+#  PLUGIN_INLINE_HEADERS     .h files of plugin generated inline header
+#
+#  TECS_COBJS                .o files of TECS
+#                            = $(TECSGEN_COBJS)+$(PLUGIN_COBJS)+$(CELLTYPE_COBJS)
+#                            = $(TECS_KERNEL_COBJS)+$(TECS_USER_COBJS)+$(TECS_OUTOFDOMAIN_COBJS)
+#                            = $(TECSGEN_domain_COBJS)+$(PLUGIN_domain_COBJS)+$(CELLTYPE_domain_COBJS) for each domain
+#
+#  TECSGEN_COBJS             .o files of celltype_tecsgen.c
+#  CELLTYPE_COBJS            .o files of celltype.c (celltype code)
+#  PLUGIN_COBJS              .o files of plugin generated .c files
+#
+#  TECSGEN_SRCS              .c files of celltype_tecsgen.c
+#  CELLTYPE_SRCS             .c files of celltype.c (celltype code)
+#  PLUGIN_SRCS               .c files of plugin generated
+#  PLUGIN_CELLTYPE_SRCS      .c files of plugin generated celltype.c (celltype code)
+#  PLUGIN_TECSGEN_SRCS       .c files of plugin generated celltype_tecsgen.c
+#
+# Variables for domain (These are defined if domain is specified)
+#  TECS_DOMAINS             domain names
+#  TECS_KERNEL_COBJS        .o files of kernel domain (tecsgen, celltype, plugin)
+#  TECS_USER_COBJS          .o files of user domain (tecsgen, celltype, plugin)
+#  TECS_OUTOFDOMAIN_COBJS   .o files of OutOfDomain (tecsgen, celltype, plugin)
+#  TECSGEN_domain_COBJS     .o files of celltype_tecsgen.c files for each domain
+#  PLUGIN_domain_COBJS      .o files of plugin generated .c files for each domain
+#  CELLTYPE_domain_COBJS    .o files of celltype.c files for each domain
+#  TECSGEN_domain_SRCS      .c files of celltype_domain_tecsgen.c
+#  PLUGIN_domain_SRCS       .c files of plugin generated .c files for each domain
+#  CELLTYPE_domain_SRCS     .c files of celltype.c files for each domain
+
+TECS_IMPORT_CDLS = DispatchSem.cdl ../spikert.cdl ./../kernel_rs.cdl gen/tmp_ItronrsGenCelltypePlugin_post_code.cdl gen/tmp_ItronrsGenCellPlugin_post_code.cdl
+TECS_IMPORT_HEADERS = ./../tecs_kernel/tecs_kernel.h
+TECS_IMPORTS = $(TECS_IMPORT_CDLS) $(TECS_IMPORT_HEADERS)
+
+SIGNATURE_HEADERS = \
+	$(GEN_DIR)/sTaskBody_tecsgen.h \
+	$(GEN_DIR)/sTask_tecsgen.h \
+	$(GEN_DIR)/siTask_tecsgen.h \
+	$(GEN_DIR)/siNotificationHandler_tecsgen.h \
+	$(GEN_DIR)/sMotor_tecsgen.h \
+	$(GEN_DIR)/sSensor_tecsgen.h \
+	$(GEN_DIR)/sPowerdown_tecsgen.h \
+# SIGNATURE_HEADERS terminator
+
+CELLTYPE_TECSGEN_HEADERS = \
+ 	$(GEN_DIR)/tTaskRs_tecsgen.h \
+ 	$(GEN_DIR)/tMotor_tecsgen.h \
+ 	$(GEN_DIR)/tSensor_tecsgen.h \
+ 	$(GEN_DIR)/tMotorbody_tecsgen.h \
+ 	$(GEN_DIR)/tSensorbody_tecsgen.h \
+ 	$(GEN_DIR)/tMMbody_tecsgen.h \
+ 	$(GEN_DIR)/tSSbody_tecsgen.h \
+# CELLTYPE_TECSGEN_HEADERS terminator
+
+CELLTYPE_FACTORY_HEADERS = \
+ 	$(GEN_DIR)/tTaskRs_factory.h \
+ 	$(GEN_DIR)/tMotor_factory.h \
+ 	$(GEN_DIR)/tSensor_factory.h \
+ 	$(GEN_DIR)/tMotorbody_factory.h \
+ 	$(GEN_DIR)/tSensorbody_factory.h \
+ 	$(GEN_DIR)/tMMbody_factory.h \
+ 	$(GEN_DIR)/tSSbody_factory.h \
+# CELLTYPE_FACTORY_HEADERS terminator
+
+# TECS_HEADERS:  headers generated by tecsgen
+TECS_HEADERS = $(SIGNATURE_HEADERS) $(CELLTYPE_TECSGEN_HEADERS) $(CELLTYPE_FACTORY_HEADERS)
+
+TECS_INLINE_HEADERS = \
+ 	tTaskRs_tecsgen.h \
+ 	tMotor_tecsgen.h \
+ 	tSensor_tecsgen.h \
+ 	tMotorbody_tecsgen.h \
+ 	tSensorbody_tecsgen.h \
+ 	tMMbody_tecsgen.h \
+ 	tSSbody_tecsgen.h \
+# TECS_INLINE_HEADERS terminator
+
+PLUGIN_INLINE_HEADERS = \
+# PLUGIN_INLINE_HEADERS terminator
+
+# TECS_COBJS: all objects of TECS, include both user written code and tecsgen automatically generated code
+TECS_COBJS = $(TECSGEN_COBJS) $(PLUGIN_COBJS) $(CELLTYPE_COBJS)
+
+# TECSGEN_COBJS: objects from sources which are automatically generated by tecsgen
+TECSGEN_COBJS = \
+ 	$(_TECS_OBJ_DIR)tTaskRs_tecsgen.o \
+ 	$(_TECS_OBJ_DIR)tMotor_tecsgen.o \
+ 	$(_TECS_OBJ_DIR)tSensor_tecsgen.o \
+ 	$(_TECS_OBJ_DIR)tMotorbody_tecsgen.o \
+ 	$(_TECS_OBJ_DIR)tSensorbody_tecsgen.o \
+ 	$(_TECS_OBJ_DIR)tMMbody_tecsgen.o \
+ 	$(_TECS_OBJ_DIR)tSSbody_tecsgen.o \
+# TECSGEN_COBJS terminator
+
+# PLUGIN_COBJS: objects from sources which are automatically generated by plugin(s)
+PLUGIN_COBJS = \
+# PLUGIN_COBJS terminator
+
+# CELLTYPE_COBJS: objects of celltype code written by user
+CELLTYPE_COBJS = \
+ 	$(_TECS_OBJ_DIR)tTaskRs.o \
+ 	$(_TECS_OBJ_DIR)tMotorbody.o \
+ 	$(_TECS_OBJ_DIR)tSensorbody.o \
+ 	$(_TECS_OBJ_DIR)tMMbody.o \
+ 	$(_TECS_OBJ_DIR)tSSbody.o \
+# CELLTYPE_COBJS terminator
+
+# TECSGEN_SRCS: sources automatically generated by tecsgen
+TECSGEN_SRCS = \
+ 	$(GEN_DIR)/tTaskRs_tecsgen.c \
+ 	$(GEN_DIR)/tMotor_tecsgen.c \
+ 	$(GEN_DIR)/tSensor_tecsgen.c \
+ 	$(GEN_DIR)/tMotorbody_tecsgen.c \
+ 	$(GEN_DIR)/tSensorbody_tecsgen.c \
+ 	$(GEN_DIR)/tMMbody_tecsgen.c \
+ 	$(GEN_DIR)/tSSbody_tecsgen.c \
+# TECSGEN_SRCS terminator
+
+# PLUGIN_SRCS: sources automatically generated by plugin
+PLUGIN_CELLTYPE_SRCS = \
+  $(PLUGIN_CELLTYPE_SRCS)\
+# PLUGIN_CELLTYPE_SRCS terminator
+
+PLUGIN_TECSGEN_SRCS = \
+  $(PLUGIN_TECSGEN_SRCS)\
+# PLUGIN_TECSGEN_SRCS terminator
+
+PLUGIN_SRCS = $(PLUGIN_CELLTYPE_SRCS) $(PLUGIN_TECSGEN_SRCS)
+
+PLUGIN_CELLTYPE_SRCS = \
+# PLUGIN_CELLTYPE_SRCS terminator
+
+PLUGIN_TECSGEN_SRCS = \
+# PLUGIN_TECSGEN_SRCS terminator
+
+# CELLTYPE_SRCS: sources of celltype code written by user
+CELLTYPE_SRCS = \
+ 	tTaskRs.c \
+ 	tMotorbody.c \
+ 	tSensorbody.c \
+ 	tMMbody.c \
+ 	tSSbody.c \
+# CELLTYPE_SRCS terminator
+
+tSSbody: get_diff_between_gen_and_src
+tSSbody: gen_use_for_entry_port
+tSSbody: gen_use_header
+tSSbody: get_callport_list
+tSSbody: get_jenerics_alphabet_list
+tSSbody: gen_rust_cell_structure_header
+tSSbody: gen_rust_cell_structure_jenerics
+tSSbody: gen_rust_cell_structure_callport
+tSSbody: gen_rust_cell_structure_attribute
+tSSbody: gen_rust_cell_structure_variable
+tSSbody: gen_rust_cell_structure_ex_ctrl_ref
+tSSbody: gen_rust_variable_structure
+tSSbody: gen_rust_sync_variable_structure
+tSSbody: gen_rust_impl_sync_trait_for_sync_variable_structure
+tSSbody: gen_rust_entry_structure
+tSSbody: gen_rust_entryport_structure_initialize
+tSSbody: gen_mod_in_main_lib_rs_for_celltype
+tSSbody: gen_rust_cell_structure_header_initialize
+tSSbody: gen_rust_cell_structure_jenerics_initialize
+tSSbody: gen_rust_cell_structure_callport_initialize
+tSSbody: gen_rust_cell_structure_attribute_initialize
+tSSbody: gen_rust_cell_structure_variable_initialize
+tSSbody: gen_rust_cell_structure_ex_ctrl_ref_initialize
+tSSbody: gen_rust_variable_structure_initialize
+tSSbody: gen_rust_ex_ctrl_ref_initialize
+tSSbody: gen_rust_entryport_structure_initialize
+tSSbody: gen_rust_impl_drop_for_lock_guard_structure
+tSSbody: gen_rust_get_cell_ref
+tSSbody: gen_use_for_impl_file
+tSSbody: gen_rust_entryport_function
+tSSbody: gen_trait_files
+tSSbody: copy t_ssbody.rs to cargo
+tSSbody: copy lib.rs to cargo
+# generated automatically by tecsgen.
+# This file is not intended to modify.
+#
+# Makefile variables below are defined.
+#  TECS_IMPORT_CDLS          .cdl files improted by import statement
+#  SIGNATURE_HEADERS         .h files of signature
+#  CELLTYPE_TECSGEN_HEADERS  .h files of celltype
+#  CELLTYPE_FACTORY_HEADERS  .h files of celltype's factory
+#  TECS_HEADERS              summary of .h files above
+#  TECS_INLINE_HEADERS       .h files of celltype inline header
+#  PLUGIN_INLINE_HEADERS     .h files of plugin generated inline header
+#
+#  TECS_COBJS                .o files of TECS
+#                            = $(TECSGEN_COBJS)+$(PLUGIN_COBJS)+$(CELLTYPE_COBJS)
+#                            = $(TECS_KERNEL_COBJS)+$(TECS_USER_COBJS)+$(TECS_OUTOFDOMAIN_COBJS)
+#                            = $(TECSGEN_domain_COBJS)+$(PLUGIN_domain_COBJS)+$(CELLTYPE_domain_COBJS) for each domain
+#
+#  TECSGEN_COBJS             .o files of celltype_tecsgen.c
+#  CELLTYPE_COBJS            .o files of celltype.c (celltype code)
+#  PLUGIN_COBJS              .o files of plugin generated .c files
+#
+#  TECSGEN_SRCS              .c files of celltype_tecsgen.c
+#  CELLTYPE_SRCS             .c files of celltype.c (celltype code)
+#  PLUGIN_SRCS               .c files of plugin generated
+#  PLUGIN_CELLTYPE_SRCS      .c files of plugin generated celltype.c (celltype code)
+#  PLUGIN_TECSGEN_SRCS       .c files of plugin generated celltype_tecsgen.c
+#
+# Variables for domain (These are defined if domain is specified)
+#  TECS_DOMAINS             domain names
+#  TECS_KERNEL_COBJS        .o files of kernel domain (tecsgen, celltype, plugin)
+#  TECS_USER_COBJS          .o files of user domain (tecsgen, celltype, plugin)
+#  TECS_OUTOFDOMAIN_COBJS   .o files of OutOfDomain (tecsgen, celltype, plugin)
+#  TECSGEN_domain_COBJS     .o files of celltype_tecsgen.c files for each domain
+#  PLUGIN_domain_COBJS      .o files of plugin generated .c files for each domain
+#  CELLTYPE_domain_COBJS    .o files of celltype.c files for each domain
+#  TECSGEN_domain_SRCS      .c files of celltype_domain_tecsgen.c
+#  PLUGIN_domain_SRCS       .c files of plugin generated .c files for each domain
+#  CELLTYPE_domain_SRCS     .c files of celltype.c files for each domain
+
+TECS_IMPORT_CDLS = DispatchSem.cdl ../spikert.cdl ./../kernel_rs.cdl gen/tmp_ItronrsGenCelltypePlugin_post_code.cdl gen/tmp_ItronrsGenCellPlugin_post_code.cdl
+TECS_IMPORT_HEADERS = ./../tecs_kernel/tecs_kernel.h
+TECS_IMPORTS = $(TECS_IMPORT_CDLS) $(TECS_IMPORT_HEADERS)
+
+SIGNATURE_HEADERS = \
+	$(GEN_DIR)/sTaskBody_tecsgen.h \
+	$(GEN_DIR)/sTask_tecsgen.h \
+	$(GEN_DIR)/siTask_tecsgen.h \
+	$(GEN_DIR)/siNotificationHandler_tecsgen.h \
+	$(GEN_DIR)/sMotor_tecsgen.h \
+	$(GEN_DIR)/sSensor_tecsgen.h \
+	$(GEN_DIR)/sPowerdown_tecsgen.h \
+# SIGNATURE_HEADERS terminator
+
+CELLTYPE_TECSGEN_HEADERS = \
+ 	$(GEN_DIR)/tTaskRs_tecsgen.h \
+ 	$(GEN_DIR)/tMotor_tecsgen.h \
+ 	$(GEN_DIR)/tSensor_tecsgen.h \
+ 	$(GEN_DIR)/tMotorbody_tecsgen.h \
+ 	$(GEN_DIR)/tSensorbody_tecsgen.h \
+ 	$(GEN_DIR)/tMMbody_tecsgen.h \
+ 	$(GEN_DIR)/tSSbody_tecsgen.h \
+# CELLTYPE_TECSGEN_HEADERS terminator
+
+CELLTYPE_FACTORY_HEADERS = \
+ 	$(GEN_DIR)/tTaskRs_factory.h \
+ 	$(GEN_DIR)/tMotor_factory.h \
+ 	$(GEN_DIR)/tSensor_factory.h \
+ 	$(GEN_DIR)/tMotorbody_factory.h \
+ 	$(GEN_DIR)/tSensorbody_factory.h \
+ 	$(GEN_DIR)/tMMbody_factory.h \
+ 	$(GEN_DIR)/tSSbody_factory.h \
+# CELLTYPE_FACTORY_HEADERS terminator
+
+# TECS_HEADERS:  headers generated by tecsgen
+TECS_HEADERS = $(SIGNATURE_HEADERS) $(CELLTYPE_TECSGEN_HEADERS) $(CELLTYPE_FACTORY_HEADERS)
+
+TECS_INLINE_HEADERS = \
+ 	tTaskRs_tecsgen.h \
+ 	tMotor_tecsgen.h \
+ 	tSensor_tecsgen.h \
+ 	tMotorbody_tecsgen.h \
+ 	tSensorbody_tecsgen.h \
+ 	tMMbody_tecsgen.h \
+ 	tSSbody_tecsgen.h \
+# TECS_INLINE_HEADERS terminator
+
+PLUGIN_INLINE_HEADERS = \
+# PLUGIN_INLINE_HEADERS terminator
+
+# TECS_COBJS: all objects of TECS, include both user written code and tecsgen automatically generated code
+TECS_COBJS = $(TECSGEN_COBJS) $(PLUGIN_COBJS) $(CELLTYPE_COBJS)
+
+# TECSGEN_COBJS: objects from sources which are automatically generated by tecsgen
+TECSGEN_COBJS = \
+ 	$(_TECS_OBJ_DIR)tTaskRs_tecsgen.o \
+ 	$(_TECS_OBJ_DIR)tMotor_tecsgen.o \
+ 	$(_TECS_OBJ_DIR)tSensor_tecsgen.o \
+ 	$(_TECS_OBJ_DIR)tMotorbody_tecsgen.o \
+ 	$(_TECS_OBJ_DIR)tSensorbody_tecsgen.o \
+ 	$(_TECS_OBJ_DIR)tMMbody_tecsgen.o \
+ 	$(_TECS_OBJ_DIR)tSSbody_tecsgen.o \
+# TECSGEN_COBJS terminator
+
+# PLUGIN_COBJS: objects from sources which are automatically generated by plugin(s)
+PLUGIN_COBJS = \
+# PLUGIN_COBJS terminator
+
+# CELLTYPE_COBJS: objects of celltype code written by user
+CELLTYPE_COBJS = \
+ 	$(_TECS_OBJ_DIR)tTaskRs.o \
+ 	$(_TECS_OBJ_DIR)tMotorbody.o \
+ 	$(_TECS_OBJ_DIR)tSensorbody.o \
+ 	$(_TECS_OBJ_DIR)tMMbody.o \
+ 	$(_TECS_OBJ_DIR)tSSbody.o \
+# CELLTYPE_COBJS terminator
+
+# TECSGEN_SRCS: sources automatically generated by tecsgen
+TECSGEN_SRCS = \
+ 	$(GEN_DIR)/tTaskRs_tecsgen.c \
+ 	$(GEN_DIR)/tMotor_tecsgen.c \
+ 	$(GEN_DIR)/tSensor_tecsgen.c \
+ 	$(GEN_DIR)/tMotorbody_tecsgen.c \
+ 	$(GEN_DIR)/tSensorbody_tecsgen.c \
+ 	$(GEN_DIR)/tMMbody_tecsgen.c \
+ 	$(GEN_DIR)/tSSbody_tecsgen.c \
+# TECSGEN_SRCS terminator
+
+# PLUGIN_SRCS: sources automatically generated by plugin
+PLUGIN_CELLTYPE_SRCS = \
+  $(PLUGIN_CELLTYPE_SRCS)\
+# PLUGIN_CELLTYPE_SRCS terminator
+
+PLUGIN_TECSGEN_SRCS = \
+  $(PLUGIN_TECSGEN_SRCS)\
+# PLUGIN_TECSGEN_SRCS terminator
+
+PLUGIN_SRCS = $(PLUGIN_CELLTYPE_SRCS) $(PLUGIN_TECSGEN_SRCS)
+
+PLUGIN_CELLTYPE_SRCS = \
+# PLUGIN_CELLTYPE_SRCS terminator
+
+PLUGIN_TECSGEN_SRCS = \
+# PLUGIN_TECSGEN_SRCS terminator
+
+# CELLTYPE_SRCS: sources of celltype code written by user
+CELLTYPE_SRCS = \
+ 	tTaskRs.c \
+ 	tMotorbody.c \
+ 	tSensorbody.c \
+ 	tMMbody.c \
+ 	tSSbody.c \
+# CELLTYPE_SRCS terminator
+

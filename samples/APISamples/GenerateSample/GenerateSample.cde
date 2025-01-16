@@ -1,0 +1,257 @@
+__tool_info__ ("tecsgen") {
+    "tecscde_version"     : "0.5.1.0",
+    "cde_format_version"  : "0.5.0.0",
+    "save_date"           : "2024-12-17T19:38:30+09:00",
+    "base_dir" : [
+        "/home/yosshy/tecsgen-V1.9.0-Beta5/tecsgen/samples/APISamples/GenerateSample"
+    ],
+    "define_macro" : [
+
+    ],
+   "import_path" : [
+        ".",
+        "../",
+        "../tecs_kernel/"
+    ],
+    "direct_import" : [
+        "GenerateSample.cdl"
+    ]
+}
+
+
+/*************************************************
+ *         TOOL INFORMATION FOR TECSCDE          *
+ *     This  information is used by tecscde      *
+ *  please don't touch if you are not familiar   *
+ ************************************************/
+__tool_info__ ("tecscde") {
+    "paper" : {
+       "type" : "paper",
+       "size" :  "A3",
+       "orientation" :  "LANDSCAPE"
+    },
+    "cell_list" : [
+        {       /** cell_list[ 0 ] **/
+            "type"     : "cell_location",
+            "name"     : "MotorA",
+            "location" : [ 83.0, 86.0, 25.0, 15.0 ],
+            "region"   : "::",
+            "port_location" : [
+                {
+                    "type"      : "port_location",
+                    "port_name" : "eMotor",
+                    "edge"      : "EDGE_TOP",
+                    "offset"    : 12.0
+                }
+            ]
+        },
+        {       /** cell_list[ 1 ] **/
+            "type"     : "cell_location",
+            "name"     : "MotorB",
+            "location" : [ 123.0, 86.0, 25.0, 15.0 ],
+            "region"   : "::",
+            "port_location" : [
+                {
+                    "type"      : "port_location",
+                    "port_name" : "eMotor",
+                    "edge"      : "EDGE_TOP",
+                    "offset"    : 12.0
+                }
+            ]
+        },
+        {       /** cell_list[ 2 ] **/
+            "type"     : "cell_location",
+            "name"     : "Sensor",
+            "location" : [ 164.0, 86.0, 25.0, 15.0 ],
+            "region"   : "::",
+            "port_location" : [
+                {
+                    "type"      : "port_location",
+                    "port_name" : "eSensor",
+                    "edge"      : "EDGE_TOP",
+                    "offset"    : 12.0
+                }
+            ]
+        },
+        {       /** cell_list[ 3 ] **/
+            "type"     : "cell_location",
+            "name"     : "Taskbody",
+            "location" : [ 123.0, 48.0, 25.0, 15.0 ],
+            "region"   : "::",
+            "port_location" : [
+                {
+                    "type"      : "port_location",
+                    "port_name" : "cMotorA",
+                    "edge"      : "EDGE_BOTTOM",
+                    "offset"    : 4
+                },
+                {
+                    "type"      : "port_location",
+                    "port_name" : "cMotorB",
+                    "edge"      : "EDGE_BOTTOM",
+                    "offset"    : 12.0
+                },
+                {
+                    "type"      : "port_location",
+                    "port_name" : "cSensor",
+                    "edge"      : "EDGE_BOTTOM",
+                    "offset"    : 22.0
+                },
+                {
+                    "type"      : "port_location",
+                    "port_name" : "eTaskbody",
+                    "edge"      : "EDGE_TOP",
+                    "offset"    : 13.0
+                }
+            ]
+        },
+        {       /** cell_list[ 4 ] **/
+            "type"     : "cell_location",
+            "name"     : "Task1",
+            "location" : [ 123.0, 16.0, 25.0, 15.0 ],
+            "region"   : "::",
+            "port_location" : [
+                {
+                    "type"      : "port_location",
+                    "port_name" : "cTaskBody",
+                    "edge"      : "EDGE_BOTTOM",
+                    "offset"    : 5.0
+                },
+                {
+                    "type"      : "port_location",
+                    "port_name" : "eTask",
+                    "edge"      : "EDGE_TOP",
+                    "offset"    : 4
+                },
+                {
+                    "type"      : "port_location",
+                    "port_name" : "eiTask",
+                    "edge"      : "EDGE_TOP",
+                    "offset"    : 8
+                },
+                {
+                    "type"      : "port_location",
+                    "port_name" : "eiActivateNotificationHandler",
+                    "edge"      : "EDGE_TOP",
+                    "offset"    : 12
+                },
+                {
+                    "type"      : "port_location",
+                    "port_name" : "eiWakeUpNotificationHandler",
+                    "edge"      : "EDGE_TOP",
+                    "offset"    : 16
+                }
+            ]
+        }
+    ],
+    "join_list" : [
+        {       /** join_list[ 0 ] **/
+            "type"        : "join_location",
+            "call_cell"   : "Taskbody",
+            "call_region" : "::",
+            "call_port"   : "cMotorA",
+            "entry_cell"  : "MotorA",
+            "entry_region": "::",
+            "entry_port"  : "eMotor",
+            "bar_list"    : [
+                {
+                     "type"     : "VBar",
+                     "position" : 73.0
+                },                {
+                     "type"     : "HBar",
+                     "position" : 121.0
+                },                {
+                     "type"     : "VBar",
+                     "position" : 73.0
+                },                {
+                     "type"     : "HBar",
+                     "position" : 95.0
+                },                {
+                     "type"     : "VBar",
+                     "position" : 86.0
+                }
+            ]
+        },
+        {       /** join_list[ 1 ] **/
+            "type"        : "join_location",
+            "call_cell"   : "Taskbody",
+            "call_region" : "::",
+            "call_port"   : "cMotorB",
+            "entry_cell"  : "MotorB",
+            "entry_region": "::",
+            "entry_port"  : "eMotor",
+            "bar_list"    : [
+                {
+                     "type"     : "VBar",
+                     "position" : 73.0
+                },                {
+                     "type"     : "HBar",
+                     "position" : 135.0
+                },                {
+                     "type"     : "VBar",
+                     "position" : 76.0
+                },                {
+                     "type"     : "HBar",
+                     "position" : 135.0
+                },                {
+                     "type"     : "VBar",
+                     "position" : 86.0
+                }
+            ]
+        },
+        {       /** join_list[ 2 ] **/
+            "type"        : "join_location",
+            "call_cell"   : "Taskbody",
+            "call_region" : "::",
+            "call_port"   : "cSensor",
+            "entry_cell"  : "Sensor",
+            "entry_region": "::",
+            "entry_port"  : "eSensor",
+            "bar_list"    : [
+                {
+                     "type"     : "VBar",
+                     "position" : 73.0
+                },                {
+                     "type"     : "HBar",
+                     "position" : 176.0
+                },                {
+                     "type"     : "VBar",
+                     "position" : 76.0
+                },                {
+                     "type"     : "HBar",
+                     "position" : 176.0
+                },                {
+                     "type"     : "VBar",
+                     "position" : 86.0
+                }
+            ]
+        },
+        {       /** join_list[ 3 ] **/
+            "type"        : "join_location",
+            "call_cell"   : "Task1",
+            "call_region" : "::",
+            "call_port"   : "cTaskBody",
+            "entry_cell"  : "Taskbody",
+            "entry_region": "::",
+            "entry_port"  : "eTaskbody",
+            "bar_list"    : [
+                {
+                     "type"     : "VBar",
+                     "position" : 33.0
+                },                {
+                     "type"     : "HBar",
+                     "position" : 136.0
+                },                {
+                     "type"     : "VBar",
+                     "position" : 41.0
+                },                {
+                     "type"     : "HBar",
+                     "position" : 136.0
+                },                {
+                     "type"     : "VBar",
+                     "position" : 48.0
+                }
+            ]
+        }
+    ]
+}

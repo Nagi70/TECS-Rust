@@ -1,5 +1,6 @@
 use itron::mutex::MutexRef;
-use crate::tecs_mutex::*;
+use itron::semaphore::SemaphoreRef;
+use crate::tecs_ex_ctrl::*;
 use core::cell::UnsafeCell;
 use core::num::NonZeroI32;
 use crate::kernel_cfg::*;
@@ -7,7 +8,7 @@ pub struct TSensor<'a>
 {
 	port: PbioPortIdT,
 	variable: &'a SyncTSensorVar<'a>,
-	mutex_ref: &'a (dyn LockableForMutex + Sync + Send),
+	ex_ctrl_ref: &'a (dyn LockManager + Sync + Send),
 }
 
 pub struct TSensorVar<'a>{
@@ -25,17 +26,18 @@ pub struct ESensorForTSensor<'a>{
 }
 
 pub struct LockGuardForTSensor<'a>{
-	mutex_ref: &'a (dyn LockableForMutex + Sync + Send),
+	ex_ctrl_ref: &'a (dyn LockManager + Sync + Send),
 }
 
 #[link_section = ".rodata"]
 pub static SENSOR1: TSensor = TSensor {
 	port: PbioPortIdT::PbioPortIdC,
 	variable: &SENSOR1VAR,
-	mutex_ref: &DUMMY_MUTEX_REF,
+	ex_ctrl_ref: &DUMMY_EX_CTRL_REF,
 };
 
 pub static SENSOR1VAR: SyncTSensorVar = SyncTSensorVar {
+	/// This UnsafeCell is safe because it is only accessed by one task due to the call flow and component structure of TECS.
 	unsafe_var: UnsafeCell::new(TSensorVar {
 		ult: None,
 	}),
@@ -50,18 +52,19 @@ pub static ESENSORFORSENSOR1: ESensorForTSensor = ESensorForTSensor {
 pub static SENSOR2: TSensor = TSensor {
 	port: PbioPortIdT::PbioPortIdD,
 	variable: &SENSOR2VAR,
-	mutex_ref: &SENSOR2_MUTEX_REF,
+	ex_ctrl_ref: &SENSOR2_EX_CTRL_REF,
 };
 
 pub static SENSOR2VAR: SyncTSensorVar = SyncTSensorVar {
+	/// This UnsafeCell is accessed by multiple tasks, but is safe because it is operated exclusively by the semaphore object.
 	unsafe_var: UnsafeCell::new(TSensorVar {
 		ult: None,
 	}),
 };
 
 #[link_section = ".rodata"]
-pub static SENSOR2_MUTEX_REF: TECSMutexRef = TECSMutexRef{
-	inner: unsafe{MutexRef::from_raw_nonnull(NonZeroI32::new(TECS_RUST_MUTEX_2).unwrap())},
+pub static SENSOR2_EX_CTRL_REF: TECSSemaphoreRef = TECSSemaphoreRef{
+	inner: unsafe{SemaphoreRef::from_raw_nonnull(NonZeroI32::new(TECS_RUST_EX_CTRL_2).unwrap())},
 };
 
 #[link_section = ".rodata"]
@@ -71,19 +74,19 @@ pub static ESENSORFORSENSOR2: ESensorForTSensor = ESensorForTSensor {
 
 impl<'a> Drop for LockGuardForTSensor<'a> {
 	fn drop(&mut self){
-		self.mutex_ref.unlock();
+		self.ex_ctrl_ref.unlock();
 	}
 }
 
 impl<'a> TSensor<'a> {
 	#[inline]
 	pub fn get_cell_ref(&'static self) -> (&'static PbioPortIdT, &'static mut TSensorVar, LockGuardForTSensor) {
-		self.mutex_ref.lock();
+		self.ex_ctrl_ref.lock();
 		(
 			&self.port,
 			unsafe{&mut *self.variable.unsafe_var.get()},
 			LockGuardForTSensor{
-				mutex_ref: self.mutex_ref,
+				ex_ctrl_ref: self.ex_ctrl_ref,
 			}
 		)
 	}

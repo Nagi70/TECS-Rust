@@ -1142,6 +1142,9 @@ module TECSFlow
     cell_list.each do |cell|
       cell.get_celltype.get_port_list.each do |port|
         next if port.get_port_type == :ENTRY
+
+        next if cell.get_join_list.get_item(port.get_name) == nil
+
         callee_cell_name = cell.get_join_list.get_item(port.get_name).get_cell.get_name.to_s
 
         # 呼び先のセルがアクセスされるアクティブセルの数をカウント
