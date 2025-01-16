@@ -92,6 +92,7 @@ class Celltype < NSBDNode # < Nestable
 #                            @domain_class_roots2[ sub_region(domain_or_class_root) ] = [ cell ]
 #                            sub_region: クラスルートまたはドメインルートの、いずれか末端側のリージョン
 # @@domain_class_roots::Hash { sub_region => [ celltype ] }   # { region => celltype }
+# @impl_lang : このセルタイプの振る舞いを実装する言語
 
   include PluginModule
   include CelltypePluginModule
@@ -188,6 +189,9 @@ class Celltype < NSBDNode # < Nestable
 
     @included_header = {}
     @domain_roots = {}
+
+    @impl_lang = :C
+
     @@celltype_list << self
   end
 
@@ -828,8 +832,14 @@ class Celltype < NSBDNode # < Nestable
 
   #=== Celltype# コード生成する必要があるか判定
   # セルの個数が 0 ならセルタイプコードは生成不要
+  # このセルタイプをC言語以外で実装する場合、生成は不要（プラグインによって生成されるため）
   def need_generate?
-    @n_cell_gen > 0
+    @n_cell_gen > 0 && @impl_lang == :C
+  end
+
+  #== Celltype# このセルタイプを実装する言語を設定する
+  def set_impl_lang lang
+    @impl_lang = lang
   end
 
   #=== Celltype# require 呼び口の結合を行う

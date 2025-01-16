@@ -59,6 +59,7 @@ class RustGenCelltypePlugin < CelltypePlugin
       @plugin_arg_list = {}
       @cell_list =[]
       @dyn_mutex_ref = false
+      celltype.set_impl_lang :Rust
     end
   
     #=== 新しいセル

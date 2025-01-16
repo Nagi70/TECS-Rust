@@ -58,6 +58,7 @@ class ItronrsGenCelltypePlugin < RustGenCelltypePlugin
       @plugin_arg_str = CDLString.remove_dquote option
       @plugin_arg_list = {}
       @cell_list =[]
+      celltype.set_impl_lang :Rust
     end
   
     #=== 新しいセル
