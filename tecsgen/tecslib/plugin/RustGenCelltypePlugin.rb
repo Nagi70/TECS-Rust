@@ -1529,6 +1529,7 @@ class RustGenCelltypePlugin < CelltypePlugin
 
         end
 
+        # return if @celltype.get_cell_list.length > 0
         
         # 最初に呼び出されたときに、一度だけ、生成するファイル
         if @@b_signature_header_generated != true then
@@ -1589,6 +1590,15 @@ class RustGenCelltypePlugin < CelltypePlugin
                 # puts "#{@@json_parse_result}"
             else
                 puts "cdl file is newer than json file"
+            end
+        end
+
+        # cdlファイルのパスが取得できない場合、こちらを動かす
+        if File.exist?(json_file_path) then
+            if @@json_parse_result.length == 0 then
+                puts "#{@celltype.get_global_name.to_s}: json_parse"
+                @@json_parse_result = json_parse json_file_path
+            else
             end
         end
 
