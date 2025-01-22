@@ -104,15 +104,3 @@ $(GEN_DIR)/tcflow.rbdmp : $(CELLTYPE_SRCS) $(PLUGIN_CELLTYPE_SRCS)
 $(_TECS_OBJ_DIR)%.o : %.c
 	$(CC) -c $(CFLAGS) -o $@ $<
 
-$(_TECS_OBJ_DIR)tTaskRs.o : tTaskRs.c
-	$(CC) -c $(CFLAGS) -o $@ $<
- 
-$(_TECS_OBJ_DIR)tMotor.o : tMotor.c
-	$(CC) -c $(CFLAGS) -o $@ $<
- 
-$(_TECS_OBJ_DIR)tSensor.o : tSensor.c
-	$(CC) -c $(CFLAGS) -o $@ $<
- 
-$(_TECS_OBJ_DIR)tTaskbody.o : tTaskbody.c
-	$(CC) -c $(CFLAGS) -o $@ $<
- 

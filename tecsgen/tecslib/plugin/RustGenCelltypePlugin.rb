@@ -334,15 +334,6 @@ class RustGenCelltypePlugin < CelltypePlugin
         return str
     end
 
-    # implファイルにuse文を生成する
-    def gen_use_for_trait_files file, celltype, port
-        # TODO:シグニチャが接続されているセルタイプに変数があるときだけ，spinクレートをuseするようにする
-        # 下のifだとシグニチャが複数回利用され，セルタイプに変数が無いものがあるとき，うまくuse文を生成できない
-        # if celltype.get_var_list.length != 0 then
-            file.print "use spin::Mutex;\n"
-        # end
-    end
-
     # セルタイプに呼び口がある場合，その呼び口につながっているシグニチャのトレイトファイルを生成する
     def gen_trait_files celltype
 
@@ -353,7 +344,6 @@ class RustGenCelltypePlugin < CelltypePlugin
 
             gen_mod_in_main_lib_rs_for_signature sig
             trait_file = CFile.open( "#{$gen}/#{snake_case(sig_name)}.rs", "w" )
-            # gen_use_for_trait_files trait_file, @celltype, port
             # gen_use_mutex trait_file
 
             trait_file.print "pub trait #{camel_case(snake_case(sig_name))} {\n"

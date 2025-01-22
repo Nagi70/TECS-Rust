@@ -18,7 +18,7 @@ cell tTaskbody Taskbody {
     cSensor = Sensor.eSensor;
 };
 
-[generate( ItronrsGenPlugin, "lib, TASK")]
+[generate( ToppersASP3RustPlugin, "lib, TASK")]
 cell tTaskRs Task1{
     cTaskBody = Taskbody.eTaskbody;
     id = C_EXP("TECS_RUST_TASK1");

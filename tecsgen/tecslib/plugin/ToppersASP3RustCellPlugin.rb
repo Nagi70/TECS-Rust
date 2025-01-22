@@ -34,28 +34,43 @@
 #   アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
 #   の責任を負わない．
 #  
-#   $Id: MultiPlugin.rb 2952 2018-05-07 10:19:07Z okuma-top $
+#   $Id: CellPlugin.rb 2952 2018-05-07 10:19:07Z okuma-top $
 #++
 
-#== MultiPlugin クラス
-class ItronrsGenPlugin < MultiPlugin
-    def self.get_plugin superClass
-      # case when (つまりは ===) では、期待したように一致しない模様
-      if superClass == SignaturePlugin then
-        return nil
-      elsif superClass == CelltypePlugin then
-        require_tecsgen_lib "tecslib/plugin/ItronrsGenCelltypePlugin.rb"
-        return ItronrsGenCelltypePlugin
-      elsif superClass == CellPlugin then
-        require_tecsgen_lib "tecslib/plugin/ItronrsGenCellPlugin.rb"
-        return ItronrsGenCellPlugin
-      elsif superClass == ThroughPlugin then
-        return nil
-      elsif superClass == DomainPlugin then
-        return nil
-      else
-        return nil
-      end
+class ToppersASP3RustCellPlugin < CellPlugin
+
+    #=== CellPlugin# initialize
+    #cell::     Cell        セル（インスタンス）
+    # このメソッドは、セルの構文解析が終わったところで呼び出される
+    # この段階では意味解析が終わっていない
+    def initialize( cell, option )
+      super
+      @cell = cell
+      @plugin_arg_str = CDLString.remove_dquote option
+      # @plugin_arg_str = option.gsub( /\A"(.*)/, '\1' )    # 前後の "" を取り除く
+      # @plugin_arg_str.sub!( /(.*)"\z/, '\1' )
+      @plugin_arg_list = {}
+    end
+  
+    #=== CppIfGenCellPlugin# gen_cdl_file
+    # セルの属するセルタイプに対し、セルタイププラグインを適用する
+    # 現状実装では、すべてのセルに対してセルプラグインを適用するのと同じ
+    #  (IDX マクロを特定セルに対してのみ出力するか、どうかの違い)
+    def gen_cdl_file file
+      file.print <<EOT
+/* apply CppIfGenCelltypePlugin to celltype '#{@cell.get_celltype.get_name}' (celltype of cell '#{@cell.get_name}') */
+generate( ToppersASP3RustPlugin, #{@cell.get_celltype.get_namespace_path.get_path_str}, "#{@plugin_arg_str}" ); 
+  
+EOT
+    end
+  
+    #=== 後ろの CDL コードを生成
+    #プラグインの後ろの CDL コードを生成
+    #file:: File: 
+    def self.gen_post_code( file )
+      # 複数のプラグインの post_code が一つのファイルに含まれるため、以下のような見出しをつけること
+      # file.print "/* '#{self.class.name}' post code */\n"
     end
   end
+  
   

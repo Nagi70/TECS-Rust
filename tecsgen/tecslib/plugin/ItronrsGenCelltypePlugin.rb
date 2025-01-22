@@ -212,28 +212,8 @@ CODE
         rust_tecs_h.close
     end
 
+    # ToppersASP3RustCelltypePlugin や ToppersFMP3RustCelltypePlugin などで、それぞれのタスクの静的APIを生成する
     def gen_task_static_api_for_configuration cell
-        file = AppFile.open( "#{$gen}/tecsgen.cfg" )
-
-        id = cell.get_attr_initializer("id".to_sym)
-        attribute = cell.get_attr_initializer("attribute".to_sym)
-        priority = cell.get_attr_initializer("priority".to_sym)
-        stack_size = cell.get_attr_initializer("stackSize".to_sym)
-        
-        # TODO: Rust のタスク関数を呼び出すための extern 宣言をインクルードするための生成であり、将来的には削除できるかも
-        if @@rust_tecs_header_include == false then
-            file.print "#include \"rust_tecs.h\"\n"
-            @@rust_tecs_header_include = true
-        end
-
-        # TODO: tTaskRs であることを前提としている
-        file.print "CRE_TSK(#{id}, { #{attribute}, 0, tecs_rust_start_#{snake_case(cell.get_global_name.to_s)}, #{priority}, #{stack_size}, NULL });\n"
-        file.close
-
-        gen_rust_tecs_h "tecs_rust_start_#{snake_case(cell.get_global_name.to_s)}"
-
-        # TODO: タスクオブジェクトのダミーIDはすべて0で生成しているが、変えてもいいかもしれない
-        add_dummy_id_to_kernel_cfg_rs "#{id}", 0
 
     end
 
@@ -493,28 +473,6 @@ CODE
             end
         }
     end
-    
-    # 呼び先のセルタイプが ITRON オブジェクトかどうかを判断する
-    def check_callee_port_celltype_is_itron_object port
-        itron_object_list = ["tTask_rs", "tSemaphore_rs", "tEventflag_rs", "tDataqueue_rs", "tMutex_rs"]
-        if port.get_port_type == :CALL then
-            callee_celltype_name = port.get_real_callee_cell.get_celltype.get_global_name.to_s
-            if itron_object_list.include?(callee_celltype_name) then
-                return true
-            end
-        end
-        return false
-    end
-
-    def gen_use_for_trait_files file, celltype, port
-        super(file, celltype, port)
-        if port.get_port_type == :ENTRY then
-            object_ref = get_itronrs_kernel_obj_ref_str
-            file.print "use itron::abi::*;\n"
-            object_module = object_ref.gsub(/Ref/, "").downcase
-            file.print "use itron::#{object_module}::#{object_ref};\n"
-        end
-    end
 
     def gen_rust_get_cell_ref file, celltype, callport_list, use_jenerics_alphabet
         # セルタイプに受け口がない場合は，生成しない
@@ -737,33 +695,15 @@ CODE
     end
 
     # itron のコンフィグレーションファイルにミューテックス静的APIを生成する
+    # ToppersASP3RustCelltypePlugin や ToppersFMP3RustCelltypePlugin などで、具体的な静的APIの生成を実装する
     def gen_mutex_static_api_for_configuration cell
-        file = AppFile.open( "#{$gen}/tecsgen.cfg" )
-
-        # TODO: 優先度上限か、優先度継承かをプラグインオプションで判断できるようにする
-        # file.print "CRE_MTX( TECS_RUST_EX_CTRL_#{@@ex_ctrl_ref_id}, { TA_INHERIT });\n"
-
-        # 優先度上限値の取得
-        ceiling_priority = get_ceiling_priority cell
-        file.print "CRE_MTX( TECS_RUST_EX_CTRL_#{@@ex_ctrl_ref_id}, { TA_CEILING, #{ceiling_priority} });\n"
-        file.close
-
-        add_dummy_id_to_kernel_cfg_rs "TECS_RUST_EX_CTRL_#{@@ex_ctrl_ref_id}", @@ex_ctrl_ref_id
-
-        @@ex_ctrl_ref_id += 1
+        
     end
 
     # itron のコンフィグレーションファイルにセマフォ静的APIを生成する
+    # ToppersASP3RustCelltypePlugin や ToppersFMP3RustCelltypePlugin などで、具体的な静的APIの生成を実装する
     def gen_semaphore_static_api_for_configuration cell
-        file = AppFile.open( "#{$gen}/tecsgen.cfg" )
 
-        # 資源数 1 でセマフォを生成
-        file.print "CRE_SEM( TECS_RUST_EX_CTRL_#{@@ex_ctrl_ref_id}, { TA_NULL, 1, 1 });\n"
-        file.close
-
-        add_dummy_id_to_kernel_cfg_rs "TECS_RUST_EX_CTRL_#{@@ex_ctrl_ref_id}", @@ex_ctrl_ref_id
-
-        @@ex_ctrl_ref_id += 1
     end
 
     # セルのミューテックスオブジェクトの優先度上限値を取得する
@@ -1243,7 +1183,7 @@ impl LockManager for TECSSemaphoreRef<'_>{
         mutex_file.close
     end
 
-    # 排他制御のダミーなど、共通部分のファイルを生成する
+    # tecs_mutex.rs と tecs_semaphore.rs の両方を含んだコードを生成する
     def gen_tecs_ex_ctrl_rs
         contents = <<~'EOS'
 use itron::mutex::{MutexRef, LockError, UnlockError};
@@ -1434,79 +1374,9 @@ impl LockManager for TECSSemaphoreRef<'_>{
     end
 
     # syslog の Rust ラップである print.rs を生成する
+    # カーネルによって型などが異なるため、それぞれのプラグインで実装する
     def gen_tecs_print_rs
-        contents = <<~'EOS'
-use itron::abi::uint_t;
-use itron::abi::*;
 
-extern "C"{
-    pub fn syslog_wri_log(prio: uint_t, p_syslog: *const Syslog) -> ER;
-}
-
-#[repr(C)]
-pub struct Syslog {
-    pub logtype: uint_t,
-    pub logtim: HRTCNT,
-    pub loginfo: [uint_t; TMAX_LONINFO],
-}
-
-pub type HRTCNT = u32;
-
-const TMAX_LONINFO: usize = 6;
-
-pub const LOG_TYPE_COMMENT: u32 = 0x1;
-
-pub const LOG_EMERG: u32 = 0x0;
-pub const LOG_ALERT: u32 = 0x1;
-pub const LOG_CRIT: u32 = 0x2;
-pub const LOG_ERROR: u32 = 0x3;
-pub const LOG_WARNING: u32 = 0x4;
-pub const LOG_NOTICE: u32 = 0x5;
-pub const LOG_INFO: u32 = 0x6;
-pub const LOG_DEBUG: u32 = 0x7;
-
-#[no_mangle]
-#[macro_export]
-#[macro_use]
-macro_rules! print{
-    ($fmt : expr, $($arg : expr),*) => {
-
-        let ini_ary = {
-            let mut ary : [uint_t; 6] = [0; 6];
-
-            ary[0] = concat!($fmt, '\0').as_bytes().as_ptr() as uint_t;
-
-            let mut _index = 1;
-            $(
-                {
-                    ary[_index] = $arg as uint_t;
-                    _index = _index + 1;
-                }
-            )*
-            ary
-        } ; 
-
-        let mut _syslog = Syslog {
-            logtype : LOG_TYPE_COMMENT,
-            logtim : 0,
-            loginfo : ini_ary
-        };
-
-        unsafe{
-            let _ = syslog_wri_log(LOG_NOTICE, &_syslog);
-        }
-    };
-}
-            EOS
-
-        # get_diff_between_gen_and_src "tecs_print.rs"
-        print_file = CFile.open( "#{$gen}/tecs_print.rs", "w" )
-        print_file.print contents
-        print_file.close
-
-        if File.exist?("#{@@cargo_path}/tecs_print.rs") == false then
-            copy_gen_files_to_cargo "tecs_print.rs"
-        end
     end
 
     #=== tCelltype_factory.h に挿入するコードを生成する
@@ -1535,52 +1405,6 @@ macro_rules! print{
         gen_tecs_print_rs
 
         copy_gen_files_to_cargo "kernel_cfg.rs"
-
-        # @celltype.get_cell_list.each{ |cell|
-        #     if cell.is_generate? then
-        #         global_file_name = cell.get_global_name
-        #         global_file_name = global_file_name.to_s
-        #         global_file_name = snake_case(global_file_name)
-        #     end
-        #     # if File.exist?("#{$gen}/#{global_file_name}.rs") then
-        #     #     return
-        #     # else
-        #         file4 = CFile.open( "#{$gen}/#{global_file_name}.rs", "w" )
-        #     # end
-
-        #     file4.print "#![no_std]\n"
-        #     file4.print "#![feature(const_option)]\n"
-        #     file4.print "\n"
-        #     file4.print "use core::num::NonZeroI32;\n"
-        #     file4.print "use itron::*;\n"
-        #     @celltype.get_port_list.each{ |port|
-        #         if port.get_port_type == :CALL then
-        #             call_port_name = snake_case(port.get_name.to_s)
-        #             callee_cell_name = snake_case(port.get_real_callee_cell.get_global_name.to_s)
-        #             callee_port_structure_name = port.get_real_callee_port.get_name.to_s.upcase + "FOR" + port.get_real_callee_cell.get_global_name.to_s.upcase
-        #             file4.print "use crate::#{callee_cell_name}::#{callee_port_structure_name} as #{call_port_name};\n"
-        #         end
-        #     }
-
-        #     file4.print "\n"
-
-        #     task_id = (cell.get_attr_initializer :id).to_s
-        #     cell_id = cell.get_id.to_s
-        #     file4.print "pub const #{task_id.upcase}: NonNullID = NonZeroI32::new(#{cell_id}).unwrap();\n"
-        #     file4.print "pub const #{cell.get_global_name.to_s.upcase}: TaskRef = unsafe { TaskRef::from_raw_nonnull(#{task_id.upcase}) };\n"
-        #     # file4.print "pub const #{task_id.upcase}: TaskRef = unsafe { TaskRef::from_raw_nonnull( NonZeroI32::new( #{cell_id} ).unwrap() ) };\n"
-        #     file4.print "\n"
-        #     file4.print "#[no_mangle]\n"
-        #     file4.print "pub extern \"C\" fn tTask_start(_: usize) {\n"
-        #     file4.print "/*tTask型の呼び口につながっているセルの関数を呼び出す*/\n"
-        #     file4.print "\n"
-        #     file4.print "\tc_task_body.main();\n"
-        #     file4.print "\n"
-        #     file4.print "}\n"
-
-
-        # } # celltype.get_cell_list.each
-
     end
 
 end

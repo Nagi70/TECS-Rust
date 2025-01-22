@@ -11,7 +11,7 @@ pub trait LockManager {
 
 pub type TECSDummyLockGuard = u32;
 
-pub struct TECSDummyExclusiveControlRef{}
+pub struct TECSDummyExCtrlRef{}
 
 pub struct TECSMutexRef<'a>{
 	pub inner: MutexRef<'a>,
@@ -25,9 +25,9 @@ pub struct TECSSemaphoreRef<'a>{
 pub static DUMMY_LOCK_GUARD: TECSDummyLockGuard = 0;
 
 #[link_section = ".rodata"]
-pub static DUMMY_EX_CTRL_REF: TECSDummyExclusiveControlRef = TECSDummyExclusiveControlRef{};
+pub static DUMMY_EX_CTRL_REF: TECSDummyExCtrlRef = TECSDummyExCtrlRef{};
 
-impl LockManager for TECSDummyExclusiveControlRef{
+impl LockManager for TECSDummyExCtrlRef{
     #[inline]
     fn lock(&self){}
     #[inline]
