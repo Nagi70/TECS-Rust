@@ -74,6 +74,8 @@ class ToppersFMP3RustCelltypePlugin < ItronrsGenCelltypePlugin
 
     # タスクの静的APIの生成は FMPPlugin が行うため、このプラグインはヘッダファイルなどのインクルード生成を行う
     def gen_task_static_api_for_configuration cell
+        id = cell.get_attr_initializer("id".to_sym)
+
         file = AppFile.open( "#{$gen}/tecsgen.cfg" )
 
         # TODO: Rust のタスク関数を呼び出すための extern 宣言をインクルードするための生成であり、将来的には削除できるかも

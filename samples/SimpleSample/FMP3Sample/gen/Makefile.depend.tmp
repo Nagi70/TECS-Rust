@@ -1,0 +1,10 @@
+# Celltype: tTaskRs  #_MDEP_#
+$(_TECS_OBJ_DIR)tTaskRs_tecsgen.o : tTaskRs_tecsgen.c  $(GEN_DIR)/tPrint_tecsgen.h $(GEN_DIR)/global_tecsgen.h $(GEN_DIR)/sTaskBody_tecsgen.h $(GEN_DIR)/sTask_tecsgen.h $(GEN_DIR)/siTask_tecsgen.h $(GEN_DIR)/tTaskRs_factory.h $(GEN_DIR)/tTaskRs_tecsgen.h tTaskRs_inline.h
+$(_TECS_OBJ_DIR)tTaskRs_templ.o : tTaskRs_templ.c  $(GEN_DIR)/tPrint_tecsgen.h $(GEN_DIR)/global_tecsgen.h $(GEN_DIR)/sTaskBody_tecsgen.h $(GEN_DIR)/sTask_tecsgen.h $(GEN_DIR)/siTask_tecsgen.h $(GEN_DIR)/tTaskRs_factory.h $(GEN_DIR)/tTaskRs_tecsgen.h tTaskRs_inline.h
+$(_TECS_OBJ_DIR)tTaskRs.o : tTaskRs.c  $(GEN_DIR)/tPrint_tecsgen.h $(GEN_DIR)/global_tecsgen.h $(GEN_DIR)/sTaskBody_tecsgen.h $(GEN_DIR)/sTask_tecsgen.h $(GEN_DIR)/siTask_tecsgen.h $(GEN_DIR)/tTaskRs_factory.h $(GEN_DIR)/tTaskRs_tecsgen.h tTaskRs_inline.h
+
+# Celltype: tPrint  #_MDEP_#
+$(_TECS_OBJ_DIR)tPrint_tecsgen.o : tPrint_tecsgen.c $(GEN_DIR)/global_tecsgen.h $(GEN_DIR)/sTaskBody_tecsgen.h $(GEN_DIR)/tPrint_factory.h $(GEN_DIR)/tPrint_tecsgen.h
+$(_TECS_OBJ_DIR)tPrint_templ.o : tPrint_templ.c $(GEN_DIR)/global_tecsgen.h $(GEN_DIR)/sTaskBody_tecsgen.h $(GEN_DIR)/tPrint_factory.h $(GEN_DIR)/tPrint_tecsgen.h
+$(_TECS_OBJ_DIR)tPrint.o : tPrint.c $(GEN_DIR)/global_tecsgen.h $(GEN_DIR)/sTaskBody_tecsgen.h $(GEN_DIR)/tPrint_factory.h $(GEN_DIR)/tPrint_tecsgen.h
+

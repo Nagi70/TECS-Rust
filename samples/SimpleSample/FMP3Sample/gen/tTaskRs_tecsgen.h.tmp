@@ -1,0 +1,61 @@
+#ifndef TOPPERS_MACRO_ONLY
+
+/*  include inline header #_INL_# */
+#include "tTaskRs_inline.h"
+
+#endif /* TOPPERS_MACRO_ONLY */
+
+#ifdef TOPPERS_CB_TYPE_ONLY
+
+/* undef for inline #_UDF_# */
+#undef VALID_IDX
+#undef GET_CELLCB
+#undef CELLCB
+#undef CELLIDX
+#undef tTaskRs_IDX
+#undef FOREACH_CELL
+#undef END_FOREACH_CELL
+#undef INITIALIZE_CB
+#undef SET_CB_INIB_POINTER
+#undef ATTR_id
+#undef tTaskRs_ATTR_id
+#undef tTaskRs_GET_id
+#undef ATTR_task_ref
+#undef tTaskRs_ATTR_task_ref
+#undef tTaskRs_GET_task_ref
+#undef ATTR_attribute
+#undef tTaskRs_ATTR_attribute
+#undef tTaskRs_GET_attribute
+#undef ATTR_priority
+#undef tTaskRs_ATTR_priority
+#undef tTaskRs_GET_priority
+#undef ATTR_stackSize
+#undef tTaskRs_ATTR_stackSize
+#undef tTaskRs_GET_stackSize
+#undef ATTR_systemStackSize
+#undef tTaskRs_ATTR_systemStackSize
+#undef tTaskRs_GET_systemStackSize
+#undef tTaskRs_cTaskBody_main
+#undef cTaskBody_main
+#undef eTask_activate
+#undef eTask_migrateAndActivate
+#undef eTask_cancelActivate
+#undef eTask_migrate
+#undef eTask_getTaskState
+#undef eTask_changePriority
+#undef eTask_changeSubPriority
+#undef eTask_getPriority
+#undef eTask_refer
+#undef eTask_wakeup
+#undef eTask_cancelWakeup
+#undef eTask_releaseWait
+#undef eTask_suspend
+#undef eTask_resume
+#undef eTask_raiseTerminate
+#undef eTask_terminate
+#undef eiTask_activate
+#undef eiTask_wakeup
+#undef eiTask_releaseWait
+#endif /* TOPPERS_CB_TYPE_ONLY */
+
+#endif /* tTaskRs_TECSGENH */

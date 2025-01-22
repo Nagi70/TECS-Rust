@@ -1,0 +1,51 @@
+/*
+ *  カーネルオブジェクトの定義
+ */
+import(<kernel.cdl>);
+import(<kernel_rs.cdl>);
+//import("target.cdl");
+import( <target_class.cdl> );
+
+celltype tPrint {
+    entry sTaskBody ePrint;
+};
+
+[class(FMP,"CLS_ALL_PRC1")]
+region rProcessor1Symmetric{
+
+    [generate(ToppersFMP3RustPlugin, "TASK, lib")]
+    cell tTaskRs Task1_1 {
+        /* 呼び口の結合 */
+        cTaskBody = rProcessor1Symmetric::Print1_1.ePrint;
+        /* 属性の設定 */
+        id = C_EXP("TSKID_1_1");
+        task_ref = C_EXP("unsafe{TaskRef::from_raw_nonnull(NonZeroI32::new(TSKID_1_1).unwrap())}");
+        priority = C_EXP("MID_PRIORITY");
+        stackSize = C_EXP("STACK_SIZE");
+        attribute = C_EXP("TA_ACT");
+    };
+
+    [generate (ToppersFMP3RustPlugin, "lib")]
+        cell tPrint Print1_1 {
+    };
+};
+
+[class(FMP,"CLS_ALL_PRC2")]
+region rProcessor2Symmetric{
+
+    [generate(ToppersFMP3RustPlugin, "TASK, lib")]
+    cell tTaskRs Task2_1 {
+        /* 呼び口の結合 */
+        cTaskBody = rProcessor2Symmetric::Print2_1.ePrint;
+        /* 属性の設定 */
+        id = C_EXP("TSKID_2_1");
+        task_ref = C_EXP("unsafe{TaskRef::from_raw_nonnull(NonZeroI32::new(TSKID_2_1).unwrap())}");
+        priority = C_EXP("MID_PRIORITY");
+        stackSize = C_EXP("STACK_SIZE");
+        attribute = C_EXP("TA_ACT");
+    };
+
+    [generate (ToppersFMP3RustPlugin, "lib")]
+        cell tPrint Print2_1 {
+    };
+};

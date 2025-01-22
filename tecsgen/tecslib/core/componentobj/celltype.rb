@@ -834,6 +834,7 @@ class Celltype < NSBDNode # < Nestable
   # セルの個数が 0 ならセルタイプコードは生成不要
   # このセルタイプをC言語以外で実装する場合、生成は不要（プラグインによって生成されるため）
   def need_generate?
+    # @n_cell_gen > 0
     @n_cell_gen > 0 && @impl_lang == :C
   end
 

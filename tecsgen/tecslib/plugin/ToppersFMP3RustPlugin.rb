@@ -47,8 +47,8 @@ class ToppersFMP3RustPlugin < MultiPlugin
         require_tecsgen_lib "tecslib/plugin/ToppersFMP3RustCelltypePlugin.rb"
         return ToppersFMP3RustCelltypePlugin
       elsif superClass == CellPlugin then
-        require_tecsgen_lib "tecslib/plugin/ToppersASP3RustCellPlugin.rb"
-        return ToppersASP3RustCellPlugin
+        require_tecsgen_lib "tecslib/plugin/ToppersFMP3RustCellPlugin.rb"
+        return ToppersFMP3RustCellPlugin
       elsif superClass == ThroughPlugin then
         return nil
       elsif superClass == DomainPlugin then
