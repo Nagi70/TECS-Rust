@@ -837,9 +837,17 @@ class Celltype < NSBDNode # < Nestable
     @n_cell_gen > 0 && @impl_lang == :C
   end
 
+  def get_n_cell_gen
+    @n_cell_gen
+  end
+
   #== Celltype# このセルタイプを実装する言語を設定する
   def set_impl_lang lang
     @impl_lang = lang
+  end
+
+  def get_impl_lang
+    return @impl_lang
   end
 
   #=== Celltype# require 呼び口の結合を行う

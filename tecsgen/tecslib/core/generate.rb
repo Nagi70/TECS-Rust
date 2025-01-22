@@ -1209,7 +1209,14 @@ class Celltype
   end
 
   def generate_post
-    return if ! need_generate?    # セルのないセルタイプは生成しない
+    # return if ! need_generate?    # セルのないセルタイプは生成しない
+
+    if ! need_generate?
+      return if get_n_cell_gen <= 0
+
+      generate_factory_header_post
+      return
+    end
 
     generate_private_header_post
     generate_factory_header_post
