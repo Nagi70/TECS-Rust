@@ -307,6 +307,7 @@ class TECSGEN
     $no_default_import_path = false  # bool: no default import path
     $c_suffix  = "c"       # suffix for C progorams (for C++ source)
     $h_suffix  = "h"       # suffix for C progoram headers (for C++ source)
+    $rust_suffix = "rs"    # suffix for Rust programs
 
     if ENV['TECSGEN_DEFAULT_RAM'] then
       rom_ram_defalult = "ram"

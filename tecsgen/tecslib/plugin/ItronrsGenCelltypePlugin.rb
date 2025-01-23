@@ -1005,6 +1005,13 @@ CODE
         end
     end
 
+    # 他のRustプラグインで生成したい RUST_PLUGIN_TECSGEN_SRCS の要素
+    def gen_extra_rust_plugin_tecsgen_srcs_for_makefile makefile
+        makefile.print( "\t$(TECS_RUST_SRC_DIR)/kernel_cfg.rs \\\n" )
+        makefile.print( "\t$(TECS_RUST_SRC_DIR)/tecs_ex_ctrl.rs \\\n" )
+        makefile.print( "\t$(TECS_RUST_SRC_DIR)/tecs_print.rs \\\n" )
+    end
+
     # tecs_mutex.rs を生成する
     def gen_tecs_mutex_rs
         contents = <<~'EOS'
