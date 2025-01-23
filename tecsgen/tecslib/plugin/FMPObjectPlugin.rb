@@ -114,7 +114,12 @@ class FMPObjectPlugin < CelltypePlugin
     name_array = celltype.get_name_array cell
     attr = params[3]
     arg_list = [ celltype.get_cell_attr_var_init_str( cell, name_array, attr ) ]
-    arg_list += [ "(intptr_t)#{name_array[7]}", "tTask_start" ]
+    case celltype.get_impl_lang
+    when :C
+      arg_list += [ "(intptr_t)#{name_array[7]}", "tTask_start" ]
+    when :Rust
+      arg_list += [ "0", "tecs_rust_start_#{cell.get_global_name.to_s.gsub(/(.)([A-Z])/, '\\1_\\2').downcase}" ]
+    end
     params.slice(4..-1).each { |attr|
       arg_list << celltype.get_cell_attr_var_init_str( cell, name_array, attr )
     }
