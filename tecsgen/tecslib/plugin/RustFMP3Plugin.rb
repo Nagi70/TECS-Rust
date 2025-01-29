@@ -38,17 +38,17 @@
 #++
 
 #== MultiPlugin クラス
-class ToppersASP3RustPlugin < MultiPlugin
+class RustFMP3Plugin < MultiPlugin
     def self.get_plugin superClass
       # case when (つまりは ===) では、期待したように一致しない模様
       if superClass == SignaturePlugin then
         return nil
       elsif superClass == CelltypePlugin then
-        require_tecsgen_lib "tecslib/plugin/ToppersASP3RustCelltypePlugin.rb"
-        return ToppersASP3RustCelltypePlugin
+        require_tecsgen_lib "tecslib/plugin/RustFMP3CelltypePlugin.rb"
+        return RustFMP3CelltypePlugin
       elsif superClass == CellPlugin then
-        require_tecsgen_lib "tecslib/plugin/ToppersASP3RustCellPlugin.rb"
-        return ToppersASP3RustCellPlugin
+        require_tecsgen_lib "tecslib/plugin/RustFMP3CellPlugin.rb"
+        return RustFMP3CellPlugin
       elsif superClass == ThroughPlugin then
         return nil
       elsif superClass == DomainPlugin then

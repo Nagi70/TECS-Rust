@@ -35,7 +35,7 @@ cell tSensorbody Sensorbody {
 };
 
 
-[generate( ItronrsGenPlugin, "lib, TASK")]
+[generate( RustITRONPlugin, "lib, TASK")]
 cell tTaskRs Task1{
     cTaskBody = MMbody.eMMbody;
     id = C_EXP("TECS_RUST_TASK1");
@@ -45,7 +45,7 @@ cell tTaskRs Task1{
     priority = 7;
 };
 
-[generate( ItronrsGenPlugin, "lib, TASK")]
+[generate( RustITRONPlugin, "lib, TASK")]
 cell tTaskRs Task2{
     cTaskBody = Motorbody.eMotorbody;
     id = C_EXP("TECS_RUST_TASK2");
@@ -55,7 +55,7 @@ cell tTaskRs Task2{
     priority = 7;
 };
 
-[generate( ItronrsGenPlugin, "lib, TASK")]
+[generate( RustITRONPlugin, "lib, TASK")]
 cell tTaskRs Task3{
     cTaskBody = SSbody.eSSbody;
     id = C_EXP("TECS_RUST_TASK3");
@@ -65,7 +65,7 @@ cell tTaskRs Task3{
     priority = 7;
 };
 
-[generate( ItronrsGenPlugin, "lib, TASK")]
+[generate( RustITRONPlugin, "lib, TASK")]
 cell tTaskRs Task4{
     cTaskBody = Sensorbody.eSensorbody;
     id = C_EXP("TECS_RUST_TASK4");

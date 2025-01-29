@@ -40,7 +40,7 @@
 require_tecsgen_lib "RustGenCelltypePlugin.rb"
 
 #== celltype プラグインの共通の親クラス
-class ItronrsGenCelltypePlugin < RustGenCelltypePlugin
+class RustITRONCelltypePlugin < RustGenCelltypePlugin
     CLASS_NAME_SUFFIX = ""
     @@b_signature_header_generated = false
     @@module_generated = false
@@ -212,7 +212,7 @@ CODE
         rust_tecs_h.close
     end
 
-    # ToppersASP3RustCelltypePlugin や ToppersFMP3RustCelltypePlugin などで、それぞれのタスクの静的APIを生成する
+    # RustASP3CelltypePlugin や RustFMP3CelltypePlugin などで、それぞれのタスクの静的APIを生成する
     def gen_task_static_api_for_configuration cell
 
     end
@@ -695,13 +695,13 @@ CODE
     end
 
     # itron のコンフィグレーションファイルにミューテックス静的APIを生成する
-    # ToppersASP3RustCelltypePlugin や ToppersFMP3RustCelltypePlugin などで、具体的な静的APIの生成を実装する
+    # RustASP3CelltypePlugin や RustFMP3CelltypePlugin などで、具体的な静的APIの生成を実装する
     def gen_mutex_static_api_for_configuration cell
         
     end
 
     # itron のコンフィグレーションファイルにセマフォ静的APIを生成する
-    # ToppersASP3RustCelltypePlugin や ToppersFMP3RustCelltypePlugin などで、具体的な静的APIの生成を実装する
+    # RustASP3CelltypePlugin や RustFMP3CelltypePlugin などで、具体的な静的APIの生成を実装する
     def gen_semaphore_static_api_for_configuration cell
 
     end

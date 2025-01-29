@@ -4,17 +4,17 @@ signature sSensor {
     void test(void);
 };
 
-[generate (ItronrsGenPlugin, "lib")]
+[generate (RustITRONPlugin, "lib")]
 celltype tSensorA {
     entry sSensor eSensor;
 };
 
-[generate (ItronrsGenPlugin, "lib")]
+[generate (RustITRONPlugin, "lib")]
 celltype tSensorB {
     entry sSensor eSensor;
 };
 
-[generate (ItronrsGenPlugin, "lib")]
+[generate (RustITRONPlugin, "lib")]
 celltype tTaskbody {
     entry sTaskBody eTaskbody;
     call sSensor cSensor;
@@ -36,7 +36,7 @@ cell tTaskbody Taskbody2 {
     cSensor = SensorB.eSensor;
 };
 
-[generate( ItronrsGenPlugin, "lib, TASK")]
+[generate( RustITRONPlugin, "lib, TASK")]
 cell tTaskRs Task1{
     cTaskBody = Taskbody1.eTaskbody;
     id = C_EXP("TECS_RUST_TASK1");
@@ -46,7 +46,7 @@ cell tTaskRs Task1{
     priority = 7;
 };
 
-[generate( ItronrsGenPlugin, "lib, TASK")]
+[generate( RustITRONPlugin, "lib, TASK")]
 cell tTaskRs Task2{
     cTaskBody = Taskbody2.eTaskbody;
     id = C_EXP("TECS_RUST_TASK2");

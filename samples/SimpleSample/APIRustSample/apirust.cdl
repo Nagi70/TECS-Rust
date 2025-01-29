@@ -20,7 +20,7 @@ cell tTaskbody2 Taskbody2 {
     cTask = Task.eTask;
 };
 
-[generate( ItronrsGenPlugin, "lib")]
+[generate( RustITRONPlugin, "lib")]
 cell tTask_rs Task{
     cTaskBody = Taskbody.eTaskbody;
     id = C_EXP("TSKID_1");
@@ -30,7 +30,7 @@ cell tTask_rs Task{
     priority = 7;
 };
 
-[generate( ItronrsGenPlugin, "lib")]
+[generate( RustITRONPlugin, "lib")]
 cell tTask_rs Task_sleep{
     cTaskBody = Taskbody2.eTaskbody;
     id = C_EXP("TSKID_2");

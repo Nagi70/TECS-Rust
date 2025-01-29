@@ -37,7 +37,7 @@
 #  PLUGIN_domain_SRCS       .c files of plugin generated .c files for each domain
 #  CELLTYPE_domain_SRCS     .c files of celltype.c files for each domain
 
-TECS_IMPORT_CDLS = rustSample.cdl tecs_fmp_kernel/kernel.cdl kernel_rs.cdl tecs_fmp_kernel/target_class.cdl tecs_fmp_kernel/class_def.cdf gen/tmp_FMPPlugin_post_code.cdl gen/tmp_FMPObjectPlugin_post_code.cdl gen/tmp_NotifierPlugin_post_code.cdl gen/tmp_FMPHandlerPlugin_post_code.cdl gen/tmp_ToppersFMP3RustCelltypePlugin_post_code.cdl gen/tmp_ToppersFMP3RustCellPlugin_post_code.cdl
+TECS_IMPORT_CDLS = rustSample.cdl tecs_fmp_kernel/kernel.cdl kernel_rs.cdl tecs_fmp_kernel/target_class.cdl tecs_fmp_kernel/class_def.cdf gen/tmp_FMPPlugin_post_code.cdl gen/tmp_FMPObjectPlugin_post_code.cdl gen/tmp_NotifierPlugin_post_code.cdl gen/tmp_FMPHandlerPlugin_post_code.cdl gen/tmp_RustFMP3CelltypePlugin_post_code.cdl gen/tmp_RustFMP3CellPlugin_post_code.cdl
 TECS_IMPORT_HEADERS = tecs_fmp_kernel/tecs_kernel.h
 TECS_IMPORTS = $(TECS_IMPORT_CDLS) $(TECS_IMPORT_HEADERS)
 

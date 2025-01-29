@@ -88,7 +88,7 @@ cell tTaskbody Taskbody {
 cell tPowerdown Powerdown{
 };
 
-[generate( ItronrsGenPlugin, "lib")]
+[generate( RustITRONPlugin, "lib")]
 cell tTask_rs Task{
     cTaskBody = Taskbody.eTaskbody;
     id = C_EXP("TASK1");

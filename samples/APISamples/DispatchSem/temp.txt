@@ -98,7 +98,7 @@ tTaskRs: copy lib.rs to cargo
 #  PLUGIN_domain_SRCS       .c files of plugin generated .c files for each domain
 #  CELLTYPE_domain_SRCS     .c files of celltype.c files for each domain
 
-TECS_IMPORT_CDLS = DispatchSem.cdl ../spikert.cdl ./../kernel_rs.cdl gen/tmp_ItronrsGenCelltypePlugin_post_code.cdl gen/tmp_ItronrsGenCellPlugin_post_code.cdl
+TECS_IMPORT_CDLS = DispatchSem.cdl ../spikert.cdl ./../kernel_rs.cdl gen/tmp_RustITRONCelltypePlugin_post_code.cdl gen/tmp_RustITRONCellPlugin_post_code.cdl
 TECS_IMPORT_HEADERS = ./../tecs_kernel/tecs_kernel.h
 TECS_IMPORTS = $(TECS_IMPORT_CDLS) $(TECS_IMPORT_HEADERS)
 
@@ -311,7 +311,7 @@ tTaskRs: copy lib.rs to cargo
 #  PLUGIN_domain_SRCS       .c files of plugin generated .c files for each domain
 #  CELLTYPE_domain_SRCS     .c files of celltype.c files for each domain
 
-TECS_IMPORT_CDLS = DispatchSem.cdl ../spikert.cdl ./../kernel_rs.cdl gen/tmp_ItronrsGenCelltypePlugin_post_code.cdl gen/tmp_ItronrsGenCellPlugin_post_code.cdl
+TECS_IMPORT_CDLS = DispatchSem.cdl ../spikert.cdl ./../kernel_rs.cdl gen/tmp_RustITRONCelltypePlugin_post_code.cdl gen/tmp_RustITRONCellPlugin_post_code.cdl
 TECS_IMPORT_HEADERS = ./../tecs_kernel/tecs_kernel.h
 TECS_IMPORTS = $(TECS_IMPORT_CDLS) $(TECS_IMPORT_HEADERS)
 
@@ -524,7 +524,7 @@ tTaskRs: copy lib.rs to cargo
 #  PLUGIN_domain_SRCS       .c files of plugin generated .c files for each domain
 #  CELLTYPE_domain_SRCS     .c files of celltype.c files for each domain
 
-TECS_IMPORT_CDLS = DispatchSem.cdl ../spikert.cdl ./../kernel_rs.cdl gen/tmp_ItronrsGenCelltypePlugin_post_code.cdl gen/tmp_ItronrsGenCellPlugin_post_code.cdl
+TECS_IMPORT_CDLS = DispatchSem.cdl ../spikert.cdl ./../kernel_rs.cdl gen/tmp_RustITRONCelltypePlugin_post_code.cdl gen/tmp_RustITRONCellPlugin_post_code.cdl
 TECS_IMPORT_HEADERS = ./../tecs_kernel/tecs_kernel.h
 TECS_IMPORTS = $(TECS_IMPORT_CDLS) $(TECS_IMPORT_HEADERS)
 
@@ -737,7 +737,7 @@ tTaskRs: copy lib.rs to cargo
 #  PLUGIN_domain_SRCS       .c files of plugin generated .c files for each domain
 #  CELLTYPE_domain_SRCS     .c files of celltype.c files for each domain
 
-TECS_IMPORT_CDLS = DispatchSem.cdl ../spikert.cdl ./../kernel_rs.cdl gen/tmp_ItronrsGenCelltypePlugin_post_code.cdl gen/tmp_ItronrsGenCellPlugin_post_code.cdl
+TECS_IMPORT_CDLS = DispatchSem.cdl ../spikert.cdl ./../kernel_rs.cdl gen/tmp_RustITRONCelltypePlugin_post_code.cdl gen/tmp_RustITRONCellPlugin_post_code.cdl
 TECS_IMPORT_HEADERS = ./../tecs_kernel/tecs_kernel.h
 TECS_IMPORTS = $(TECS_IMPORT_CDLS) $(TECS_IMPORT_HEADERS)
 
@@ -950,7 +950,7 @@ tTaskRs: copy lib.rs to cargo
 #  PLUGIN_domain_SRCS       .c files of plugin generated .c files for each domain
 #  CELLTYPE_domain_SRCS     .c files of celltype.c files for each domain
 
-TECS_IMPORT_CDLS = DispatchSem.cdl ../spikert.cdl ./../kernel_rs.cdl gen/tmp_ItronrsGenCelltypePlugin_post_code.cdl gen/tmp_ItronrsGenCellPlugin_post_code.cdl
+TECS_IMPORT_CDLS = DispatchSem.cdl ../spikert.cdl ./../kernel_rs.cdl gen/tmp_RustITRONCelltypePlugin_post_code.cdl gen/tmp_RustITRONCellPlugin_post_code.cdl
 TECS_IMPORT_HEADERS = ./../tecs_kernel/tecs_kernel.h
 TECS_IMPORTS = $(TECS_IMPORT_CDLS) $(TECS_IMPORT_HEADERS)
 
@@ -1145,7 +1145,7 @@ tMotor: copy lib.rs to cargo
 #  PLUGIN_domain_SRCS       .c files of plugin generated .c files for each domain
 #  CELLTYPE_domain_SRCS     .c files of celltype.c files for each domain
 
-TECS_IMPORT_CDLS = DispatchSem.cdl ../spikert.cdl ./../kernel_rs.cdl gen/tmp_ItronrsGenCelltypePlugin_post_code.cdl gen/tmp_ItronrsGenCellPlugin_post_code.cdl
+TECS_IMPORT_CDLS = DispatchSem.cdl ../spikert.cdl ./../kernel_rs.cdl gen/tmp_RustITRONCelltypePlugin_post_code.cdl gen/tmp_RustITRONCellPlugin_post_code.cdl
 TECS_IMPORT_HEADERS = ./../tecs_kernel/tecs_kernel.h
 TECS_IMPORTS = $(TECS_IMPORT_CDLS) $(TECS_IMPORT_HEADERS)
 
@@ -1340,7 +1340,7 @@ tSensor: copy lib.rs to cargo
 #  PLUGIN_domain_SRCS       .c files of plugin generated .c files for each domain
 #  CELLTYPE_domain_SRCS     .c files of celltype.c files for each domain
 
-TECS_IMPORT_CDLS = DispatchSem.cdl ../spikert.cdl ./../kernel_rs.cdl gen/tmp_ItronrsGenCelltypePlugin_post_code.cdl gen/tmp_ItronrsGenCellPlugin_post_code.cdl
+TECS_IMPORT_CDLS = DispatchSem.cdl ../spikert.cdl ./../kernel_rs.cdl gen/tmp_RustITRONCelltypePlugin_post_code.cdl gen/tmp_RustITRONCellPlugin_post_code.cdl
 TECS_IMPORT_HEADERS = ./../tecs_kernel/tecs_kernel.h
 TECS_IMPORTS = $(TECS_IMPORT_CDLS) $(TECS_IMPORT_HEADERS)
 
@@ -1526,7 +1526,7 @@ tMotorbody: copy lib.rs to cargo
 #  PLUGIN_domain_SRCS       .c files of plugin generated .c files for each domain
 #  CELLTYPE_domain_SRCS     .c files of celltype.c files for each domain
 
-TECS_IMPORT_CDLS = DispatchSem.cdl ../spikert.cdl ./../kernel_rs.cdl gen/tmp_ItronrsGenCelltypePlugin_post_code.cdl gen/tmp_ItronrsGenCellPlugin_post_code.cdl
+TECS_IMPORT_CDLS = DispatchSem.cdl ../spikert.cdl ./../kernel_rs.cdl gen/tmp_RustITRONCelltypePlugin_post_code.cdl gen/tmp_RustITRONCellPlugin_post_code.cdl
 TECS_IMPORT_HEADERS = ./../tecs_kernel/tecs_kernel.h
 TECS_IMPORTS = $(TECS_IMPORT_CDLS) $(TECS_IMPORT_HEADERS)
 
@@ -1712,7 +1712,7 @@ tSensorbody: copy lib.rs to cargo
 #  PLUGIN_domain_SRCS       .c files of plugin generated .c files for each domain
 #  CELLTYPE_domain_SRCS     .c files of celltype.c files for each domain
 
-TECS_IMPORT_CDLS = DispatchSem.cdl ../spikert.cdl ./../kernel_rs.cdl gen/tmp_ItronrsGenCelltypePlugin_post_code.cdl gen/tmp_ItronrsGenCellPlugin_post_code.cdl
+TECS_IMPORT_CDLS = DispatchSem.cdl ../spikert.cdl ./../kernel_rs.cdl gen/tmp_RustITRONCelltypePlugin_post_code.cdl gen/tmp_RustITRONCellPlugin_post_code.cdl
 TECS_IMPORT_HEADERS = ./../tecs_kernel/tecs_kernel.h
 TECS_IMPORTS = $(TECS_IMPORT_CDLS) $(TECS_IMPORT_HEADERS)
 
@@ -1898,7 +1898,7 @@ tMMbody: copy lib.rs to cargo
 #  PLUGIN_domain_SRCS       .c files of plugin generated .c files for each domain
 #  CELLTYPE_domain_SRCS     .c files of celltype.c files for each domain
 
-TECS_IMPORT_CDLS = DispatchSem.cdl ../spikert.cdl ./../kernel_rs.cdl gen/tmp_ItronrsGenCelltypePlugin_post_code.cdl gen/tmp_ItronrsGenCellPlugin_post_code.cdl
+TECS_IMPORT_CDLS = DispatchSem.cdl ../spikert.cdl ./../kernel_rs.cdl gen/tmp_RustITRONCelltypePlugin_post_code.cdl gen/tmp_RustITRONCellPlugin_post_code.cdl
 TECS_IMPORT_HEADERS = ./../tecs_kernel/tecs_kernel.h
 TECS_IMPORTS = $(TECS_IMPORT_CDLS) $(TECS_IMPORT_HEADERS)
 
@@ -2084,7 +2084,7 @@ tSSbody: copy lib.rs to cargo
 #  PLUGIN_domain_SRCS       .c files of plugin generated .c files for each domain
 #  CELLTYPE_domain_SRCS     .c files of celltype.c files for each domain
 
-TECS_IMPORT_CDLS = DispatchSem.cdl ../spikert.cdl ./../kernel_rs.cdl gen/tmp_ItronrsGenCelltypePlugin_post_code.cdl gen/tmp_ItronrsGenCellPlugin_post_code.cdl
+TECS_IMPORT_CDLS = DispatchSem.cdl ../spikert.cdl ./../kernel_rs.cdl gen/tmp_RustITRONCelltypePlugin_post_code.cdl gen/tmp_RustITRONCellPlugin_post_code.cdl
 TECS_IMPORT_HEADERS = ./../tecs_kernel/tecs_kernel.h
 TECS_IMPORTS = $(TECS_IMPORT_CDLS) $(TECS_IMPORT_HEADERS)
 

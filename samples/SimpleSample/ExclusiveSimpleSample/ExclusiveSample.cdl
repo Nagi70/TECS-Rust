@@ -23,13 +23,13 @@ celltype tTask{
     };
 };
 
-[generate(ItronrsGenPlugin,"lib")]
+[generate(RustITRONPlugin,"lib")]
 celltype tTaskbody {
     call sHello cPerson;
     entry sTaskbody eTaskbody;
 };
 
-[generate(ItronrsGenPlugin,"lib")]
+[generate(RustITRONPlugin,"lib")]
 celltype tAlice {
     call sHello2 cBob;
     call sHello2 cBob2;
@@ -44,7 +44,7 @@ celltype tAlice {
     };
 };
 
-[generate(ItronrsGenPlugin,"lib")]
+[generate(RustITRONPlugin,"lib")]
 celltype tBob {
     call sHello3 cCarol;
     entry sHello2 eBob1;
@@ -58,7 +58,7 @@ celltype tBob {
     };
 };
 
-[generate(ItronrsGenPlugin,"lib")]
+[generate(RustITRONPlugin,"lib")]
 celltype tCarol {
     entry sHello3 eCarol;
     attr{
@@ -70,19 +70,19 @@ celltype tCarol {
     };
 };
 
-[generate(ItronrsGenPlugin,"lib")]
+[generate(RustITRONPlugin,"lib")]
 cell tTask Task1 {
     cTaskbody = Taskbody1.eTaskbody;
     id = 0;
 };
 
-[generate(ItronrsGenPlugin,"lib")]
+[generate(RustITRONPlugin,"lib")]
 cell tTask Task2 {
     cTaskbody = Taskbody2.eTaskbody;
     id = 0;
 };
 
-[generate(ItronrsGenPlugin,"lib")]
+[generate(RustITRONPlugin,"lib")]
 cell tTask Task3 {
     cTaskbody = Taskbody3.eTaskbody;
     id = 0;

@@ -2,7 +2,7 @@ signature sHello {
     void Hello(void);
 };
 
-[generate(ItronrsGenPlugin,"lib")]
+[generate(RustITRONPlugin,"lib")]
 celltype tAlice {
     call sHello cPerson;
     entry sHello eAlice;
@@ -11,7 +11,7 @@ celltype tAlice {
     };
 };
 
-[generate(ItronrsGenPlugin,"lib")]
+[generate(RustITRONPlugin,"lib")]
 celltype tBob {
     call sHello cPerson;
     entry sHello eBob;
@@ -23,7 +23,7 @@ celltype tBob {
     };
 };
 
-[generate(ItronrsGenPlugin,"lib")]
+[generate(RustITRONPlugin,"lib")]
 celltype tCarol {
     call sHello cPerson;
     entry sHello eCarol;

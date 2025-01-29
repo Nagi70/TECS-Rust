@@ -99,7 +99,7 @@ signature siNotificationHandler {
 /*
  *  タスクのセルタイプ
  */
-[active, generate( ToppersASP3RustPlugin, "lib, TASK")]
+[active, generate( RustASP3Plugin, "lib, TASK")]
 celltype tTaskRs {
 	[inline] entry	sTask	eTask;
 	[inline] entry	siTask	eiTask;

@@ -37,10 +37,10 @@
 #   $Id: CelltypePlugin.rb 2952 2018-05-07 10:19:07Z okuma-top $
 #++
 
-require_tecsgen_lib "ItronrsGenCelltypePlugin.rb"
+require_tecsgen_lib "RustITRONCelltypePlugin.rb"
 
 #== celltype プラグインの共通の親クラス
-class ToppersASP3RustCelltypePlugin < ItronrsGenCelltypePlugin
+class RustFMP3CelltypePlugin < RustITRONCelltypePlugin
     CLASS_NAME_SUFFIX = ""
 
     #celltype::     Celltype        セルタイプ（インスタンス）
@@ -72,23 +72,17 @@ class ToppersASP3RustCelltypePlugin < ItronrsGenCelltypePlugin
       # file.print "/* '#{self.class.name}' post code */\n"
     end
 
+    # タスクの静的APIの生成は FMPPlugin が行うため、このプラグインはヘッダファイルなどのインクルード生成を行う
     def gen_task_static_api_for_configuration cell
+        id = cell.get_attr_initializer("id".to_sym)
+
         file = AppFile.open( "#{$gen}/tecsgen.cfg" )
 
-        id = cell.get_attr_initializer("id".to_sym)
-        attribute = cell.get_attr_initializer("attribute".to_sym)
-        priority = cell.get_attr_initializer("priority".to_sym)
-        stack_size = cell.get_attr_initializer("stackSize".to_sym)
-        
         # TODO: Rust のタスク関数を呼び出すための extern 宣言をインクルードするための生成であり、将来的には削除できるかも
         if @@rust_tecs_header_include == false then
             file.print "#include \"rust_tecs.h\"\n"
             @@rust_tecs_header_include = true
         end
-
-        # TODO: tTaskRs であることを前提としている
-        file.print "CRE_TSK(#{id}, { #{attribute}, 0, tecs_rust_start_#{snake_case(cell.get_global_name.to_s)}, #{priority}, #{stack_size}, NULL });\n"
-        file.close
 
         gen_rust_tecs_h "tecs_rust_start_#{snake_case(cell.get_global_name.to_s)}"
 
@@ -98,6 +92,7 @@ class ToppersASP3RustCelltypePlugin < ItronrsGenCelltypePlugin
     end
 
     # itron のコンフィグレーションファイルにミューテックス静的APIを生成する
+    # TODO: ミューテックスの静的APIをどこのクラスに配置するべきかを決める必要がありそう
     def gen_mutex_static_api_for_configuration cell
         file = AppFile.open( "#{$gen}/tecsgen.cfg" )
 
@@ -115,6 +110,7 @@ class ToppersASP3RustCelltypePlugin < ItronrsGenCelltypePlugin
     end
 
     # itron のコンフィグレーションファイルにセマフォ静的APIを生成する
+    # TODO: セマフォの静的APIをどこのクラスに配置するべきかを決める必要がありそう
     def gen_semaphore_static_api_for_configuration cell
         file = AppFile.open( "#{$gen}/tecsgen.cfg" )
 
@@ -132,7 +128,7 @@ class ToppersASP3RustCelltypePlugin < ItronrsGenCelltypePlugin
         cargo_toml_path = "#{path}/Cargo.toml"
 
         # TODO: asp3 か fmp3 かは、何かしらで判断する必要がある
-        itron_rs_depenence = "itron = { version = \"= 0.1.9\", features = [\"asp3\", \"nightly\", \"unstable\"] }"
+        itron_rs_depenence = "itron = { version = \"= 0.1.9\", features = [\"fmp3\", \"nightly\", \"unstable\"] }"
 
         File.open(cargo_toml_path, "a") do |file|
             file.puts itron_rs_depenence
@@ -152,33 +148,34 @@ class ToppersASP3RustCelltypePlugin < ItronrsGenCelltypePlugin
         Dir.mkdir(config_toml_dir)
         File.open(comfig_toml_path, "w") do |file|
             file.puts "[build]"
-            file.puts "target = \"thumbv7em-none-eabihf\"     # Cortex-M4F and Cortex-M7F (with FPU) (e.g., Spike-rt)"
+            file.puts "target = \"armv7a-none-eabi\"          # Bare Armv7-A (e.g., Zynq-7000 (Xilinx))"
         end
     end
 
     # syslog の Rust ラップである print.rs を生成する
     def gen_tecs_print_rs
         contents = <<~'EOS'
-use itron::abi::uint_t;
 use itron::abi::*;
 
 extern "C"{
-    pub fn syslog_wri_log(prio: uint_t, p_syslog: *const Syslog) -> ER;
+    pub fn syslog_wri_log(prio: u32, p_syslog: *const Syslog) -> ER;
 }
+
+pub type Intprt = u32;
+pub type HrtCnt = u32;
+pub type Id = i32;
 
 #[repr(C)]
 pub struct Syslog {
-    pub logtype: uint_t,
-    pub logtim: HRTCNT,
-    pub loginfo: [uint_t; TMAX_LONINFO],
+    pub logtype: u32,
+    pub logtim: HrtCnt,
+    pub prcid: Id,
+    pub loginfo: [Intprt; TMAX_LONINFO],
 }
-
-pub type HRTCNT = u32;
 
 const TMAX_LONINFO: usize = 6;
 
 pub const LOG_TYPE_COMMENT: u32 = 0x1;
-
 pub const LOG_EMERG: u32 = 0x0;
 pub const LOG_ALERT: u32 = 0x1;
 pub const LOG_CRIT: u32 = 0x2;
@@ -195,14 +192,14 @@ macro_rules! print{
     ($fmt : expr, $($arg : expr),*) => {
 
         let ini_ary = {
-            let mut ary : [uint_t; 6] = [0; 6];
+            let mut ary : [Intprt; 6] = [0; 6];
 
-            ary[0] = concat!($fmt, '\0').as_bytes().as_ptr() as uint_t;
+            ary[0] = concat!($fmt, '\0').as_bytes().as_ptr() as Intprt;
 
             let mut _index = 1;
             $(
                 {
-                    ary[_index] = $arg as uint_t;
+                    ary[_index] = $arg as Intprt;
                     _index = _index + 1;
                 }
             )*
@@ -212,6 +209,7 @@ macro_rules! print{
         let mut _syslog = Syslog {
             logtype : LOG_TYPE_COMMENT,
             logtim : 0,
+            prcid : 0,
             loginfo : ini_ary
         };
 
@@ -238,5 +236,4 @@ macro_rules! print{
     def gen_factory file
         super(file)
     end
-
 end

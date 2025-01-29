@@ -19,7 +19,7 @@ cell tPrint PrintA{
 	printattr = 2;
 };
 
-[generate( ItronrsGenPlugin, "lib")]
+[generate( RustITRONPlugin, "lib")]
 cell tTask_rs Task{
     cTaskBody = PrintA.ePrint;
 

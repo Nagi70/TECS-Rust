@@ -1,6 +1,6 @@
 import(<PaperSampleCelltype.cdl>);
 
-[generate( ItronrsGenPlugin, "lib")]
+[generate( RustITRONPlugin, "lib")]
 cell tTaskRs Task1{
     cTaskBody = Manager.eManage1;
     id = C_EXP("TASK1");
@@ -10,7 +10,7 @@ cell tTaskRs Task1{
     priority = 42;
 };
 
-[generate( ItronrsGenPlugin, "lib")]
+[generate( RustITRONPlugin, "lib")]
 cell tTaskRs Task2{
     cTaskBody = Taskbody1.eTaskbody;
     id = C_EXP("TASK2");
@@ -20,7 +20,7 @@ cell tTaskRs Task2{
     priority = 42;
 };
 
-[generate( ItronrsGenPlugin, "lib")]
+[generate( RustITRONPlugin, "lib")]
 cell tTaskRs Task3{
     cTaskBody = Taskbody2.eTaskbody;
     id = C_EXP("TASK3");

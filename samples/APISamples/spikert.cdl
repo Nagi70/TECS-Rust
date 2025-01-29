@@ -26,7 +26,7 @@ signature sPowerdown{
     void powerdown( [in] PbioErrorT error );
 };
 
-[generate (ToppersASP3RustPlugin, "lib")]
+[generate (RustASP3Plugin, "lib")]
 celltype tMotor {
     [inline] entry sMotor eMotor;
     attr {
@@ -37,7 +37,7 @@ celltype tMotor {
     };
 };
 
-[generate (ToppersASP3RustPlugin, "lib")]
+[generate (RustASP3Plugin, "lib")]
 celltype tSensor {
     [inline] entry sSensor eSensor;
     attr{
@@ -48,7 +48,7 @@ celltype tSensor {
     };
 };
 
-[generate (ToppersASP3RustPlugin, "lib")]
+[generate (RustASP3Plugin, "lib")]
 celltype tTaskbody {
     entry sTaskBody eTaskbody;
     call sMotor cMotorA;
@@ -56,33 +56,33 @@ celltype tTaskbody {
     call sSensor cSensor;
 };
 
-[generate (ToppersASP3RustPlugin, "lib")]
+[generate (RustASP3Plugin, "lib")]
 celltype tMotorbody {
     call sMotor cMotor;
     entry sTaskBody eMotorbody;
 };
 
-[generate (ToppersASP3RustPlugin, "lib")]
+[generate (RustASP3Plugin, "lib")]
 celltype tSensorbody {
     call sSensor cSensor;
     entry sTaskBody eSensorbody;
 };
 
-[generate (ToppersASP3RustPlugin, "lib")]
+[generate (RustASP3Plugin, "lib")]
 celltype tMMbody {
     call sMotor cMotor1;
     call sMotor cMotor2;
     entry sTaskBody eMMbody;
 };
 
-[generate (ToppersASP3RustPlugin, "lib")]
+[generate (RustASP3Plugin, "lib")]
 celltype tSSbody {
     call sSensor cSensor1;
     call sSensor cSensor2;
     entry sTaskBody eSSbody;
 };
 
-[generate (ToppersASP3RustPlugin, "lib")]
+[generate (RustASP3Plugin, "lib")]
 celltype tPowerdown {
     [inline] entry sPowerdown ePowerdown1;
     [inline] entry sPowerdown ePowerdown2;

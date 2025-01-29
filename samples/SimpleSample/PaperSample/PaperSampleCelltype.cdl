@@ -30,7 +30,7 @@ signature sSensor {
     void lightOff( void );
 };
 
-[generate ( ItronrsGenPlugin, "lib")]
+[generate ( RustITRONPlugin, "lib")]
 celltype tTaskbody1 {
     entry sTaskBody eTaskbody;
     call sManage cManager;
@@ -40,7 +40,7 @@ celltype tTaskbody1 {
     };
 };
 
-[generate ( ItronrsGenPlugin, "lib")]
+[generate ( RustITRONPlugin, "lib")]
 celltype tTaskbody2 {
     entry sTaskBody eTaskbody;
     call sSensor cSensor;
@@ -51,7 +51,7 @@ celltype tTaskbody2 {
     };
 };
 
-[generate ( ItronrsGenPlugin, "lib")]
+[generate ( RustITRONPlugin, "lib")]
 celltype tManager {
     entry sTaskBody eManage1;
     entry sManage eManage2;
@@ -61,7 +61,7 @@ celltype tManager {
     };
 };
 
-[generate ( ItronrsGenPlugin, "lib")]
+[generate ( RustITRONPlugin, "lib")]
 celltype tMotor {
     [inline] entry sMotor eMotor;
     attr {
@@ -72,7 +72,7 @@ celltype tMotor {
     };
 };
 
-[generate ( ItronrsGenPlugin, "lib")]
+[generate ( RustITRONPlugin, "lib")]
 celltype tSensor {
     [inline] entry sSensor eSensor;
     attr{

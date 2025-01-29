@@ -50,7 +50,7 @@ cell tBinarySearch Binarysearch {
 cell tCompare Compare {
 };
 
-[generate( ItronrsGenPlugin, "lib")]
+[generate( RustITRONPlugin, "lib")]
 cell tTask_rs Task{
     cTaskBody = Taskbody.eTaskbody;
     id = C_EXP("TASK1");

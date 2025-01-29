@@ -1390,7 +1390,7 @@ pop Namespace
 use_kernel.cdl: line 4 : [ '['
 use_kernel.cdl: line 4 : GENERATE 'generate'
 use_kernel.cdl: line 4 : ( '('
-use_kernel.cdl: line 4 : IDENTIFIER 'ItronrsGenPlugin'
+use_kernel.cdl: line 4 : IDENTIFIER 'RustITRONPlugin'
 use_kernel.cdl: line 4 : , ','
 use_kernel.cdl: line 4 : STRING_LITERAL '""'
 use_kernel.cdl: line 4 : ) ')'
@@ -1438,14 +1438,14 @@ use_kernel.cdl: line 13 : } '}'
 use_kernel.cdl: line 13 : ; ';'
 use_kernel.cdl: line 14 : } '}'
 use_kernel.cdl: line 14 : ; ';'
-PluginModule: load_plugin: ItronrsGenPlugin
-require_lib: ItronrsGenPlugin.rb
-pluginClass=ItronrsGenPlugin
-require_lib: tecslib/plugin/ItronrsGenCelltypePlugin.rb
+PluginModule: load_plugin: RustITRONPlugin
+require_lib: RustITRONPlugin.rb
+pluginClass=RustITRONPlugin
+require_lib: tecslib/plugin/RustITRONCelltypePlugin.rb
 *** Begin Ruby exception message ***
 uninitialized constant RustGenCelltypePlugin
 #### stack trace ####
-["/home/yosshy/tecsgen-V1.9.0-Beta5/tecsgen/tecsgen/tecslib/plugin/ItronrsGenCelltypePlugin.rb:43:in `<top (required)>'",
+["/home/yosshy/tecsgen-V1.9.0-Beta5/tecsgen/tecsgen/tecslib/plugin/RustITRONCelltypePlugin.rb:43:in `<top (required)>'",
  "<internal:/usr/lib/ruby/vendor_ruby/rubygems/core_ext/kernel_require.rb>:85:in `require'",
  "<internal:/usr/lib/ruby/vendor_ruby/rubygems/core_ext/kernel_require.rb>:85:in `require'",
  "/home/yosshy/tecsgen-V1.9.0-Beta5/tecsgen/tecsgen/tecsgen.rb:112:in `block (2 levels) in require_tecsgen_lib'",
@@ -1453,7 +1453,7 @@ uninitialized constant RustGenCelltypePlugin
  "/home/yosshy/tecsgen-V1.9.0-Beta5/tecsgen/tecsgen/tecsgen.rb:107:in `block in require_tecsgen_lib'",
  "/home/yosshy/tecsgen-V1.9.0-Beta5/tecsgen/tecsgen/tecsgen.rb:106:in `each'",
  "/home/yosshy/tecsgen-V1.9.0-Beta5/tecsgen/tecsgen/tecsgen.rb:106:in `require_tecsgen_lib'",
- "/home/yosshy/tecsgen-V1.9.0-Beta5/tecsgen/tecsgen/tecslib/plugin/ItronrsGenPlugin.rb:47:in `get_plugin'",
+ "/home/yosshy/tecsgen-V1.9.0-Beta5/tecsgen/tecsgen/tecslib/plugin/RustITRONPlugin.rb:47:in `get_plugin'",
  "/home/yosshy/tecsgen-V1.9.0-Beta5/tecsgen/tecsgen/tecslib/core/pluginModule.rb:86:in `load_plugin'",
  "/home/yosshy/tecsgen-V1.9.0-Beta5/tecsgen/tecsgen/tecslib/core/componentobj/celltypeModule.rb:60:in `apply_plugin'",
  "/home/yosshy/tecsgen-V1.9.0-Beta5/tecsgen/tecsgen/tecslib/core/componentobj/celltypeModule.rb:45:in `celltype_plugin'",
@@ -1473,7 +1473,7 @@ uninitialized constant RustGenCelltypePlugin
 SystemExit
 ["/home/yosshy/tecsgen-V1.9.0-Beta5/tecsgen/tecsgen/tecsgen.rb:156:in `exit'",
  "/home/yosshy/tecsgen-V1.9.0-Beta5/tecsgen/tecsgen/tecsgen.rb:156:in `require_tecsgen_lib'",
- "/home/yosshy/tecsgen-V1.9.0-Beta5/tecsgen/tecsgen/tecslib/plugin/ItronrsGenPlugin.rb:47:in `get_plugin'",
+ "/home/yosshy/tecsgen-V1.9.0-Beta5/tecsgen/tecsgen/tecslib/plugin/RustITRONPlugin.rb:47:in `get_plugin'",
  "/home/yosshy/tecsgen-V1.9.0-Beta5/tecsgen/tecsgen/tecslib/core/pluginModule.rb:86:in `load_plugin'",
  "/home/yosshy/tecsgen-V1.9.0-Beta5/tecsgen/tecsgen/tecslib/core/componentobj/celltypeModule.rb:60:in `apply_plugin'",
  "/home/yosshy/tecsgen-V1.9.0-Beta5/tecsgen/tecsgen/tecslib/core/componentobj/celltypeModule.rb:45:in `celltype_plugin'",
@@ -1489,7 +1489,7 @@ SystemExit
  "/home/yosshy/tecsgen-V1.9.0-Beta5/tecsgen/tecsgen/tecslib/core/tecsgen.rb:232:in `syntax_analisys'",
  "/home/yosshy/tecsgen-V1.9.0-Beta5/tecsgen/tecsgen/tecsgen.rb:243:in `run1'",
  "/home/yosshy/tecsgen-V1.9.0-Beta5/tecsgen/tecsgen/tecsgen.rb:597:in `<main>'"]
-use_kernel.cdl:14:2: error: P2003 ItronrsGenPlugin: load failed
+use_kernel.cdl:14:2: error: P2003 RustITRONPlugin: load failed
 use_kernel.cdl: line 16 : [ '['
 use_kernel.cdl: line 16 : GENERATE 'generate'
 use_kernel.cdl: line 16 : ( '('
@@ -1557,7 +1557,7 @@ pop Namespace
 use_kernel.cdl: line 22 : [ '['
 use_kernel.cdl: line 22 : GENERATE 'generate'
 use_kernel.cdl: line 22 : ( '('
-use_kernel.cdl: line 22 : IDENTIFIER 'ItronrsGenPlugin'
+use_kernel.cdl: line 22 : IDENTIFIER 'RustITRONPlugin'
 use_kernel.cdl: line 22 : , ','
 use_kernel.cdl: line 22 : STRING_LITERAL '""'
 use_kernel.cdl: line 22 : ) ')'
@@ -1633,28 +1633,28 @@ add_item: name=priority   locale=(use_kernel.cdl, 31)
 use_kernel.cdl: line 32 : } '}'
 use_kernel.cdl: line 32 : ; ';'
 Celltype#new_cell( Task )
-PluginModule: load_plugin: ItronrsGenPlugin
-pluginClass=ItronrsGenPlugin
-require_lib: tecslib/plugin/ItronrsGenCellPlugin.rb
-pluginClass=ItronrsGenCellPlugin
-generate_and_parse: ItronrsGenCellPlugin: gen_cdl_file
+PluginModule: load_plugin: RustITRONPlugin
+pluginClass=RustITRONPlugin
+require_lib: tecslib/plugin/RustITRONCellPlugin.rb
+pluginClass=RustITRONCellPlugin
+generate_and_parse: RustITRONCellPlugin: gen_cdl_file
 push Namespace
-gen/tmp_ItronrsGenCellPlugin_0.cdl: line 2 : GENERATE 'generate'
-gen/tmp_ItronrsGenCellPlugin_0.cdl: line 2 : ( '('
-gen/tmp_ItronrsGenCellPlugin_0.cdl: line 2 : IDENTIFIER 'ItronrsGenPlugin'
-gen/tmp_ItronrsGenCellPlugin_0.cdl: line 2 : , ','
-gen/tmp_ItronrsGenCellPlugin_0.cdl: line 2 : :: '::'
-gen/tmp_ItronrsGenCellPlugin_0.cdl: line 2 : IDENTIFIER 'tTask'
-gen/tmp_ItronrsGenCellPlugin_0.cdl: line 2 : , ','
-gen/tmp_ItronrsGenCellPlugin_0.cdl: line 2 : STRING_LITERAL '""'
-gen/tmp_ItronrsGenCellPlugin_0.cdl: line 2 : ) ')'
-gen/tmp_ItronrsGenCellPlugin_0.cdl: line 2 : ; ';'
-generate: ItronrsGenPlugin ::tTask option=""
-PluginModule: load_plugin: ItronrsGenPlugin
-pluginClass=ItronrsGenPlugin
-require_lib: tecslib/plugin/ItronrsGenCelltypePlugin.rb
-pluginClass=ItronrsGenCelltypePlugin
-generate_and_parse: ItronrsGenCelltypePlugin: gen_cdl_file
+gen/tmp_RustITRONCellPlugin_0.cdl: line 2 : GENERATE 'generate'
+gen/tmp_RustITRONCellPlugin_0.cdl: line 2 : ( '('
+gen/tmp_RustITRONCellPlugin_0.cdl: line 2 : IDENTIFIER 'RustITRONPlugin'
+gen/tmp_RustITRONCellPlugin_0.cdl: line 2 : , ','
+gen/tmp_RustITRONCellPlugin_0.cdl: line 2 : :: '::'
+gen/tmp_RustITRONCellPlugin_0.cdl: line 2 : IDENTIFIER 'tTask'
+gen/tmp_RustITRONCellPlugin_0.cdl: line 2 : , ','
+gen/tmp_RustITRONCellPlugin_0.cdl: line 2 : STRING_LITERAL '""'
+gen/tmp_RustITRONCellPlugin_0.cdl: line 2 : ) ')'
+gen/tmp_RustITRONCellPlugin_0.cdl: line 2 : ; ';'
+generate: RustITRONPlugin ::tTask option=""
+PluginModule: load_plugin: RustITRONPlugin
+pluginClass=RustITRONPlugin
+require_lib: tecslib/plugin/RustITRONCelltypePlugin.rb
+pluginClass=RustITRONCelltypePlugin
+generate_and_parse: RustITRONCelltypePlugin: gen_cdl_file
 push Namespace
 pop Namespace
 pop Namespace
@@ -1715,21 +1715,21 @@ sign= ident=printattr val=2 max=2147483647 min=-2147483648
 set_definition_join Task
 ## Generating Post Code
 ------------  gen_plugin_post_code  -------------
-PluginModule {:ItronrsGenPlugin=>:MultiPlugin, :RustGenPlugin=>:MultiPlugin, :RustGenCellPlugin=>1, :RustGenCelltypePlugin=>1, :ItronrsGenCellPlugin=>1, :ItronrsGenCelltypePlugin=>1}
-pluginModule: prio=0 plugin=ItronrsGenPlugin
+PluginModule {:RustITRONPlugin=>:MultiPlugin, :RustGenPlugin=>:MultiPlugin, :RustGenCellPlugin=>1, :RustGenCelltypePlugin=>1, :RustITRONCellPlugin=>1, :RustITRONCelltypePlugin=>1}
+pluginModule: prio=0 plugin=RustITRONPlugin
 pluginModule: prio=0 plugin=RustGenPlugin
 pluginModule: prio=50000 plugin=RustGenCellPlugin
 pluginModule: prio=30000 plugin=RustGenCelltypePlugin
-pluginModule: prio=50000 plugin=ItronrsGenCellPlugin
-pluginModule: prio=30000 plugin=ItronrsGenCelltypePlugin
+pluginModule: prio=50000 plugin=RustITRONCellPlugin
+pluginModule: prio=30000 plugin=RustITRONCelltypePlugin
 PluginModule: RustGenCelltypePlugin
 ## Import Post Code
 base_dir=. while searching gen/tmp_RustGenCelltypePlugin_post_code.cdl
 push Namespace
 pop Namespace
-PluginModule: ItronrsGenCelltypePlugin
+PluginModule: RustITRONCelltypePlugin
 ## Import Post Code
-base_dir=. while searching gen/tmp_ItronrsGenCelltypePlugin_post_code.cdl
+base_dir=. while searching gen/tmp_RustITRONCelltypePlugin_post_code.cdl
 push Namespace
 pop Namespace
 PluginModule: RustGenCellPlugin
@@ -1737,12 +1737,12 @@ PluginModule: RustGenCellPlugin
 base_dir=. while searching gen/tmp_RustGenCellPlugin_post_code.cdl
 push Namespace
 pop Namespace
-PluginModule: ItronrsGenCellPlugin
+PluginModule: RustITRONCellPlugin
 ## Import Post Code
-base_dir=. while searching gen/tmp_ItronrsGenCellPlugin_post_code.cdl
+base_dir=. while searching gen/tmp_RustITRONCellPlugin_post_code.cdl
 push Namespace
 pop Namespace
-pluginModule: prio=0 plugin=ItronrsGenPlugin
+pluginModule: prio=0 plugin=RustITRONPlugin
 pluginModule: prio=0 plugin=RustGenPlugin
 ## Creating reverse join (for post code) 
 ## Checking all join (for cells generated by Post Code

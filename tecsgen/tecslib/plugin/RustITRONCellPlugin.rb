@@ -37,7 +37,7 @@
 #   $Id: CellPlugin.rb 2952 2018-05-07 10:19:07Z okuma-top $
 #++
 
-class ItronrsGenCellPlugin < CellPlugin
+class RustITRONCellPlugin < CellPlugin
 
     #=== CellPlugin# initialize
     #cell::     Cell        セル（インスタンス）
@@ -59,7 +59,7 @@ class ItronrsGenCellPlugin < CellPlugin
     def gen_cdl_file file
       file.print <<EOT
 /* apply CppIfGenCelltypePlugin to celltype '#{@cell.get_celltype.get_name}' (celltype of cell '#{@cell.get_name}') */
-generate( ItronrsGenPlugin, #{@cell.get_celltype.get_namespace_path.get_path_str}, "#{@plugin_arg_str}" ); 
+generate( RustITRONPlugin, #{@cell.get_celltype.get_namespace_path.get_path_str}, "#{@plugin_arg_str}" ); 
   
 EOT
     end

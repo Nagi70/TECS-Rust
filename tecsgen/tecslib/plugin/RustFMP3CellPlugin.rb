@@ -37,7 +37,7 @@
 #   $Id: CellPlugin.rb 2952 2018-05-07 10:19:07Z okuma-top $
 #++
 
-class ToppersASP3RustCellPlugin < CellPlugin
+class RustFMP3CellPlugin < CellPlugin
 
     #=== CellPlugin# initialize
     #cell::     Cell        セル（インスタンス）
@@ -59,7 +59,7 @@ class ToppersASP3RustCellPlugin < CellPlugin
     def gen_cdl_file file
       file.print <<EOT
 /* apply CppIfGenCelltypePlugin to celltype '#{@cell.get_celltype.get_name}' (celltype of cell '#{@cell.get_name}') */
-generate( ToppersASP3RustPlugin, #{@cell.get_celltype.get_namespace_path.get_path_str}, "#{@plugin_arg_str}" ); 
+generate( RustFMP3Plugin, #{@cell.get_celltype.get_namespace_path.get_path_str}, "#{@plugin_arg_str}" ); 
   
 EOT
     end

@@ -43,7 +43,7 @@
 #  RUST_PLUGIN_TECSGEN_SRCS   .rs files of Rust plugin generated celltype.rs
 #  RUST_PLUGIN_SRCS           .rs files of Rust plugin generated
 
-TECS_IMPORT_CDLS = GenerateSample.cdl ../spikert.cdl ./../kernel_rs.cdl gen/tmp_ToppersASP3RustCelltypePlugin_post_code.cdl gen/tmp_ToppersASP3RustCellPlugin_post_code.cdl
+TECS_IMPORT_CDLS = GenerateSample.cdl ../spikert.cdl ./../kernel_rs.cdl gen/tmp_RustASP3CelltypePlugin_post_code.cdl gen/tmp_RustASP3CellPlugin_post_code.cdl
 TECS_IMPORT_HEADERS = ./../tecs_kernel/tecs_kernel.h
 TECS_IMPORTS = $(TECS_IMPORT_CDLS) $(TECS_IMPORT_HEADERS)
 
