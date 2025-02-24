@@ -1,0 +1,3 @@
+/* apply CppIfGenCelltypePlugin to celltype 'tPrint' (celltype of cell 'Print2_1') */
+generate( RustFMP3Plugin, ::tPrint, "lib" ); 
+  

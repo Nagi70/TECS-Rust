@@ -189,36 +189,25 @@ class RustGenCelltypePlugin < CelltypePlugin
         # 正規表現パターンの配列を定義
         # yamlファイルなどの外部ファイルを利用して，パターンの追加を簡単にしていく
         patterns = [
-          /Option__(\w+)__/,
-          /Option_Ref__(\w+)__/,
-          /Option_Ref_mut__(\w+)__/,
-          /Option_Ref_a_mut__(\w+)__/,
-          /Ref__(\w+)__/,
-          /Ref_mut__(\w+)__/,
-          /Ref_a__(\w+)__/,
-          # 他にも必要なパターンがあれば追加
-        ]
-      
-        # 各パターンに対する変換ロジックを定義
-        conversion_rules = {
-          0 => lambda { |type_name| "Option<#{type_name}>" },
-          1 => lambda { |type_name| "Option<& #{type_name}>" },
-          2 => lambda { |type_name| "Option<&mut #{type_name}>" },
-          3 => lambda { |type_name| "Option<&'a mut #{type_name}>" },
-          4 => lambda { |type_name| "&#{type_name}" },
-          5 => lambda { |type_name| "&mut #{type_name}" },
-          6 => lambda { |type_name| "&'a #{type_name}" },
-          # 他にも必要な変換ルールがあれば追加
-        }
-      
-        # 各パターンに対して処理を行う
-        result = input.dup
-        patterns.each_with_index do |pattern, index|
-          result.gsub!(pattern) do |match|
-            type_name = $1
-            conversion_rules[index].call(type_name)
+            [/Option__(\w+)__/, ->(type) { "Option<#{type}>" }],
+            [/Option_Ref__(\w+)__/, ->(type) { "Option<& #{type}>" }],
+            [/Option_Ref_mut__(\w+)__/, ->(type) { "Option<&mut #{type}>" }],
+            [/Option_Ref_a_mut__(\w+)__/, ->(type) { "Option<&'a mut #{type}>" }],
+            [/Ref__(\w+)__/, ->(type) { "&#{type}" }],
+            [/Ref_mut__(\w+)__/, ->(type) { "&mut #{type}" }],
+            [/Ref_a__(\w+)__/, ->(type) { "&'a #{type}" }],
+            [/ITRONResult__empty__(\w+)__/, ->(err) { "Result<(), Error<#{err}>>" }],
+            [/ITRONResult__(\w+)__(\w+)__/, ->(ok, err) { "Result<#{ok}, Error<#{err}>>" }],
+            [/Result__empty__(\w+)__/, ->(err) { "Result<(), #{err}>" }],
+            [/Result__(\w+)__(\w+)__/, ->(ok, err) { "Result<#{ok}, #{err}>" }],
+          ]
+        
+          result = input.dup
+          patterns.each do |pattern, conversion|
+            result.gsub!(pattern) do
+              conversion.call(*$~.captures)  # `$~.captures` を展開して渡す
+            end
           end
-        end
       
         return result
     end
@@ -552,6 +541,10 @@ class RustGenCelltypePlugin < CelltypePlugin
         file.print "pub struct #{get_rust_celltype_name(celltype)}"
         if check_only_entryport_celltype(celltype) then
         else
+            # TODO: ライフタイムアノテーションは、呼び口がある場合のみ生成するようにしており、属性や変数に参照をもつ構造体がないことを前提としている
+            if callport_list.length == 0 then
+                return
+            end
             # 受け口以外の要素が無い場合は，ジェネリクスを生成しない
             file.print "<'a"
             # use_jenerics_alphabet と callport_list の要素数が等しいことを前提としている
@@ -766,7 +759,7 @@ class RustGenCelltypePlugin < CelltypePlugin
     end
 
     # 受け口構造体の定義を生成
-    def gen_rust_entry_structure file, celltype
+    def gen_rust_entry_structure file, celltype, callport_list
         celltype.get_port_list.each{ |port|
             if port.get_port_type == :ENTRY then
                 # 受け口構造体の定義を生成
@@ -777,6 +770,12 @@ class RustGenCelltypePlugin < CelltypePlugin
                 file.print "\tpub cell: &'a #{get_rust_celltype_name(celltype)}"
                 if check_only_entryport_celltype(celltype) then
                 else
+                    # TODO: ライフタイムアノテーションは、呼び口がある場合のみ生成するようにしており、属性や変数に参照をもつ構造体がないことを前提としている
+                    if callport_list.length == 0 then
+                        file.print ",\n"
+                        file.print "}\n\n"
+                        next
+                    end
                     file.print "<'a"
                     celltype.get_port_list.each{ |port|
                         # ジェネリクスの代入を生成
@@ -819,8 +818,8 @@ class RustGenCelltypePlugin < CelltypePlugin
             if port.get_port_type == :ENTRY then
                 sig = port.get_signature
 
-                file.print "impl #{camel_case(snake_case(port.get_signature.get_global_name.to_s))} for #{camel_case(snake_case(port.get_name.to_s))}For#{get_rust_celltype_name(celltype)}<'_"
-                file.print ">"
+                file.print "impl #{camel_case(snake_case(port.get_signature.get_global_name.to_s))} for #{camel_case(snake_case(port.get_name.to_s))}For#{get_rust_celltype_name(celltype)}"
+                file.print "<'_>"
                 file.print "{\n\n"
 
                 sig_param_str_list, _, lifetime_flag = get_sig_param_str sig
@@ -983,22 +982,28 @@ class RustGenCelltypePlugin < CelltypePlugin
                 file.print " #{get_rust_celltype_name(celltype)}"
                 if check_only_entryport_celltype(celltype) then
                 else
-                    file.print "<'"
+                    file.print "<"
                     # ライフタイムアノテーションの生成部
                     # TODO：ライフタイムについては，もう少し厳格にする必要がある
                     if celltype.get_var_list.length != 0 then
                         celltype.get_var_list.each{ |var|
                             var_type_name = var.get_type.get_type_str
                             if check_lifetime_annotation(var_type_name) then
-                                file.print "a"
+                                file.print "'a"
                                 break
                             else
-                                file.print "_"
-                                break
+                                # TODO: ライフタイムアノテーションは、呼び口がある場合のみ生成するようにしており、属性や変数に参照をもつ構造体がないことを前提としている
+                                if callport_list.length >= 1 then
+                                    file.print "'_"
+                                    break
+                                end
                             end
                         }
                     else
-                        file.print "_"
+                        # TODO: ライフタイムアノテーションは、呼び口がある場合のみ生成するようにしており、属性や変数に参照をもつ構造体がないことを前提としている
+                        if callport_list.length >= 1 then
+                            file.print "'_"
+                        end
                     end
                     callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
                         if check_gen_dyn_for_port(callport) == nil then
@@ -1395,8 +1400,8 @@ class RustGenCelltypePlugin < CelltypePlugin
 
         gen_file_path = "#{$gen}/#{file_name}"
 
-        # Cargo プロジェクトがあるかどうかを確認
-        return if Dir.exist?(@@cargo_path) == false
+        # Cargo プロジェクトがあるかどうかと、gen ディレクトリにコピー元のファイルがあるかどうかを確認
+        return if Dir.exist?(@@cargo_path) == false || File.exist?(gen_file_path) == false
 
         FileUtils.cp(gen_file_path, "#{@@cargo_path}/src")
 
@@ -1660,7 +1665,7 @@ class RustGenCelltypePlugin < CelltypePlugin
 
         print "#{@celltype.get_global_name.to_s}: gen_rust_entry_structure\n"
         # 受け口構造体の定義と初期化を生成
-        gen_rust_entry_structure file, @celltype
+        gen_rust_entry_structure file, @celltype, callport_list
 
         print "#{@celltype.get_global_name.to_s}: gen_rust_entryport_structure_initialize\n"
         # ロックガード構造体の定義を生成

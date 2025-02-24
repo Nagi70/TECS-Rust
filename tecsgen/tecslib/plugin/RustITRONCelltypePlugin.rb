@@ -458,18 +458,20 @@ CODE
                 str = c_type_to_rust_type(attr.get_type)
                 # 属性や変数のフィールドに構造体がある場合は，ライフタイムを付与する必要がある
                 # itron-rsオブジェクトに対する，特別な生成
-                if str == "TaskRef" then
-                    # ライフタイムを付与
+                # ライフタイムを付与
+                case str
+                when "TaskRef"
                     str = "TaskRef<'a>"
-                    file.print "#{str},\n"
-                    # 書き込んでいるファイルを一度閉じる
-                    # file.close
-                    # creat_itron_rs_use cell
-                    # global_file_name = snake_case(cell.get_global_name.to_s)
-                    # file = CFile.open( "#{$gen}/#{global_file_name}.rs", "a" )
-                else
-                    file.print "#{str},\n"
+                when "SemaphoreRef"
+                    str = "SemaphoreRef<'a>"
+                when "EventflagRef"
+                    str = "EventflagRef<'a>"
+                when "DataqueueRef"
+                    str = "DataqueueRef<'a>"
+                when "MutexRef"
+                    str = "MutexRef<'a>"
                 end
+                file.print "#{str},\n"
             end
         }
     end
@@ -534,22 +536,28 @@ CODE
                 file.print " #{get_rust_celltype_name(celltype)}"
                 if check_only_entryport_celltype(celltype) then
                 else
-                    file.print "<'"
+                    file.print "<"
                     # ライフタイムアノテーションの生成部
                     # TODO：ライフタイムについては，もう少し厳格にする必要がある
                     if celltype.get_var_list.length != 0 then
                         celltype.get_var_list.each{ |var|
                             var_type_name = var.get_type.get_type_str
                             if check_lifetime_annotation(var_type_name) then
-                                file.print "a"
+                                file.print "'a"
                                 break
                             else
-                                file.print "_"
-                                break
+                                # TODO: ライフタイムアノテーションは、呼び口がある場合のみ生成するようにしており、属性や変数に構造体がないことを前提としている
+                                if callport_list.length >= 1 then
+                                    file.print "'_"
+                                    break
+                                end
                             end
                         }
                     else
-                        file.print "_"
+                        # TODO: ライフタイムアノテーションは、呼び口がある場合のみ生成するようにしており、属性や変数に参照をもつ構造体がないことを前提としている
+                        if callport_list.length >= 1 then
+                            file.print "'_"
+                        end
                     end
                     callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
                         if check_gen_dyn_for_port(callport) == nil then
@@ -833,8 +841,8 @@ CODE
             if port.get_port_type == :ENTRY then
                 sig = port.get_signature
 
-                file.print "impl #{camel_case(snake_case(port.get_signature.get_global_name.to_s))} for #{camel_case(snake_case(port.get_name.to_s))}For#{get_rust_celltype_name(celltype)}<'_"
-                file.print ">"
+                file.print "impl #{camel_case(snake_case(port.get_signature.get_global_name.to_s))} for #{camel_case(snake_case(port.get_name.to_s))}For#{get_rust_celltype_name(celltype)}"
+                file.print "<'_>"
                 file.print "{\n\n"
 
                 sig_param_str_list, _, lifetime_flag = get_sig_param_str sig
@@ -928,15 +936,15 @@ CODE
 
     # Cargo.toml の設定を変更する
     def change_cargo_toml path
-        cargo_toml_path = "#{path}/Cargo.toml"
+        # cargo_toml_path = "#{path}/Cargo.toml"
 
-        # TODO: asp3 か fmp3 かは、何かしらで判断する必要がある
-        itron_rs_depenence = "itron = { version = \"= 0.1.9\", features = [\"asp3\", \"nightly\", \"unstable\"] }"
+        # # TODO: asp3 か fmp3 かは、何かしらで判断する必要がある
+        # itron_rs_depenence = "itron = { version = \"= 0.1.9\", features = [\"asp3\", \"nightly\", \"unstable\"] }"
 
-        File.open(cargo_toml_path, "a") do |file|
-            file.puts itron_rs_depenence
-            file.puts ""
-        end
+        # File.open(cargo_toml_path, "a") do |file|
+        #     file.puts itron_rs_depenence
+        #     file.puts ""
+        # end
 
         super(path)
     end
