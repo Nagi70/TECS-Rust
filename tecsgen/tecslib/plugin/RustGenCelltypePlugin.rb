@@ -157,7 +157,7 @@ class RustGenCelltypePlugin < CelltypePlugin
         return_param_str =[]
         param_decl_list.each{ |param_decl|
             param_type = param_decl.get_type.get_type_str
-            if check_lifetime_annotation(param_type) then
+            if check_lifetime_annotation_for_type(param_type) then
                 lifetime_annotation_flag = true
             end
             if param_decl == "return" then
@@ -212,9 +212,9 @@ class RustGenCelltypePlugin < CelltypePlugin
         return result
     end
     
-    # 正規表現のパターンを用いて，ライフタイムが必要かチェックする関数
+    # 正規表現のパターンを用いて，型にライフタイムが必要かチェックする関数
     # 正規表現のパターン以外には対応していない
-    def check_lifetime_annotation str
+    def check_lifetime_annotation_for_type str
         # 正規表現パターンの配列を定義
         patterns = [
             /Option_Ref_a_mut__(\w+)__/,
@@ -227,6 +227,37 @@ class RustGenCelltypePlugin < CelltypePlugin
 
         return match_found
 
+    end
+
+    # セルタイプ構造体にライフタイムアノテーションが必要かどうかを判定する関数
+    def check_lifetime_annotation_for_celltype_structure celltype, callport_list
+
+        # 呼び口は受け口構造体に繋がっており、受け口構造体は必ずライフタイムアノテーションが必要であるため、trueを返す
+        if callport_list.length >= 1 then
+            return true
+        end
+
+        # ライフタイムアノテーションが必要な属性があるかどうか
+        celltype.get_attribute_list.each{ |attr|
+            if attr.is_omit? then
+                next
+            else
+                attr_type_name = attr.get_type.get_type_str
+                if check_lifetime_annotation_for_type(attr_type_name) then
+                    return true
+                end
+            end
+        }
+
+        # ライフタイムアノテーションが必要な変数があるかどうか
+        celltype.get_var_list.each{ |var|
+            var_type_name = var.get_type.get_type_str
+            if check_lifetime_annotation_for_type(var_type_name) then
+                return true
+            end
+        }
+
+        return false
     end
 
     def gen_use_mutex file
@@ -541,21 +572,19 @@ class RustGenCelltypePlugin < CelltypePlugin
         file.print "pub struct #{get_rust_celltype_name(celltype)}"
         if check_only_entryport_celltype(celltype) then
         else
-            # TODO: ライフタイムアノテーションは、呼び口がある場合のみ生成するようにしており、属性や変数に参照をもつ構造体がないことを前提としている
-            if callport_list.length == 0 then
-                return
-            end
-            # 受け口以外の要素が無い場合は，ジェネリクスを生成しない
-            file.print "<'a"
-            # use_jenerics_alphabet と callport_list の要素数が等しいことを前提としている
-            callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
-                if check_gen_dyn_for_port(callport) == nil then
-                    file.print ", #{alphabet}"
+            # セルタイプ構造体にライフタイムアノテーションが必要かどうか判定する(必要 -> 呼び口を持っている)
+            # TODO: ライフタイムアノテーションの判定は厳格にする必要がある
+            if check_lifetime_annotation_for_celltype_structure(celltype, callport_list) then
+                file.print "<'a"
+                # use_jenerics_alphabet と callport_list の要素数が等しいことを前提としている
+                callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
+                    if check_gen_dyn_for_port(callport) == nil then
+                        file.print ", #{alphabet}"
+                    end
                 end
+                file.print ">"
             end
-            file.print ">"
         end
-        file.print "\n"
     end
 
     def get_rust_signature_name signature
@@ -620,7 +649,7 @@ class RustGenCelltypePlugin < CelltypePlugin
             # TODO：ライフタイムについては，もう少し厳格にする必要がある
             celltype.get_var_list.each{ |var|
                 var_type_name = var.get_type.get_type_str
-                if check_lifetime_annotation(var_type_name) then
+                if check_lifetime_annotation_for_type(var_type_name) then
                     file.print "<'a>"
                     break
                 end
@@ -637,7 +666,7 @@ class RustGenCelltypePlugin < CelltypePlugin
             # TODO：ライフタイムについては，もう少し厳格にする必要がある
             celltype.get_var_list.each{ |var|
                 var_type_name = var.get_type.get_type_str
-                if check_lifetime_annotation var_type_name then
+                if check_lifetime_annotation_for_type var_type_name then
                     file.print "<'a>"
                     break
                 end
@@ -770,26 +799,20 @@ class RustGenCelltypePlugin < CelltypePlugin
                 file.print "\tpub cell: &'a #{get_rust_celltype_name(celltype)}"
                 if check_only_entryport_celltype(celltype) then
                 else
-                    # TODO: ライフタイムアノテーションは、呼び口がある場合のみ生成するようにしており、属性や変数に参照をもつ構造体がないことを前提としている
-                    if callport_list.length == 0 then
-                        file.print ",\n"
-                        file.print "}\n\n"
-                        next
-                    end
-                    file.print "<'a"
-                    celltype.get_port_list.each{ |port|
-                        # ジェネリクスの代入を生成
-                        if port.get_port_type == :CALL then
-                            if check_gen_dyn_for_port(port) == nil then
+                    # セルタイプ構造体にライフタイムアノテーションが必要かどうか
+                    if check_lifetime_annotation_for_celltype_structure(celltype, callport_list) then
+                        file.print "<'a"
+                        callport_list.each{ |cport|
+                            if check_gen_dyn_for_port(cport) == nil then
                                 # entryport_name = camel_case(snake_case(cell.get_join_list.get_item(port.get_name).get_port_name.to_s))
-                                entryport_name = camel_case(snake_case(port.get_real_callee_port.get_name.to_s))
+                                entryport_name = camel_case(snake_case(cport.get_real_callee_port.get_name.to_s))
                                 # call_celltype_name = camel_case(snake_case(cell.get_join_list.get_item(port.get_name).get_celltype.get_global_name.to_s))
-                                call_celltype_name = camel_case(snake_case(port.get_real_callee_cell.get_celltype.get_global_name.to_s))
+                                call_celltype_name = camel_case(snake_case(cport.get_real_callee_cell.get_celltype.get_global_name.to_s))
                                 file.print ", #{entryport_name}For#{call_celltype_name}<'a>"
-                            end
-                        end
-                    }
-                    file.print ">"
+                            end   
+                        }
+                        file.print ">"
+                    end
                 end
                 file.print ",\n"
                 file.print "}\n\n"
@@ -944,7 +967,7 @@ class RustGenCelltypePlugin < CelltypePlugin
                 celltype.get_var_list.each{ |var|
                     # ライフタイムアノテーションが必要な型が変数にあるかどうかを判断
                     var_type_name = var.get_type.get_type_str
-                    if check_lifetime_annotation(var_type_name) then
+                    if check_lifetime_annotation_for_type(var_type_name) then
                         # file.print "'a, "
                         file.print "'a"
                         life_time_declare = true
@@ -982,35 +1005,17 @@ class RustGenCelltypePlugin < CelltypePlugin
                 file.print " #{get_rust_celltype_name(celltype)}"
                 if check_only_entryport_celltype(celltype) then
                 else
-                    file.print "<"
-                    # ライフタイムアノテーションの生成部
-                    # TODO：ライフタイムについては，もう少し厳格にする必要がある
-                    if celltype.get_var_list.length != 0 then
-                        celltype.get_var_list.each{ |var|
-                            var_type_name = var.get_type.get_type_str
-                            if check_lifetime_annotation(var_type_name) then
-                                file.print "'a"
-                                break
-                            else
-                                # TODO: ライフタイムアノテーションは、呼び口がある場合のみ生成するようにしており、属性や変数に参照をもつ構造体がないことを前提としている
-                                if callport_list.length >= 1 then
-                                    file.print "'_"
-                                    break
-                                end
+                    if check_lifetime_annotation_for_celltype_structure(celltype, callport_list) then
+                        file.print "<'_"
+
+                        callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
+                            if check_gen_dyn_for_port(callport) == nil then
+                                file.print ", #{alphabet}"
                             end
-                        }
-                    else
-                        # TODO: ライフタイムアノテーションは、呼び口がある場合のみ生成するようにしており、属性や変数に参照をもつ構造体がないことを前提としている
-                        if callport_list.length >= 1 then
-                            file.print "'_"
                         end
+                        file.print ">"
                     end
-                    callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
-                        if check_gen_dyn_for_port(callport) == nil then
-                            file.print ", #{alphabet}"
-                        end
-                    end
-                    file.print ">"
+
                 end
                 file.print " {\n"
                 # インライン化
@@ -1023,7 +1028,7 @@ class RustGenCelltypePlugin < CelltypePlugin
                 # TODO：ライフタイムについては，もう少し厳格にする必要がある
                 celltype.get_var_list.each{ |var|
                     var_type_name = var.get_type.get_type_str
-                    if check_lifetime_annotation(var_type_name) && life_time_declare == false then
+                    if check_lifetime_annotation_for_type(var_type_name) && life_time_declare == false then
                         file.print "<'a>"
                         break
                     end
@@ -1054,7 +1059,7 @@ class RustGenCelltypePlugin < CelltypePlugin
                     return_tuple_type_list.push("&Mutex<#{get_rust_celltype_name(celltype)}Var")
                     celltype.get_var_list.each{ |var|
                         var_type_name = var.get_type.get_type_str
-                        if check_lifetime_annotation(var_type_name) then
+                        if check_lifetime_annotation_for_type(var_type_name) then
                             return_tuple_type_list[-1].concat("<'a>")
                             break
                         end

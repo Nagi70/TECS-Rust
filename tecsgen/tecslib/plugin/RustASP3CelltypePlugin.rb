@@ -97,6 +97,26 @@ class RustASP3CelltypePlugin < RustITRONCelltypePlugin
 
     end
 
+    # セルタイプ構造体にライフタイムアノテーションが必要かどうかを判定する関数
+    # TODO: FMP3でも排他制御の最適化が適用できたら、この関数を RustITRONCelltypePluginに移す
+    def check_lifetime_annotation_for_celltype_structure celltype, callport_list
+
+        result = super(celltype, callport_list)
+
+        if result == true then
+            return result
+        end
+
+        # ex_ctrl_ref フィールドはライフタイムアノテーションが必要であるため、生成されるかどうかを判定する
+        celltype.get_cell_list.each{ |cell|
+            if check_exclusive_control_for_cell(cell) == true then
+                return true
+            end
+        }
+
+        return false
+    end
+
     # itron のコンフィグレーションファイルにミューテックス静的APIを生成する
     def gen_mutex_static_api_for_configuration cell
         file = AppFile.open( "#{$gen}/tecsgen.cfg" )

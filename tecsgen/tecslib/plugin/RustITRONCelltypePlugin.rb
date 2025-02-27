@@ -190,6 +190,25 @@ CODE
         end
         kernel_cfg_rs.close
     end
+    
+    # 引数の文字列が、ITRONクレートのカーネルオブジェクトへの参照型になっているかを追加判定する
+    # TODO: リファクタリングの余地あり
+    def check_lifetime_annotation_for_type str
+        result = super(str)
+        
+        itron_rs_refs = [
+            "TaskRef",
+            "SemaphoreRef",
+            "EventflagRef",
+            "DataqueueRef",
+            "MutexRef",
+        ]
+
+        match_found = itron_rs_refs.include?(str)
+
+        return result || match_found
+
+    end
 
     def gen_rust_tecs_h function_name
 
@@ -274,7 +293,7 @@ CODE
             file.print "\tvariable: &'a Sync#{get_rust_celltype_name(celltype)}Var"
             celltype.get_var_list.each{ |var|
                 var_type_name = var.get_type.get_type_str
-                if check_lifetime_annotation(var_type_name) then
+                if check_lifetime_annotation_for_type(var_type_name) then
                     file.print "<'a>"
                     break
                 end
@@ -363,7 +382,7 @@ CODE
             file.print "pub struct Sync#{get_rust_celltype_name(celltype)}Var"
             celltype.get_var_list.each{ |var|
                 var_type_name = var.get_type.get_type_str
-                if check_lifetime_annotation(var_type_name) then
+                if check_lifetime_annotation_for_type(var_type_name) then
                     file.print "<'a>"
                     break
                 end
@@ -372,7 +391,7 @@ CODE
             file.print "\tunsafe_var: UnsafeCell<#{get_rust_celltype_name(celltype)}Var"
             celltype.get_var_list.each{ |var|
                 var_type_name = var.get_type.get_type_str
-                if check_lifetime_annotation(var_type_name) then
+                if check_lifetime_annotation_for_type(var_type_name) then
                     file.print "<'a>"
                     break
                 end
@@ -389,7 +408,7 @@ CODE
         file.print "unsafe impl"
         celltype.get_var_list.each{ |var|
             var_type_name = var.get_type.get_type_str
-            if check_lifetime_annotation(var_type_name) then
+            if check_lifetime_annotation_for_type(var_type_name) then
                 file.print "<'a>"
                 break
             end
@@ -397,7 +416,7 @@ CODE
         file.print " Sync for Sync#{get_rust_celltype_name(celltype)}Var"
         celltype.get_var_list.each{ |var|
             var_type_name = var.get_type.get_type_str
-            if check_lifetime_annotation(var_type_name) then
+            if check_lifetime_annotation_for_type(var_type_name) then
                 file.print "<'a>"
                 break
             end
@@ -499,7 +518,7 @@ CODE
                 celltype.get_var_list.each{ |var|
                     # ライフタイムアノテーションが必要な型が変数にあるかどうかを判断
                     var_type_name = var.get_type.get_type_str
-                    if check_lifetime_annotation(var_type_name) then
+                    if check_lifetime_annotation_for_type(var_type_name) then
                         file.print "'a"
                         life_time_declare = true
                         break
@@ -536,35 +555,16 @@ CODE
                 file.print " #{get_rust_celltype_name(celltype)}"
                 if check_only_entryport_celltype(celltype) then
                 else
-                    file.print "<"
-                    # ライフタイムアノテーションの生成部
-                    # TODO：ライフタイムについては，もう少し厳格にする必要がある
-                    if celltype.get_var_list.length != 0 then
-                        celltype.get_var_list.each{ |var|
-                            var_type_name = var.get_type.get_type_str
-                            if check_lifetime_annotation(var_type_name) then
-                                file.print "'a"
-                                break
-                            else
-                                # TODO: ライフタイムアノテーションは、呼び口がある場合のみ生成するようにしており、属性や変数に構造体がないことを前提としている
-                                if callport_list.length >= 1 then
-                                    file.print "'_"
-                                    break
-                                end
+                    if check_lifetime_annotation_for_celltype_structure(celltype, callport_list) then
+                        file.print "<'_"
+
+                        callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
+                            if check_gen_dyn_for_port(callport) == nil then
+                                file.print ", #{alphabet}"
                             end
-                        }
-                    else
-                        # TODO: ライフタイムアノテーションは、呼び口がある場合のみ生成するようにしており、属性や変数に参照をもつ構造体がないことを前提としている
-                        if callport_list.length >= 1 then
-                            file.print "'_"
                         end
+                        file.print ">"
                     end
-                    callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
-                        if check_gen_dyn_for_port(callport) == nil then
-                            file.print ", #{alphabet}"
-                        end
-                    end
-                    file.print ">"
                 end
                 file.print " {\n"
                 # インライン化
@@ -577,7 +577,7 @@ CODE
                 # TODO：ライフタイムについては，もう少し厳格にする必要がある
                 celltype.get_var_list.each{ |var|
                     var_type_name = var.get_type.get_type_str
-                    if check_lifetime_annotation(var_type_name) && life_time_declare == false then
+                    if check_lifetime_annotation_for_type(var_type_name) && life_time_declare == false then
                         file.print "<'a>"
                         break
                     end
@@ -608,7 +608,7 @@ CODE
                     return_tuple_type_list.push("&'static mut #{get_rust_celltype_name(celltype)}Var")
                     # celltype.get_var_list.each{ |var|
                     #     var_type_name = var.get_type.get_type_str
-                    #     if check_lifetime_annotation(var_type_name) then
+                    #     if check_lifetime_annotation_for_type(var_type_name) then
                     #         return_tuple_type_list[-1].concat("<'a>")
                     #         break
                     #     end
@@ -814,7 +814,7 @@ CODE
         file.print "impl"
         celltype.get_var_list.each{ |var|
             var_type_name = var.get_type.get_type_str
-            if check_lifetime_annotation(var_type_name) then
+            if check_lifetime_annotation_for_type(var_type_name) then
                 file.print "<'a>"
                 break
             end
@@ -822,7 +822,7 @@ CODE
         file.print " Drop for LockGuardFor#{get_rust_celltype_name(celltype)}"
         celltype.get_var_list.each{ |var|
             var_type_name = var.get_type.get_type_str
-            if check_lifetime_annotation(var_type_name) then
+            if check_lifetime_annotation_for_type(var_type_name) then
                 file.print "<'a>"
                 break
             end
