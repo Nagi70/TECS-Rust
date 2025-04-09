@@ -81,7 +81,6 @@ class RustFMP3CelltypePlugin < RustITRONCelltypePlugin
             file = AppFile.open( "#{$gen}/tecsgen.cfg" )
             file.print "#include \"rust_tecs.h\"\n"
             file.close
-
             @@rust_tecs_header_include = true
         end
 
@@ -90,6 +89,40 @@ class RustFMP3CelltypePlugin < RustITRONCelltypePlugin
         # TODO: タスクオブジェクトのダミーIDはすべて0で生成しているが、変えてもいいかもしれない
         add_dummy_id_to_kernel_cfg_rs "#{id}", 0
 
+    end
+
+    # CRE_ISR の生成は FMPPlugin が行うため、このプラグインはヘッダファイルなどのインクルード生成を行う
+    # TODO: リファクタリングの際に、タスクや他のハンドラの関数と一緒にしたい
+    def gen_isr_static_api_for_configuration cell
+        id = cell.get_attr_initializer("id".to_sym)
+
+        # TODO: Rust のタスク関数を呼び出すための extern 宣言をインクルードするための生成であり、将来的には削除できるかも
+        if @@rust_tecs_header_include == false then
+            file = AppFile.open( "#{$gen}/tecsgen.cfg" )
+            file.print "#include \"rust_tecs.h\"\n"
+            file.close
+            @@rust_tecs_header_include = true
+        end
+
+        gen_rust_tecs_h "tecs_rust_start_#{snake_case(cell.get_global_name.to_s)}"
+
+        # TODO: タスクオブジェクトのダミーIDはすべて0で生成しているが、変えてもいいかもしれない
+        add_dummy_id_to_kernel_cfg_rs "#{id}", 0
+    end
+
+    # ATT_INI の生成は FMPPlugin が行うため、このプラグインはヘッダファイルなどのインクルード生成を行う
+    # TODO: リファクタリングの際に、タスクや他のハンドラの関数と一緒にしたい
+    def gen_ini_static_api_for_configuration cell
+
+        # TODO: Rust のタスク関数を呼び出すための extern 宣言をインクルードするための生成であり、将来的には削除できるかも
+        if @@rust_tecs_header_include == false then
+            file = AppFile.open( "#{$gen}/tecsgen.cfg" )
+            file.print "#include \"rust_tecs.h\"\n"
+            file.close
+            @@rust_tecs_header_include = true
+        end
+
+        gen_rust_tecs_h "tecs_rust_start_#{snake_case(cell.get_global_name.to_s)}"
     end
 
     # itron のコンフィグレーションファイルにミューテックス静的APIを生成する

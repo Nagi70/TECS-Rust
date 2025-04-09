@@ -97,6 +97,16 @@ class RustASP3CelltypePlugin < RustITRONCelltypePlugin
 
     end
 
+    # TODO: ASP3向けの CRE_ISR の生成
+    def gen_isr_static_api_for_configuration cell
+
+    end
+
+    # TODO: ASP3向けの ATT_INI の生成
+    def gen_ini_static_api_for_configuration cell
+
+    end
+
     # セルタイプ構造体にライフタイムアノテーションが必要かどうかを判定する関数
     # TODO: FMP3でも排他制御の最適化が適用できたら、この関数を RustITRONCelltypePluginに移す
     def check_lifetime_annotation_for_celltype_structure celltype, callport_list
