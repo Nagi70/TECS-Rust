@@ -528,31 +528,123 @@ CODE
         file.print " {}\n\n"
     end
 
-    # ロックガード構造体の定義を生成
-    def gen_rust_lock_guard_structure file, celltype
-        return if celltype.get_var_list.length == 0
-
-
-        case check_gen_dyn_for_ex_ctrl_ref celltype
-        when "dyn"
-            file.print "pub struct LockGuardFor#{get_rust_celltype_name(celltype)}<'a>{\n"
-            file.print "\tex_ctrl_ref: &'a (dyn LockManager + Sync + Send),\n"
-        when "dummy"
-            return
+    # ロックガード構造体のヘッダーを生成
+    def gen_rust_lock_guard_structure_header file, celltype, callport_list, use_jenerics_alphabet
+        file.print "pub struct LockGuardFor#{get_rust_celltype_name(celltype)}"
+        if check_only_entryport_celltype(celltype) then
         else
-            file.print "pub struct LockGuardFor#{get_rust_celltype_name(celltype)}<'a>{\n"
-            # セマフォを適用できるかを判断する
-            case check_gen_dyn_or_mutex_or_semaphore_for_celltype celltype
-            when "mutex"
-                file.print "\tex_ctrl_ref: &'a TECSMutexRef<'a>,\n"
-            when "semaphore"
-                file.print "\tex_ctrl_ref: &'a TECSSemaphoreRef<'a>,\n"
-            when "dyn"
-                file.print "\tex_ctrl_ref: &'a (dyn LockManager + Sync + Send),\n"
+            # セルタイプ構造体にライフタイムアノテーションが必要かどうか判定する(必要 -> 呼び口を持っている)
+            # TODO: ライフタイムアノテーションの判定は厳格にする必要がある
+            if check_lifetime_annotation_for_celltype_structure(celltype, callport_list) then
+                file.print "<'a"
+                # use_jenerics_alphabet と callport_list の要素数が等しいことを前提としている
+                callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
+                    if check_gen_dyn_for_port(callport) == nil then
+                        file.print ", #{alphabet}"
+                    end
+                end
+                file.print ">"
             end
         end
+    end
+
+    # ロックガード構造体の呼び口への参照の定義を生成
+    def gen_rust_lock_guard_structure_callport file, callport_list, use_jenerics_alphabet
+        callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
+            if check_gen_dyn_for_port(callport) == nil then
+                file.print "\tpub #{snake_case(callport.get_name.to_s)}: &'a #{alphabet},\n"
+            else
+                file.print "\tpub #{snake_case(callport.get_name.to_s)}: &'a (#{check_gen_dyn_for_port(callport)} + Sync + Send),\n"
+            end
+        end
+    end
+
+    # ロックガード構造体の属性への参照の定義を生成
+    def gen_rust_lock_guard_structure_attribute file, celltype
+        celltype.get_attribute_list.each{ |attr|
+        if attr.is_omit? then
+            next
+        else
+            file.print "\tpub #{attr.get_name.to_s}: "
+            # file.print "#{c_type_to_rust_type(attr.get_type)}"
+            str = c_type_to_rust_type(attr.get_type)
+            # 属性や変数のフィールドに構造体がある場合は，ライフタイムを付与する必要がある
+            # itron-rsオブジェクトに対する，特別な生成
+            # ライフタイムを付与
+            case str
+            when "TaskRef"
+                str = "TaskRef<'a>"
+            when "SemaphoreRef"
+                str = "SemaphoreRef<'a>"
+            when "EventflagRef"
+                str = "EventflagRef<'a>"
+            when "DataqueueRef"
+                str = "DataqueueRef<'a>"
+            when "MutexRef"
+                str = "MutexRef<'a>"
+            end
+            file.print "&'a #{str},\n"
+        end
+    }
+    end
+
+    # ロックガード構造体の変数への参照の定義を生成
+    def gen_rust_lock_guard_structure_variable file, celltype
+        if celltype.get_var_list.length != 0 then
+            file.print "\tpub var: &'a mut #{get_rust_celltype_name(celltype)}Var"
+            celltype.get_var_list.each{ |var|
+                var_type_name = var.get_type.get_type_str
+                if check_lifetime_annotation_for_type(var_type_name) then
+                    file.print "<'a>"
+                    break
+                end
+            }
+            file.print ",\n"
+        end
+    end
+
+    # ロックガード構造体の定義を生成
+    def gen_rust_lock_guard_structure file, celltype, callport_list, use_jenerics_alphabet
+
+        gen_rust_lock_guard_structure_header file, celltype, callport_list, use_jenerics_alphabet
+
+        gen_rust_cell_structure_jenerics file, callport_list, use_jenerics_alphabet
+
+        file.print "{\n"
+
+        gen_rust_lock_guard_structure_callport file, callport_list, use_jenerics_alphabet
+
+        gen_rust_lock_guard_structure_attribute file, celltype
+
+        gen_rust_lock_guard_structure_variable file, celltype
+
+        gen_rust_cell_structure_ex_ctrl_ref file, celltype
 
         file.print "}\n\n"
+        
+
+        # return if celltype.get_var_list.length == 0
+
+        # case check_gen_dyn_for_ex_ctrl_ref celltype
+        # when "dyn"
+        #     file.print "pub struct LockGuardFor#{get_rust_celltype_name(celltype)}<'a>{\n"
+        #     file.print "\tex_ctrl_ref: &'a (dyn LockManager + Sync + Send),\n"
+        # when "dummy"
+        #     return
+        # else
+        #     file.print "pub struct LockGuardFor#{get_rust_celltype_name(celltype)}<'a>{\n"
+        #     # セマフォを適用できるかを判断する
+        #     case check_gen_dyn_or_mutex_or_semaphore_for_celltype celltype
+        #     when "mutex"
+        #         file.print "\tex_ctrl_ref: &'a TECSMutexRef<'a>,\n"
+        #     when "semaphore"
+        #         file.print "\tex_ctrl_ref: &'a TECSSemaphoreRef<'a>,\n"
+        #     when "dyn"
+        #         file.print "\tex_ctrl_ref: &'a (dyn LockManager + Sync + Send),\n"
+        #     end
+        # end
+
+        # file.print "}\n\n"
 
     end
 
@@ -734,22 +826,36 @@ CODE
                     end
                 end
 
-                if return_tuple_type_list.length != 1 then
-                    file.print "("
-                end
+                # if return_tuple_type_list.length != 1 then
+                #     file.print "("
+                # end
 
-                # 返り値のタプル型を生成
-                return_tuple_type_list.each_with_index do |return_tuple_type, index|
-                    if index == return_tuple_type_list.length - 1 then
-                        file.print "#{return_tuple_type}"
-                        break
+                # # 返り値のタプル型を生成
+                # return_tuple_type_list.each_with_index do |return_tuple_type, index|
+                #     if index == return_tuple_type_list.length - 1 then
+                #         file.print "#{return_tuple_type}"
+                #         break
+                #     end
+                #     file.print "#{return_tuple_type}, "
+                # end
+
+                # if return_tuple_type_list.length != 1 then
+                #     file.print ")"
+                # end
+
+                file.print "LockGuardFor#{get_rust_celltype_name(celltype)}"
+                if use_jenerics_alphabet.length != 0 then
+                    file.print "<"
+                    use_jenerics_alphabet.each do |alphabet|
+                        if alphabet == use_jenerics_alphabet.last then
+                            file.print "#{alphabet}"
+                        else
+                            file.print "#{alphabet}, "
+                        end
                     end
-                    file.print "#{return_tuple_type}, "
+                    file.print ">"
                 end
 
-                if return_tuple_type_list.length != 1 then
-                    file.print ")"
-                end
                 file.print " {\n"
 
                 if celltype.get_var_list.length != 0 then
@@ -759,29 +865,70 @@ CODE
                     end
                 end
 
-                file.print "\t\t"
+                # file.print "\t\t"
                 
-                if return_tuple_list.length != 1 then
-                    file.print "(\n"
+                # if return_tuple_list.length != 1 then
+                #     file.print "(\n"
+                # end
+
+                # # 返り値のタプルを生成
+                # return_tuple_list.each_with_index do |return_tuple, index|
+                #     if return_tuple_list.length == 1 then
+                #         file.print "#{return_tuple}"
+                #         break
+                #     end
+
+                #     if index == return_tuple_list.length - 1 then
+                #         file.print "\t\t\t#{return_tuple}\n"
+                #         break
+                #     end
+                #     file.print "\t\t\t#{return_tuple},\n"
+                # end
+
+                # if return_tuple_list.length != 1 then
+                #     file.print "\t\t)"
+                # end
+
+
+                lock_guard_filed_name = []
+                lock_guard_field_value = []
+
+                callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
+                    lock_guard_filed_name.push("#{snake_case(callport.get_name.to_s)}")
+                    lock_guard_field_value.push("self.#{snake_case(callport.get_name.to_s)}")
                 end
 
-                # 返り値のタプルを生成
-                return_tuple_list.each_with_index do |return_tuple, index|
-                    if return_tuple_list.length == 1 then
-                        file.print "#{return_tuple}"
-                        break
+                celltype.get_attribute_list.each do |attr|
+                    if attr.is_omit? then
+                        next
                     end
+                    lock_guard_filed_name.push(attr.get_name)
+                    lock_guard_field_value.push("&self.#{attr.get_name}")
+                end
 
-                    if index == return_tuple_list.length - 1 then
-                        file.print "\t\t\t#{return_tuple}\n"
-                        break
+                if celltype.get_var_list.length != 0 then
+                    lock_guard_filed_name.push("var")
+                    lock_guard_field_value.push("unsafe{&mut *self.variable.unsafe_var.get()}")
+                end
+
+                if celltype.get_var_list.length != 0 then
+                    result = check_gen_dyn_for_ex_ctrl_ref celltype
+                    if result == "dummy" then
+                    else
+                        lock_guard_filed_name.push("ex_ctrl_ref")
+                        lock_guard_field_value.push("self.ex_ctrl_ref")
                     end
-                    file.print "\t\t\t#{return_tuple},\n"
                 end
 
-                if return_tuple_list.length != 1 then
-                    file.print "\t\t)"
+
+                file.print "\t\tLockGuardFor#{get_rust_celltype_name(celltype)} {\n"
+
+                lock_guard_filed_name.each_with_index do |field_name, index|
+                    file.print "\t\t\t#{field_name}: #{lock_guard_field_value[index]},\n"
                 end
+                
+                file.print "\t\t}"
+                
                 
                 file.print"\n\t}\n}\n"
                 # get_cell_ref 関数を生成するのは1回だけでいいため，break する
@@ -982,42 +1129,45 @@ CODE
 
                     if check_only_entryport_celltype(celltype) then
                     else
-                        # get_cell_ref 関数の呼び出しを生成
-                        file.print "\t\tlet "
+                        # # get_cell_ref 関数の呼び出しを生成
+                        # file.print "\t\tlet "
 
-                        # get_cell_ref 関数の返り値を格納するタプルを生成
-                        tuple_name_list = []
-                        callport_list.each{ |callport|
-                            tuple_name_list.push "#{snake_case(callport.get_name.to_s)}"
-                        }
-                        celltype.get_attribute_list.each{ |attr|
-                            if attr.is_omit? then
-                                next
-                            end
-                            tuple_name_list.push "#{attr.get_name.to_s}"
-                        }
-                        if celltype.get_var_list.length != 0 then
-                            tuple_name_list.push "var"
-                            tuple_name_list.push "_lg"
-                        end
+                        # # get_cell_ref 関数の返り値を格納するタプルを生成
+                        # tuple_name_list = []
+                        # callport_list.each{ |callport|
+                        #     tuple_name_list.push "#{snake_case(callport.get_name.to_s)}"
+                        # }
+                        # celltype.get_attribute_list.each{ |attr|
+                        #     if attr.is_omit? then
+                        #         next
+                        #     end
+                        #     tuple_name_list.push "#{attr.get_name.to_s}"
+                        # }
+                        # if celltype.get_var_list.length != 0 then
+                        #     tuple_name_list.push "var"
+                        #     tuple_name_list.push "_lg"
+                        # end
 
-                        if tuple_name_list.length != 1 then
-                            file.print "("
-                        end
+                        # if tuple_name_list.length != 1 then
+                        #     file.print "("
+                        # end
 
-                        tuple_name_list.each_with_index do |tuple_name, index|
-                            if index == tuple_name_list.length - 1 then
-                                file.print "#{tuple_name}"
-                                break
-                            end
-                            file.print "#{tuple_name}, "
-                        end
+                        # tuple_name_list.each_with_index do |tuple_name, index|
+                        #     if index == tuple_name_list.length - 1 then
+                        #         file.print "#{tuple_name}"
+                        #         break
+                        #     end
+                        #     file.print "#{tuple_name}, "
+                        # end
 
-                        if tuple_name_list.length != 1 then
-                            file.print ")"
-                        end
+                        # if tuple_name_list.length != 1 then
+                        #     file.print ")"
+                        # end
 
-                        file.print " = self.cell.get_cell_ref();\n"
+                        # file.print " = self.cell.get_cell_ref();\n"
+
+                        # ロックガードで覆う場合の生成
+                        file.print "\t\tlet mut lg = self.cell.get_cell_ref();\n"
                     end
                     file.print "\n"
                     file.print"\t}\n"

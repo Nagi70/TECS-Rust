@@ -1325,7 +1325,7 @@ class RustGenCelltypePlugin < CelltypePlugin
     end
 
     # ロックガード構造体の定義を生成
-    def gen_rust_lock_guard_structure file, celltype
+    def gen_rust_lock_guard_structure file, celltype, callport_list, use_jenerics_alphabet
         # ItronrsPlugin で実装
         # TODO: spinクレート版を実装する場合はこの関数を使う
     end
@@ -1674,7 +1674,7 @@ class RustGenCelltypePlugin < CelltypePlugin
 
         print "#{@celltype.get_global_name.to_s}: gen_rust_entryport_structure_initialize\n"
         # ロックガード構造体の定義を生成
-        gen_rust_lock_guard_structure file, @celltype
+        gen_rust_lock_guard_structure file, @celltype, callport_list, use_jenerics_alphabet
 
         print "#{@celltype.get_global_name.to_s}: gen_mod_in_main_lib_rs_for_celltype\n"
         # main.rs もしくは lib.rs に mod を追加する
