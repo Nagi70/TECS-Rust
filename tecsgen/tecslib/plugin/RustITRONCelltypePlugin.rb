@@ -92,6 +92,8 @@ class RustITRONCelltypePlugin < RustGenCelltypePlugin
             return "DataqueueRef"
         elsif plugin_option.include?("MUTEX") then
             return "MutexRef"
+        elsif plugin_option.include?("INT_SERVICE_ROUTINE") then
+            return "ID"
         else
             return "unknown"
         end
@@ -349,7 +351,11 @@ CODE
     def gen_use_header file
         kernel_obj = get_itronrs_kernel_obj_ref_str
         if kernel_obj != "unknown" then
-            file.print "use itron::#{kernel_obj[0..-4].downcase}::#{kernel_obj};\n"
+            if kernel_obj == "ID" then
+                file.print "use itron::abi::#{kernel_obj};\n"
+            else
+                file.print "use itron::#{kernel_obj[0..-4].downcase}::#{kernel_obj};\n"
+            end
             file.print "use core::num::NonZeroI32;\n"
             file.print "use crate::kernel_cfg::*;\n"
         end
@@ -531,21 +537,16 @@ CODE
     # ロックガード構造体のヘッダーを生成
     def gen_rust_lock_guard_structure_header file, celltype, callport_list, use_jenerics_alphabet
         file.print "pub struct LockGuardFor#{get_rust_celltype_name(celltype)}"
-        if check_only_entryport_celltype(celltype) then
-        else
-            # セルタイプ構造体にライフタイムアノテーションが必要かどうか判定する(必要 -> 呼び口を持っている)
-            # TODO: ライフタイムアノテーションの判定は厳格にする必要がある
-            if check_lifetime_annotation_for_celltype_structure(celltype, callport_list) then
-                file.print "<'a"
-                # use_jenerics_alphabet と callport_list の要素数が等しいことを前提としている
-                callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
-                    if check_gen_dyn_for_port(callport) == nil then
-                        file.print ", #{alphabet}"
-                    end
-                end
-                file.print ">"
+
+        file.print "<'a"
+        # use_jenerics_alphabet と callport_list の要素数が等しいことを前提としている
+        callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
+            if check_gen_dyn_for_port(callport) == nil then
+                file.print ", #{alphabet}"
             end
         end
+        file.print ">"
+
     end
 
     # ロックガード構造体の呼び口への参照の定義を生成
@@ -605,6 +606,10 @@ CODE
 
     # ロックガード構造体の定義を生成
     def gen_rust_lock_guard_structure file, celltype, callport_list, use_jenerics_alphabet
+
+        if check_only_entryport_celltype(celltype) then
+            return
+        end
 
         gen_rust_lock_guard_structure_header file, celltype, callport_list, use_jenerics_alphabet
 
@@ -844,13 +849,16 @@ CODE
                 # end
 
                 file.print "LockGuardFor#{get_rust_celltype_name(celltype)}"
-                if use_jenerics_alphabet.length != 0 then
-                    file.print "<"
-                    use_jenerics_alphabet.each do |alphabet|
-                        if alphabet == use_jenerics_alphabet.last then
-                            file.print "#{alphabet}"
-                        else
-                            file.print "#{alphabet}, "
+                # TECS/Rust において、dyn な呼び口は、ジェネリクス参照ではなくトレイトオブジェクトへの参照として表現される
+                # そのため、use_jenerics_alphabet にトレイトオブジェクトが入っている場合は、その生成をスキップする
+                # セルタイプ構造体にライフタイムアノテーションが必要かどうか判定する(必要 -> 呼び口を持っている)
+                # TODO: ライフタイムアノテーションの判定は厳格にする必要がある
+                if check_lifetime_annotation_for_celltype_structure(celltype, callport_list) then
+                    file.print "<'_"
+                    # use_jenerics_alphabet と callport_list の要素数が等しいことを前提としている
+                    callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
+                        if check_gen_dyn_for_port(callport) == nil then
+                            file.print ", #{alphabet}"
                         end
                     end
                     file.print ">"
@@ -1056,28 +1064,92 @@ CODE
     end
 
     # ロックガードに Drop トレイトを実装する
-    def gen_rust_impl_drop_for_lock_guard_structure file, celltype
+    def gen_rust_impl_drop_for_lock_guard_structure file, celltype, callport_list, use_jenerics_alphabet
         return if celltype.get_var_list.length == 0
 
         result = check_gen_dyn_for_ex_ctrl_ref celltype
         return if result == "dummy"
 
+        life_time_declare = false
+        jenerics_flag = true
+
         file.print "impl"
+        # celltype.get_var_list.each{ |var|
+        #     var_type_name = var.get_type.get_type_str
+        #     if check_lifetime_annotation_for_type(var_type_name) then
+        #         file.print "<'a>"
+        #         break
+        #     end
+        # }
+
+        if check_only_entryport_celltype(celltype) then
+        else
+            # check_only_entryport_celltype では，dyn な呼び口を判定していないため，ここで判定する
+            celltype.get_port_list.each{ |port|
+                if check_gen_dyn_for_port(port) == nil || use_jenerics_alphabet.length != 0 then
+                    file.print "<"
+                end
+                break
+            }
+        end
+        # ライフタイムアノテーションの生成部
+        # TODO：ライフタイムについては，もう少し厳格にする必要がある
         celltype.get_var_list.each{ |var|
+            # ライフタイムアノテーションが必要な型が変数にあるかどうかを判断
             var_type_name = var.get_type.get_type_str
             if check_lifetime_annotation_for_type(var_type_name) then
-                file.print "<'a>"
+                file.print "'a"
+                life_time_declare = true
                 break
             end
         }
+
+        if use_jenerics_alphabet.length != 0 && life_time_declare == true then
+            file.print ", "
+        end
+
+        # impl のジェネリクスを生成
+        callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
+            if check_gen_dyn_for_port(callport) == nil then
+                if jenerics_flag then
+                    jenerics_flag = false
+                    file.print "#{alphabet}: #{get_rust_signature_name(callport.get_signature)}"
+                else
+                    file.print ", #{alphabet}: #{get_rust_signature_name(callport.get_signature)}"
+                end
+            end
+        end
+        if check_only_entryport_celltype(celltype) then
+        else
+            # check_only_entryport_celltype では，dyn な呼び口を判定していないため，ここで判定する
+            celltype.get_port_list.each{ |port|
+                if check_gen_dyn_for_port(port) == nil || use_jenerics_alphabet.length != 0 then
+                    file.print ">"
+                end
+                break
+            }
+        end
+
+
         file.print " Drop for LockGuardFor#{get_rust_celltype_name(celltype)}"
-        celltype.get_var_list.each{ |var|
-            var_type_name = var.get_type.get_type_str
-            if check_lifetime_annotation_for_type(var_type_name) then
-                file.print "<'a>"
-                break
+        # celltype.get_var_list.each{ |var|
+        #     var_type_name = var.get_type.get_type_str
+        #     if check_lifetime_annotation_for_type(var_type_name) then
+        #         file.print "<'a>"
+        #         break
+        #     end
+        # }
+        if check_lifetime_annotation_for_celltype_structure(celltype, callport_list) then
+            file.print "<'_"
+            # use_jenerics_alphabet と callport_list の要素数が等しいことを前提としている
+            callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
+                if check_gen_dyn_for_port(callport) == nil then
+                    file.print ", #{alphabet}"
+                end
             end
-        }
+            file.print ">"
+        end
+
         file.print " {\n"
         file.print "\tfn drop(&mut self){\n"
         file.print "\t\tself.ex_ctrl_ref.unlock();\n"
