@@ -1167,7 +1167,7 @@ CODE
                         # file.print " = self.cell.get_cell_ref();\n"
 
                         # ロックガードで覆う場合の生成
-                        file.print "\t\tlet mut lg = self.cell.get_cell_ref();\n"
+                        file.print "\t\tlet lg = self.cell.get_cell_ref();\n"
                     end
                     file.print "\n"
                     file.print"\t}\n"

@@ -126,7 +126,8 @@ class RustFMP3CelltypePlugin < RustITRONCelltypePlugin
     end
 
     # itron のコンフィグレーションファイルにミューテックス静的APIを生成する
-    # TODO: ミューテックスの静的APIをどこのクラスに配置するべきかを決める必要がありそう
+    # TODO: ミューテックスの静的APIをどこのクラスに配置するべきかを決める必要がありそう -> 暫定的にCLS_ALL_PRC1に配置する
+    # TODO: 適切なクラスを選択できるようにする必要があるかも
     def gen_mutex_static_api_for_configuration cell
         file = AppFile.open( "#{$gen}/tecsgen.cfg" )
 
@@ -135,7 +136,9 @@ class RustFMP3CelltypePlugin < RustITRONCelltypePlugin
 
         # 優先度上限値の取得
         ceiling_priority = get_ceiling_priority cell
-        file.print "CRE_MTX( TECS_RUST_EX_CTRL_#{@@ex_ctrl_ref_id}, { TA_CEILING, #{ceiling_priority} });\n"
+        file.print "\nCLASS(CLS_ALL_PRC1){\n"
+        file.print "\tCRE_MTX( TECS_RUST_EX_CTRL_#{@@ex_ctrl_ref_id}, { TA_CEILING, #{ceiling_priority} });\n"
+        file.print "}\n"
         file.close
 
         add_dummy_id_to_kernel_cfg_rs "TECS_RUST_EX_CTRL_#{@@ex_ctrl_ref_id}", @@ex_ctrl_ref_id
@@ -144,12 +147,15 @@ class RustFMP3CelltypePlugin < RustITRONCelltypePlugin
     end
 
     # itron のコンフィグレーションファイルにセマフォ静的APIを生成する
-    # TODO: セマフォの静的APIをどこのクラスに配置するべきかを決める必要がありそう
+    # TODO: セマフォの静的APIをどこのクラスに配置するべきかを決める必要がありそう -> 暫定的にCLS_ALL_PRC1に配置する
+    # TODO: 適切なクラスを選択できるようにする必要があるかも
     def gen_semaphore_static_api_for_configuration cell
         file = AppFile.open( "#{$gen}/tecsgen.cfg" )
 
         # 資源数 1 でセマフォを生成
-        file.print "CRE_SEM( TECS_RUST_EX_CTRL_#{@@ex_ctrl_ref_id}, { TA_NULL, 1, 1 });\n"
+        file.print "\nCLASS(CLS_ALL_PRC1){\n"
+        file.print "\tCRE_SEM( TECS_RUST_EX_CTRL_#{@@ex_ctrl_ref_id}, { TA_NULL, 1, 1 });\n"
+        file.print "}\n"
         file.close
 
         add_dummy_id_to_kernel_cfg_rs "TECS_RUST_EX_CTRL_#{@@ex_ctrl_ref_id}", @@ex_ctrl_ref_id
