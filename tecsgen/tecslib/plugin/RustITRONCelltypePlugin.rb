@@ -49,6 +49,15 @@ class RustITRONCelltypePlugin < RustGenCelltypePlugin
     @@rust_task_func_list = []
     @@rust_hadler_func_list = []
     @@rust_tecs_header_include = false
+    @@task_func_list = []
+    @@isr_func_list = []
+    @@ini_func_list = []
+    @@task_celltype_list = []
+    @@task_signature_list = []
+    @@isr_celltype_list = []
+    @@isr_signature_list = []
+    @@ini_celltype_list = []
+    @@ini_signature_list = []
 
     #celltype::     Celltype        セルタイプ（インスタンス）
     def initialize( celltype, option )
@@ -99,160 +108,310 @@ class RustITRONCelltypePlugin < RustGenCelltypePlugin
         end
     end
 
-    def gen_mod_in_main_lib_rs_for_celltype celltype
-        plugin_option = @plugin_arg_str.split(",").map(&:strip)
-
-        file_name = check_option_main_or_lib
-
-        if file_name != nil then
-            # TODO: 本当に排他制御が必要なときのみ、排他制御モジュールを生成するようにする
-            write_list = ["#![no_std]", "#![feature(const_option)]", "mod kernel_cfg;", "mod tecs_ex_ctrl;", "mod tecs_print;"]
-            # File.write("#{$gen}/#{file_name}.rs", "") unless File.exist?("#{$gen}/#{file_name}.rs")
-            tempfile = File.read("#{$gen}/#{file_name}.rs")
-
-            write_list.each do |write|
-                if tempfile.include?(write) then
-                    next
-                else
-                    tempfile << write + "\n"
-                end
-            end
-            File.write("#{$gen}/#{file_name}.rs", tempfile)
-        end
-
-        if plugin_option.include?("TASK") then
-            gen_task_func_definition file_name, celltype
-        elsif plugin_option.include?("INT_REQUEST") then
-            # TODO: CFG_INT (ASP3の場合はファクトリ生成かもしれない)
-        elsif plugin_option.include?("INT_SERVICE_ROUTINE") then
-            gen_isr_func_definition file_name, celltype
-        elsif plugin_option.include?("INT_HANDLER") then
-            # TODO: DEF_INH
-        elsif plugin_option.include?("CPU_EXCEPTION_HANDLER") then
-            # TODO: DEF_EXC
-        elsif plugin_option.include?("INIT_ROUTINE") then
-            gen_ini_func_definition file_name, celltype
-        elsif plugin_option.include?("TERM_ROUTINE") then
-            # TODO: ATT_TER
-        end
-
-        super(celltype)
-
-
+    def gen_mod_in_main_lib_rs file, celltype
+        file.print "mod kernel_cfg;\n"
+        file.print "mod tecs_ex_ctrl;\n"
+        file.print "mod tecs_print;\n"
+        super(file, celltype)
     end
 
-    def gen_task_func_definition file_option, celltype
-        file = File.read("#{$gen}/#{file_option}.rs")
+    def gen_compile_option_in_main_lib_rs file, celltype
+        file.print "#![no_std]\n"
+        file.print "#![feature(const_option)]\n"
+    end
+
+    def gen_entryport_function_in_main_lib_rs file, celltype
+        plugin_option = @plugin_arg_str.split(",").map(&:strip)
 
         # 一番最初のタスク関数生成の時だけ、以下のパニックハンドラと、二つのuse文を追加する
         gen_panic_handler_in_main_lib_rs file
 
-        if !file.include?("use crate::" + snake_case(celltype.get_global_name.to_s) + "::*;") then
-            file << "\nuse crate::" + snake_case(celltype.get_global_name.to_s) + "::*;\n"
+        # オプションに応じて、クラス変数に追加と、静的APIを生成する
+        if plugin_option.include?("TASK") then
+            gen_task_func_definition file, celltype
+        end
+        if plugin_option.include?("INT_REQUEST") then
+            # TODO: CFG_INT (ASP3の場合はファクトリ生成かもしれない)
+        end
+        if plugin_option.include?("INT_SERVICE_ROUTINE") then
+            gen_isr_func_definition file, celltype
+        end
+        if plugin_option.include?("INT_HANDLER") then
+            # TODO: DEF_INH
+        end
+        if plugin_option.include?("CPU_EXCEPTION_HANDLER") then
+            # TODO: DEF_EXC
+        end
+        if plugin_option.include?("INIT_ROUTINE") then
+            gen_ini_func_definition file, celltype
+        end
+        if plugin_option.include?("TERM_ROUTINE") then
+            # TODO: ATT_TER
         end
 
-        if !file.include?("use s_task_body::*;") then
-            file << "use s_task_body::*;\n"
+        # クラス変数に追加したものをファイルに出力する
+        if @@task_celltype_list.length != 0 then
+            file.print @@task_celltype_list.join("\n") + "\n"
+            file.print @@task_signature_list.join("\n") + "\n"
+            file.print @@task_func_list.join("\n") + "\n"
         end
-        
+        if @@isr_celltype_list.length != 0 then
+            file.print @@isr_celltype_list.join("\n") + "\n"
+            file.print @@isr_signature_list.join("\n") + "\n"
+            file.print @@isr_func_list.join("\n") + "\n"
+        end
+        if @@ini_celltype_list.length != 0 then
+            file.print @@ini_celltype_list.join("\n") + "\n"
+            file.print @@ini_signature_list.join("\n") + "\n"
+            file.print @@ini_func_list.join("\n") + "\n"
+        end
+
+    end
+
+    # def gen_main_lib_rs celltype
+    #     super(celltype)
+
+        # plugin_option = @plugin_arg_str.split(",").map(&:strip)
+
+        # file_name = check_option_main_or_lib
+
+        # if file_name != nil then
+        #     # TODO: 本当に排他制御が必要なときのみ、排他制御モジュールを生成するようにする
+        #     write_list = ["#![no_std]", "#![feature(const_option)]", "mod kernel_cfg;", "mod tecs_ex_ctrl;", "mod tecs_print;"]
+        #     # File.write("#{$gen}/#{file_name}.rs", "") unless File.exist?("#{$gen}/#{file_name}.rs")
+        #     tempfile = File.read("#{$gen}/#{file_name}.rs")
+
+        #     write_list.each do |write|
+        #         if tempfile.include?(write) then
+        #             next
+        #         else
+        #             tempfile << write + "\n"
+        #         end
+        #     end
+        #     File.write("#{$gen}/#{file_name}.rs", tempfile)
+        # end
+
+        # plugin_option = @plugin_arg_str.split(",").map(&:strip)
+
+        # if plugin_option.include?("TASK") then
+        #     gen_task_func_definition file_name, celltype
+        # elsif plugin_option.include?("INT_REQUEST") then
+        #     # TODO: CFG_INT (ASP3の場合はファクトリ生成かもしれない)
+        # elsif plugin_option.include?("INT_SERVICE_ROUTINE") then
+        #     gen_isr_func_definition file_name, celltype
+        # elsif plugin_option.include?("INT_HANDLER") then
+        #     # TODO: DEF_INH
+        # elsif plugin_option.include?("CPU_EXCEPTION_HANDLER") then
+        #     # TODO: DEF_EXC
+        # elsif plugin_option.include?("INIT_ROUTINE") then
+        #     gen_ini_func_definition file_name, celltype
+        # elsif plugin_option.include?("TERM_ROUTINE") then
+        #     # TODO: ATT_TER
+        # end
+    # end
+
+    def gen_task_func_definition file, celltype
+        # file = File.read("#{$gen}/#{file_option}.rs")
+
+        # 一番最初のタスク関数生成の時だけ、以下のパニックハンドラと、二つのuse文を追加する
+        # gen_panic_handler_in_main_lib_rs file
+
+        # file.print "use tecs_celltype::" + snake_case(celltype.get_global_name.to_s) + "::*;\n"
+        # file.print "use tecs_signature::s_task_body::*;\n"
+
+        @@task_celltype_list.push("use tecs_celltype::" + snake_case(celltype.get_global_name.to_s) + "::*;")
+        @@task_signature_list.push("use tecs_signature::s_task_body::*;")
+
+        # タスク関数のリストに追加する
         celltype.get_cell_list.each{ |cell|
-            search_pattern = /
-                \#\[\s*no_mangle\s*\]\n
-                pub\s+extern\s*"C"\s+fn\s+tecs_rust_start_#{snake_case(cell.get_global_name.to_s)}\(\s*_\s*:\s*usize\s*\)\s*\{\n
-                \s*#{cell.get_global_name.to_s.upcase}\.c_task_body\.main\(\);\n
-            \}/x
-            if !file.match?(search_pattern) then
-                file << "\n#[no_mangle]\n"
-                file << "pub extern \"C\" fn tecs_rust_start_" + snake_case(cell.get_global_name.to_s) + "(_: usize) {\n"
-                file << "\t#{cell.get_global_name.to_s.upcase}.c_task_body.main();\n" # TODO: 呼び口である c_task_body が sTaskBody でつながっていることを前提としている
-                file << "}\n"
-
-                gen_task_static_api_for_configuration cell
-            end
+            @@task_func_list.push(
+                "\n#[no_mangle]\n" +
+                "pub extern \"C\" fn tecs_rust_start_" + snake_case(cell.get_global_name.to_s) + "(_: usize) {\n" +
+                "\t#{cell.get_global_name.to_s.upcase}.c_task_body.main();\n" +
+                "}"
+            )
+            # 何度も呼び出されるが、重複して静的APIを生成しないように関数内で管理している
+            gen_task_static_api_for_configuration cell
         }
 
-        File.write("#{$gen}/#{file_option}.rs", file)
+        # 重複を削除する
+        @@task_celltype_list.uniq!
+        @@task_signature_list.uniq!
+        @@task_func_list.uniq!
+
+        # タスク関数を生成する
+        # @@task_func_list.each{ |func|
+            # puts "func: #{func}"
+            # file.print func
+        # }
+
+        # if !file.include?("use crate::" + snake_case(celltype.get_global_name.to_s) + "::*;") then
+        #     file << "\nuse crate::" + snake_case(celltype.get_global_name.to_s) + "::*;\n"
+        # end
+
+        # if !file.include?("use s_task_body::*;") then
+        #     file << "use s_task_body::*;\n"
+        # end
+        
+        # celltype.get_cell_list.each{ |cell|
+        #     search_pattern = /
+        #         \#\[\s*no_mangle\s*\]\n
+        #         pub\s+extern\s*"C"\s+fn\s+tecs_rust_start_#{snake_case(cell.get_global_name.to_s)}\(\s*_\s*:\s*usize\s*\)\s*\{\n
+        #         \s*#{cell.get_global_name.to_s.upcase}\.c_task_body\.main\(\);\n
+        #     \}/x
+        #     if !file.match?(search_pattern) then
+        #         file << "\n#[no_mangle]\n"
+        #         file << "pub extern \"C\" fn tecs_rust_start_" + snake_case(cell.get_global_name.to_s) + "(_: usize) {\n"
+        #         file << "\t#{cell.get_global_name.to_s.upcase}.c_task_body.main();\n" # TODO: 呼び口である c_task_body が sTaskBody でつながっていることを前提としている
+        #         file << "}\n"
+
+        #         gen_task_static_api_for_configuration cell
+        #     end
+        # }
+
+        # File.write("#{$gen}/#{file_option}.rs", file)
     end
 
     # lib.rs や main.rs に対して、extern関数を生成する
     # TODO: リファクタリングの際に、タスクや他のハンドラの関数と一緒にしたい
-    def gen_isr_func_definition file_option, celltype
-        file = File.read("#{$gen}/#{file_option}.rs")
+    def gen_isr_func_definition file, celltype
 
-        # 一番最初のタスク関数生成の時だけ、以下のパニックハンドラと、二つのuse文を追加する
-        gen_panic_handler_in_main_lib_rs file
+        # file.print "use tecs_celltype::" + snake_case(celltype.get_global_name.to_s) + "::*;\n"
+        # file.print "use tecs_signature::si_handler_body::*;\n"
 
-        if !file.include?("use crate::" + snake_case(celltype.get_global_name.to_s) + "::*;") then
-            file << "\nuse crate::" + snake_case(celltype.get_global_name.to_s) + "::*;\n"
-        end
+        @@isr_celltype_list.push("use tecs_celltype::" + snake_case(celltype.get_global_name.to_s) + "::*;")
+        @@isr_signature_list.push("use tecs_signature::si_handler_body::*;")
 
-        if !file.include?("use si_handler_body::*;") then
-            file << "use si_handler_body::*;\n"
-        end
-        
         celltype.get_cell_list.each{ |cell|
-            search_pattern = /
-                \#\[\s*no_mangle\s*\]\n
-                pub\s+extern\s*"C"\s+fn\s+tecs_rust_start_#{snake_case(cell.get_global_name.to_s)}\(\s*_\s*:\s*usize\s*\)\s*\{\n
-                \s*#{cell.get_global_name.to_s.upcase}\.ci_isr_body\.main\(\);\n
-            \}/x
-            if !file.match?(search_pattern) then
-                file << "\n#[no_mangle]\n"
-                file << "pub extern \"C\" fn tecs_rust_start_" + snake_case(cell.get_global_name.to_s) + "(_: usize) {\n"
-                file << "\t#{cell.get_global_name.to_s.upcase}.ci_isr_body.main();\n" # TODO: 呼び口である c_task_body が sTaskBody でつながっていることを前提としている
-                file << "}\n"
-
-                gen_isr_static_api_for_configuration cell
-            end
+            @@isr_func_list.push(
+                "\n#[no_mangle]\n" +
+                "pub extern \"C\" fn tecs_rust_start_" + snake_case(cell.get_global_name.to_s) + "(_: usize) {\n" +
+                "\t#{cell.get_global_name.to_s.upcase}.ci_isr_body.main();\n" +
+                "}"
+            )
+            # 何度も呼び出されるが、重複して静的APIを生成しないように関数内で管理している
+            gen_isr_static_api_for_configuration cell
         }
 
-        File.write("#{$gen}/#{file_option}.rs", file)
+        # 重複を削除する
+        @@isr_celltype_list.uniq!
+        @@isr_signature_list.uniq!
+        @@isr_func_list.uniq!
+
+        # 割り込み関数を生成する
+        # @@isr_func_list.each{ |func|
+        #     file.print func
+        # }
+
+        # file = File.read("#{$gen}/#{file_option}.rs")
+
+        # # 一番最初のタスク関数生成の時だけ、以下のパニックハンドラと、二つのuse文を追加する
+        # gen_panic_handler_in_main_lib_rs file
+
+        # if !file.include?("use crate::" + snake_case(celltype.get_global_name.to_s) + "::*;") then
+        #     file << "\nuse crate::" + snake_case(celltype.get_global_name.to_s) + "::*;\n"
+        # end
+
+        # if !file.include?("use si_handler_body::*;") then
+        #     file << "use si_handler_body::*;\n"
+        # end
+        
+        # celltype.get_cell_list.each{ |cell|
+        #     search_pattern = /
+        #         \#\[\s*no_mangle\s*\]\n
+        #         pub\s+extern\s*"C"\s+fn\s+tecs_rust_start_#{snake_case(cell.get_global_name.to_s)}\(\s*_\s*:\s*usize\s*\)\s*\{\n
+        #         \s*#{cell.get_global_name.to_s.upcase}\.ci_isr_body\.main\(\);\n
+        #     \}/x
+        #     if !file.match?(search_pattern) then
+        #         file << "\n#[no_mangle]\n"
+        #         file << "pub extern \"C\" fn tecs_rust_start_" + snake_case(cell.get_global_name.to_s) + "(_: usize) {\n"
+        #         file << "\t#{cell.get_global_name.to_s.upcase}.ci_isr_body.main();\n" # TODO: 呼び口である c_task_body が sTaskBody でつながっていることを前提としている
+        #         file << "}\n"
+
+        #         gen_isr_static_api_for_configuration cell
+        #     end
+        # }
+
+        # File.write("#{$gen}/#{file_option}.rs", file)
     end
 
     def gen_ini_func_definition file_option, celltype
-        file = File.read("#{$gen}/#{file_option}.rs")
 
-        # 一番最初のタスク関数生成の時だけ、以下のパニックハンドラと、二つのuse文を追加する
-        gen_panic_handler_in_main_lib_rs file
+        # file.print "use tecs_celltype::" + snake_case(celltype.get_global_name.to_s) + "::*;\n"
+        # file.print "use tecs_signature::si_routine_body::*;\n"
+        @@ini_celltype_list.push("use tecs_celltype::" + snake_case(celltype.get_global_name.to_s) + "::*;")
+        @@ini_signature_list.push("use tecs_signature::si_routine_body::*;")
 
-        if !file.include?("use crate::" + snake_case(celltype.get_global_name.to_s) + "::*;") then
-            file << "\nuse crate::" + snake_case(celltype.get_global_name.to_s) + "::*;\n"
-        end
-
-        if !file.include?("use s_routine_body::*;") then
-            file << "use s_routine_body::*;\n"
-        end
-        
         celltype.get_cell_list.each{ |cell|
-            search_pattern = /
-                \#\[\s*no_mangle\s*\]\n
-                pub\s+extern\s*"C"\s+fn\s+tecs_rust_start_#{snake_case(cell.get_global_name.to_s)}\(\s*_\s*:\s*usize\s*\)\s*\{\n
-                \s*#{cell.get_global_name.to_s.upcase}\.c_initialize_routine_body\.main\(\);\n
-            \}/x
-            if !file.match?(search_pattern) then
-                file << "\n#[no_mangle]\n"
-                file << "pub extern \"C\" fn tecs_rust_start_" + snake_case(cell.get_global_name.to_s) + "(_: usize) {\n"
-                file << "\t#{cell.get_global_name.to_s.upcase}.c_initialize_routine_body.main();\n" # TODO: 呼び口である c_task_body が sTaskBody でつながっていることを前提としている
-                file << "}\n"
-
-                gen_ini_static_api_for_configuration cell
-            end
+            @@ini_func_list.push(
+                "\n#[no_mangle]\n" +
+                "pub extern \"C\" fn tecs_rust_start_" + snake_case(cell.get_global_name.to_s) + "(_: usize) {\n" +
+                "\t#{cell.get_global_name.to_s.upcase}.ci_initialize_routine_body.main();\n" +
+                "}"
+            )
+            # 何度も呼び出されるが、重複して静的APIを生成しないように関数内で管理している
+            gen_ini_static_api_for_configuration cell
         }
 
-        File.write("#{$gen}/#{file_option}.rs", file)
+        # 重複を削除する
+        @@ini_celltype_list.uniq!
+        @@ini_signature_list.uniq!
+        @@ini_func_list.uniq!
+
+        # 初期化関数を生成する
+        # @@ini_func_list.each{ |func|
+        #     file.print func
+        # }
+
+        # file = File.read("#{$gen}/#{file_option}.rs")
+
+        # # 一番最初のタスク関数生成の時だけ、以下のパニックハンドラと、二つのuse文を追加する
+        # gen_panic_handler_in_main_lib_rs file
+
+        # if !file.include?("use crate::" + snake_case(celltype.get_global_name.to_s) + "::*;") then
+        #     file << "\nuse crate::" + snake_case(celltype.get_global_name.to_s) + "::*;\n"
+        # end
+
+        # if !file.include?("use s_routine_body::*;") then
+        #     file << "use s_routine_body::*;\n"
+        # end
+        
+        # celltype.get_cell_list.each{ |cell|
+        #     search_pattern = /
+        #         \#\[\s*no_mangle\s*\]\n
+        #         pub\s+extern\s*"C"\s+fn\s+tecs_rust_start_#{snake_case(cell.get_global_name.to_s)}\(\s*_\s*:\s*usize\s*\)\s*\{\n
+        #         \s*#{cell.get_global_name.to_s.upcase}\.c_initialize_routine_body\.main\(\);\n
+        #     \}/x
+        #     if !file.match?(search_pattern) then
+        #         file << "\n#[no_mangle]\n"
+        #         file << "pub extern \"C\" fn tecs_rust_start_" + snake_case(cell.get_global_name.to_s) + "(_: usize) {\n"
+        #         file << "\t#{cell.get_global_name.to_s.upcase}.c_initialize_routine_body.main();\n" # TODO: 呼び口である c_task_body が sTaskBody でつながっていることを前提としている
+        #         file << "}\n"
+
+        #         gen_ini_static_api_for_configuration cell
+        #     end
+        # }
+
+        # File.write("#{$gen}/#{file_option}.rs", file)
     end
 
     def gen_panic_handler_in_main_lib_rs file
-        search_code = <<~CODE
 
-#[panic_handler]
-fn panic(_panic: &core::panic::PanicInfo<'_>) -> ! {
-    loop {}
-}
-CODE
-        if !file.include?(search_code) then
-            file << search_code
-        end
+        file.print "\n#[panic_handler]\n"
+        file.print "fn panic(_panic: &core::panic::PanicInfo<'_>) -> ! {\n"
+        file.print "\tloop {}\n"
+        file.print "}\n\n"
+
+#         search_code = <<~CODE
+
+# #[panic_handler]
+# fn panic(_panic: &core::panic::PanicInfo<'_>) -> ! {
+#     loop {}
+# }
+# CODE
+#         if !file.include?(search_code) then
+#             file << search_code
+#         end
     end
 
     # ビルドのためのダミーオブジェクトIDを生成する
@@ -995,7 +1154,7 @@ CODE
     # Sync変数構造体の初期化を生成
     def gen_rust_variable_structure_initialize file, cell
         if @celltype.get_var_list.length != 0 then
-            file.print "pub static #{cell.get_global_name.to_s.upcase}VAR: Sync#{get_rust_celltype_name(cell.get_celltype)}Var = Sync#{get_rust_celltype_name(cell.get_celltype)}Var {\n"
+            file.print "static #{cell.get_global_name.to_s.upcase}VAR: Sync#{get_rust_celltype_name(cell.get_celltype)}Var = Sync#{get_rust_celltype_name(cell.get_celltype)}Var {\n"
             file.print "\t"
             gen_comments_safe_reason file, cell
             file.print "\tunsafe_var: UnsafeCell::new(#{get_rust_celltype_name(cell.get_celltype)}Var {\n"
@@ -1050,12 +1209,12 @@ CODE
             file.print "#[link_section = \".rodata\"]\n"
             case check_gen_which_ex_ctrl cell
             when "semaphore"
-                file.print "pub static #{cell.get_global_name.to_s.upcase}_EX_CTRL_REF: TECSSemaphoreRef = TECSSemaphoreRef{\n"
+                file.print "static #{cell.get_global_name.to_s.upcase}_EX_CTRL_REF: TECSSemaphoreRef = TECSSemaphoreRef{\n"
                 file.print "\tinner: unsafe{SemaphoreRef::from_raw_nonnull(NonZeroI32::new(TECS_RUST_EX_CTRL_#{@@ex_ctrl_ref_id}).unwrap())},\n"
                 file.print "};\n\n"
                 gen_semaphore_static_api_for_configuration cell
             when "mutex"
-                file.print "pub static #{cell.get_global_name.to_s.upcase}_EX_CTRL_REF: TECSMutexRef = TECSMutexRef{\n"
+                file.print "static #{cell.get_global_name.to_s.upcase}_EX_CTRL_REF: TECSMutexRef = TECSMutexRef{\n"
                 file.print "\tinner: unsafe{MutexRef::from_raw_nonnull(NonZeroI32::new(TECS_RUST_EX_CTRL_#{@@ex_ctrl_ref_id}).unwrap())},\n"
                 file.print "};\n\n"
                 gen_mutex_static_api_for_configuration cell
@@ -1710,7 +1869,7 @@ impl LockManager for TECSSemaphoreRef<'_>{
         ex_file.close
 
         if File.exist?("#{@@cargo_path}}/tecs_ex_ctrl.rs") == false then
-            copy_gen_files_to_cargo "tecs_ex_ctrl.rs"
+            copy_gen_files_to_cargo "tecs_ex_ctrl.rs", nil
         end
     end
 
@@ -1745,7 +1904,7 @@ impl LockManager for TECSSemaphoreRef<'_>{
 
         gen_tecs_print_rs
 
-        copy_gen_files_to_cargo "kernel_cfg.rs"
+        copy_gen_files_to_cargo "kernel_cfg.rs", nil
     end
 
 end

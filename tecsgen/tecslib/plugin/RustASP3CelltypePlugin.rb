@@ -42,6 +42,9 @@ require_tecsgen_lib "RustITRONCelltypePlugin.rb"
 #== celltype プラグインの共通の親クラス
 class RustASP3CelltypePlugin < RustITRONCelltypePlugin
     CLASS_NAME_SUFFIX = ""
+    @@registered_task_id_list = []
+    @@registered_isr_id_list = []
+    @@registered_ini_id_list = []
 
     #celltype::     Celltype        セルタイプ（インスタンス）
     def initialize( celltype, option )
@@ -73,12 +76,19 @@ class RustASP3CelltypePlugin < RustITRONCelltypePlugin
     end
 
     def gen_task_static_api_for_configuration cell
-        file = AppFile.open( "#{$gen}/tecsgen.cfg" )
 
+        # タスクIDの重複チェック
+        if @@registered_task_id_list.include?(cell.get_attr_initializer("id".to_sym)) then
+            return
+        end
         id = cell.get_attr_initializer("id".to_sym)
         attribute = cell.get_attr_initializer("attribute".to_sym)
         priority = cell.get_attr_initializer("priority".to_sym)
         stack_size = cell.get_attr_initializer("stackSize".to_sym)
+
+        @@registered_task_id_list.push(id)
+
+        file = AppFile.open( "#{$gen}/tecsgen.cfg" )
         
         # TODO: Rust のタスク関数を呼び出すための extern 宣言をインクルードするための生成であり、将来的には削除できるかも
         if @@rust_tecs_header_include == false then
@@ -258,7 +268,7 @@ macro_rules! print{
         print_file.close
 
         if File.exist?("#{@@cargo_path}/tecs_print.rs") == false then
-            copy_gen_files_to_cargo "tecs_print.rs"
+            copy_gen_files_to_cargo "tecs_print.rs", nil
         end
     end
 

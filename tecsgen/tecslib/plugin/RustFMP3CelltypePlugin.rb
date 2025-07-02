@@ -42,6 +42,9 @@ require_tecsgen_lib "RustITRONCelltypePlugin.rb"
 #== celltype プラグインの共通の親クラス
 class RustFMP3CelltypePlugin < RustITRONCelltypePlugin
     CLASS_NAME_SUFFIX = ""
+    @@registered_task_id_list = []
+    @@registered_isr_id_list = []
+    @@registered_ini_id_list = []
 
     #celltype::     Celltype        セルタイプ（インスタンス）
     def initialize( celltype, option )
@@ -74,7 +77,15 @@ class RustFMP3CelltypePlugin < RustITRONCelltypePlugin
 
     # タスクの静的APIの生成は FMPPlugin が行うため、このプラグインはヘッダファイルなどのインクルード生成を行う
     def gen_task_static_api_for_configuration cell
+
+        # タスクIDの重複チェック
+        # 複数回 AppFile に書き込まないようにするため、重複チェックを行う
+        if @@registered_task_id_list.include?(cell.get_attr_initializer("id".to_sym)) then
+            return
+        end
         id = cell.get_attr_initializer("id".to_sym)
+
+        @@registered_task_id_list.push(id)
 
         # TODO: Rust のタスク関数を呼び出すための extern 宣言をインクルードするための生成であり、将来的には削除できるかも
         if @@rust_tecs_header_include == false then
@@ -94,8 +105,15 @@ class RustFMP3CelltypePlugin < RustITRONCelltypePlugin
     # CRE_ISR の生成は FMPPlugin が行うため、このプラグインはヘッダファイルなどのインクルード生成を行う
     # TODO: リファクタリングの際に、タスクや他のハンドラの関数と一緒にしたい
     def gen_isr_static_api_for_configuration cell
+
+        # 割り込みIDの重複チェック
+        # 複数回 AppFile に書き込まないようにするため、重複チェックを行う
+        if @@registered_isr_id_list.include?(cell.get_attr_initializer("id".to_sym)) then
+            return
+        end
         id = cell.get_attr_initializer("id".to_sym)
 
+        @@registered_isr_id_list.push(id)
         # TODO: Rust のタスク関数を呼び出すための extern 宣言をインクルードするための生成であり、将来的には削除できるかも
         if @@rust_tecs_header_include == false then
             file = AppFile.open( "#{$gen}/tecsgen.cfg" )
@@ -113,6 +131,14 @@ class RustFMP3CelltypePlugin < RustITRONCelltypePlugin
     # ATT_INI の生成は FMPPlugin が行うため、このプラグインはヘッダファイルなどのインクルード生成を行う
     # TODO: リファクタリングの際に、タスクや他のハンドラの関数と一緒にしたい
     def gen_ini_static_api_for_configuration cell
+
+        # ATT_INI の重複チェック
+        # 複数回 AppFile に書き込まないようにするため、重複チェックを行う
+        if @@registered_ini_id_list.include?("tecs_rust_start_#{snake_case(cell.get_global_name.to_s)}") then
+            return
+        end
+
+        @@registered_ini_id_list.push("tecs_rust_start_#{snake_case(cell.get_global_name.to_s)}")
 
         # TODO: Rust のタスク関数を呼び出すための extern 宣言をインクルードするための生成であり、将来的には削除できるかも
         if @@rust_tecs_header_include == false then
@@ -266,7 +292,7 @@ macro_rules! print{
         print_file.close
 
         if File.exist?("#{@@cargo_path}/tecs_print.rs") == false then
-            copy_gen_files_to_cargo "tecs_print.rs"
+            copy_gen_files_to_cargo "tecs_print.rs", nil
         end
     end
 

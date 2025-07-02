@@ -49,6 +49,9 @@ class RustGenCelltypePlugin < CelltypePlugin
     @@diff_src_and_gen = Hash.new { |hash, key| hash[key] = [] }
     @@rust_src_list = []
     @@makefile_generated = false
+    @@mod_global_signatures_list = []
+    @@mod_global_celltypes_list = []
+    @@mod_global_impls_list = []
 
     #celltype::     Celltype        セルタイプ（インスタンス）
     def initialize( celltype, option )
@@ -60,6 +63,12 @@ class RustGenCelltypePlugin < CelltypePlugin
       @plugin_arg_list = {}
       @cell_list =[]
       @dyn_mutex_ref = false
+      @mod_signatures_list = []
+      @mod_celltypes_list = []
+      @mod_impls_list = []
+
+      require 'fileutils'
+
       celltype.set_impl_lang :Rust
     end
   
@@ -90,38 +99,6 @@ class RustGenCelltypePlugin < CelltypePlugin
     def camel_case(input_string)
         input_string.split('_').map(&:capitalize).join
     end
-
-    # def gen_module_header file
-    #     # すべてのシグニチャ名を mod する
-    #     Namespace.get_root.get_signature_list.each{ |sig|
-    #         # next if sig.is_allocator? == true
-    #         global_sig_name = sig.get_global_name
-    #         global_sig_name = global_sig_name.to_s
-    #         global_sig_name = snake_case(global_sig_name)
-    #         file.print "mod #{global_sig_name};\n"
-    #     }
-    #     Celltype.get_celltype_list.each{ |celltype|
-    #         # すべてのセルタイプのセル名を mod する．
-    #         celltype.get_cell_list.each{ |cell|
-    #             global_cell_name = cell.get_global_name
-    #             global_cell_name = global_cell_name.to_s
-    #             global_cell_name = snake_case(global_cell_name)
-    #             file.print "mod #{global_cell_name};\n"
-    #             # @use_string_list.push(global_cell_name)
-    #         }
-    #         # すべてのセルタイプ名を mod する．また，受け口を持たないセルタイプは mod しない.
-    #         celltype.get_port_list.each{ |port|
-    #             if port.get_port_type == :ENTRY then
-    #                 global_celltype_name = celltype.get_global_name
-    #                 global_celltype_name = global_celltype_name.to_s
-    #                 global_celltype_name = global_celltype_name[1..-1]
-    #                 global_celltype_name = snake_case(global_celltype_name)
-    #                 file.print "mod client_#{global_celltype_name};\n"
-    #             else
-    #             end
-    #         }
-    #     }
-    # end
 
     def get_sig_param_str sig
         param_decl_list = []
@@ -269,17 +246,85 @@ class RustGenCelltypePlugin < CelltypePlugin
         if @celltype.get_var_list.length != 0 then
             gen_use_mutex file
         end
-        if @use_string_list.length != 0 then
-            file.print "use crate::{"
+
+        if @mod_signatures_list.length == 1 then
+            file.print "use crate::tecs_signature::#{@mod_signatures_list[0]}::*;\n"
+        elsif @mod_signatures_list.length != 0 then
+            file.print "use crate::tecs_signature::{"
         end
-        @use_string_list.each{ |use_string|
-            if use_string != @use_string_list.last then
-                file.print "#{use_string}::*, "
+        @mod_signatures_list.each{ |mod_signature|
+            if mod_signature != @mod_signatures_list.last then
+                file.print "#{mod_signature}::*, "
             else
-                file.print "#{use_string}::*};\n\n"
+                file.print "#{mod_signature}::*};\n\n"
+            end
+        }
+
+        if @mod_celltypes_list.length == 1 then
+            file.print "use crate::tecs_celltype::#{@mod_celltypes_list[0]}::*;\n"
+        elsif @mod_celltypes_list.length != 0 then
+            file.print "use crate::tecs_celltype::{"
+        end
+        @mod_celltypes_list.each{ |mod_celltype|
+            if mod_celltype != @mod_celltypes_list.last then
+                file.print "#{mod_celltype}::*, "
+            else
+                file.print "#{mod_celltype}::*};\n\n"
             end
         }
     end
+
+    # tecs_celltype.rs と tecs_celltype ディレクトリを生成する
+    def gen_tecs_celltype_rs
+        # ディレクトリを生成する
+        if File.exist?("#{$gen}/tecs_celltype") == false then
+            FileUtils.mkdir_p("#{$gen}/tecs_celltype")
+        end
+
+        # tecs_celltype.rs を生成する
+        tecs_celltype_rs = CFile.open("#{$gen}/tecs_celltype.rs", "w")
+        @@mod_global_celltypes_list.each{ |mod_celltype|
+            tecs_celltype_rs.print "pub mod #{mod_celltype};\n"
+        }
+        tecs_celltype_rs.close
+
+        copy_gen_files_to_cargo "tecs_celltype.rs", nil
+    end
+
+    # tecs_signature.rs と tecs_signature ディレクトリを生成する
+    def gen_tecs_signature_rs
+        # ディレクトリを生成する
+        if File.exist?("#{$gen}/tecs_signature") == false then
+            FileUtils.mkdir_p("#{$gen}/tecs_signature")
+        end
+
+        # tecs_signature.rs を生成する
+        tecs_signature_rs = CFile.open("#{$gen}/tecs_signature.rs", "w")
+        @@mod_global_signatures_list.each{ |mod_signature|
+            tecs_signature_rs.print "pub mod #{mod_signature};\n"
+        }
+        tecs_signature_rs.close
+
+        copy_gen_files_to_cargo "tecs_signature.rs", nil
+    end
+
+    # tecs_impl.rs と tecs_impl ディレクトリを生成する
+    def gen_tecs_impl_rs
+        # ディレクトリを生成する
+        if File.exist?("#{$gen}/tecs_impl") == false then
+            FileUtils.mkdir_p("#{$gen}/tecs_impl")
+        end
+
+        # tecs_impl.rs を生成する
+        tecs_impl_rs = CFile.open("#{$gen}/tecs_impl.rs", "w")
+        @@mod_global_impls_list.each{ |mod_impl|
+            tecs_impl_rs.print "pub mod #{mod_impl};\n"
+        }
+        tecs_impl_rs.close
+
+        copy_gen_files_to_cargo "tecs_impl.rs", nil
+    end
+
     # 宣言されている型を Rust の型に変換する
     # 現状として，int8_t, int16_t, int32_t, int64_t のみ対応
     # TODO:他の型への対応
@@ -363,8 +408,11 @@ class RustGenCelltypePlugin < CelltypePlugin
             sig = port.get_signature
             sig_name = sig.get_global_name.to_s
 
-            gen_mod_in_main_lib_rs_for_signature sig
-            trait_file = CFile.open( "#{$gen}/#{snake_case(sig_name)}.rs", "w" )
+            puts "#{@celltype.get_global_name.to_s}: get_diff_between_gen_and_src"
+            get_diff_between_gen_and_src "#{snake_case(sig_name)}.rs", "signature"
+
+            # gen_mod_in_main_lib_rs_for_signature sig
+            trait_file = CFile.open( "#{$gen}/tecs_signature/#{snake_case(sig_name)}.rs", "w" )
             # gen_use_mutex trait_file
 
             trait_file.print "pub trait #{camel_case(snake_case(sig_name))} {\n"
@@ -412,7 +460,7 @@ class RustGenCelltypePlugin < CelltypePlugin
             # つまり、トレイトファイルは最適化の際に更新しない
             if File.exist?("#{@@cargo_path}/src/#{snake_case(sig_name)}.rs") == false then
                 puts "#{@celltype.get_global_name.to_s}: copy #{snake_case(sig_name)}.rs to cargo\n"
-                copy_gen_files_to_cargo "#{snake_case(sig_name)}.rs"
+                copy_gen_files_to_cargo "#{snake_case(sig_name)}.rs", "signature"
             end
         }
     end
@@ -429,73 +477,108 @@ class RustGenCelltypePlugin < CelltypePlugin
         return "lib"
     end
 
-    def gen_mod_in_main_lib_rs_for_celltype celltype
+    def gen_main_lib_rs celltype
 
+        # main か lib かを取得
         file_name = check_option_main_or_lib
 
-        if file_name != nil then
-            # File.write("#{$gen}/#{file_name}.rs", "") unless File.exist?("#{$gen}/#{file_name}.rs")
-            lib_file = File.read("#{$gen}/#{file_name}.rs")
-            last_mod_line = lib_file.rindex(/^mod\s+\w+;/)
-            
-            new_mods = ["mod #{snake_case(celltype.get_global_name.to_s)};\n"]
-
-            @celltype.get_port_list.each{ |port|
-                if port.get_port_type == :ENTRY then
-                    # lib_file.print "mod #{snake_case(celltype.get_global_name.to_s)}_impl;\n"
-                    new_mods.push("mod #{snake_case(celltype.get_global_name.to_s)}_impl;\n")
-                    break
-                end
-            }
-
-            # mod記述の最後に新しいmodを挿入
-            if last_mod_line
-                insert_position = last_mod_line + lib_file[last_mod_line..].index("\n") + 1
-                new_mods.each do |mod|
-                    next if lib_file.include?(mod)
-                    lib_file.insert(insert_position, "#{mod}")
-                    insert_position += "#{mod}".length
-                end
-            else
-                # もしmod記述が見つからなければ、ファイルの末尾に追加
-                lib_file << new_mods.join("\n")
-            end
-
-            File.write("#{$gen}/#{file_name}.rs", lib_file)
+        if file_name == nil then
+            return
         end
+
+        file = CFile.open("#{$gen}/#{file_name}.rs", "w")
+
+        gen_compile_option_in_main_lib_rs file, celltype
+        gen_mod_in_main_lib_rs file, celltype
+        gen_use_in_main_lib_rs file, celltype
+        gen_entryport_function_in_main_lib_rs file, celltype
+
+        file.close
+    end
+
+    # no_std や feature などのコンパイルオプションを生成する
+    def gen_compile_option_in_main_lib_rs file, celltype
+    end
+
+    # main.rs もしくは lib.rs に use 文を生成する場合、この関数をオーバーライドする
+    def gen_use_in_main_lib_rs file, celltype
+    end
+
+    # main.rs もしくは lib.rs にエントリーポート関数を生成する
+    def gen_entryport_function_in_main_lib_rs file, celltype
+    end
+
+    # main.rs もしくは lib.rs に mod 記述を生成する
+    def gen_mod_in_main_lib_rs file, celltype
+
+        file.print "mod tecs_celltype;\n"
+        file.print "mod tecs_signature;\n"
+        file.print "mod tecs_impl;\n"
+
+        # if file_name != nil then
+        #     # File.write("#{$gen}/#{file_name}.rs", "") unless File.exist?("#{$gen}/#{file_name}.rs")
+        #     lib_file = File.read("#{$gen}/#{file_name}.rs")
+        #     last_mod_line = lib_file.rindex(/^mod\s+\w+;/)
+            
+        #     new_mods = ["mod #{snake_case(celltype.get_global_name.to_s)};\n"]
+
+        #     @celltype.get_port_list.each{ |port|
+        #         if port.get_port_type == :ENTRY then
+        #             # lib_file.print "mod #{snake_case(celltype.get_global_name.to_s)}_impl;\n"
+        #             new_mods.push("mod #{snake_case(celltype.get_global_name.to_s)}_impl;\n")
+        #             break
+        #         end
+        #     }
+
+        #     # mod記述の最後に新しいmodを挿入
+        #     if last_mod_line
+        #         insert_position = last_mod_line + lib_file[last_mod_line..].index("\n") + 1
+        #         new_mods.each do |mod|
+        #             next if lib_file.include?(mod)
+        #             lib_file.insert(insert_position, "#{mod}")
+        #             insert_position += "#{mod}".length
+        #         end
+        #     else
+        #         # もしmod記述が見つからなければ、ファイルの末尾に追加
+        #         lib_file << new_mods.join("\n")
+        #     end
+
+        #     File.write("#{$gen}/#{file_name}.rs", lib_file)
+        # end
     end
 
     def gen_mod_in_main_lib_rs_for_signature signature
 
-        file_name = check_option_main_or_lib
+        # file_name = check_option_main_or_lib
 
-        if file_name != nil then
-            # File.write("#{$gen}/#{file_name}.rs", "") unless File.exist?("#{$gen}/#{file_name}.rs")
-            lib_file = File.read("#{$gen}/#{file_name}.rs")
-            return if lib_file.include?("mod #{snake_case(signature.get_global_name.to_s)};")
+        # if file_name != nil then
+        #     # File.write("#{$gen}/#{file_name}.rs", "") unless File.exist?("#{$gen}/#{file_name}.rs")
+        #     lib_file = File.read("#{$gen}/tecs_signature.rs")
+        #     return if lib_file.include?("mod #{snake_case(signature.get_global_name.to_s)};")
 
-            last_mod_line = lib_file.rindex(/^mod\s+\w+;/)
+        #     last_mod_line = lib_file.rindex(/^mod\s+\w+;/)
 
-            # mod記述の最後に新しいmodを挿入
-            if last_mod_line
-                insert_position = last_mod_line + lib_file[last_mod_line..].index("\n") + 1
-                lib_file.insert(insert_position, "mod #{snake_case(signature.get_global_name.to_s)};\n")
-            else
-                # もしmod記述が見つからなければ、ファイルの末尾に追加
-                lib_file << "mod #{snake_case(signature.get_global_name.to_s)};"
-            end
+        #     # mod記述の最後に新しいmodを挿入
+        #     if last_mod_line
+        #         insert_position = last_mod_line + lib_file[last_mod_line..].index("\n") + 1
+        #         lib_file.insert(insert_position, "mod #{snake_case(signature.get_global_name.to_s)};\n")
+        #     else
+        #         # もしmod記述が見つからなければ、ファイルの末尾に追加
+        #         lib_file << "mod #{snake_case(signature.get_global_name.to_s)};"
+        #     end
 
-            File.write("#{$gen}/#{file_name}.rs", lib_file)
-        end
+        #     File.write("#{$gen}/#{file_name}.rs", lib_file)
+        # end
     end
 
-    # セルタイプに受け口がある場合，その受け口につながっているシグニチャなどを @use_string_list に追加する
-    def gen_use_for_entry_port file
+    # セルタイプに受け口がある場合，その受け口につながっているシグニチャなどをクラス変数とインスタンス変数に追加する
+    def extract_mod_list
         # @use_string_list.push("kernel_obj_ref")
         # セルタイプに受け口がある場合，use 文を生成する
         @celltype.get_port_list.each{ |port|
             if port.get_port_type == :CALL then
-                @use_string_list.push(snake_case(port.get_signature.get_global_name.to_s))
+                @mod_signatures_list.push(snake_case(port.get_signature.get_global_name.to_s))
+                @@mod_global_signatures_list.push(snake_case(port.get_signature.get_global_name.to_s))
                 @celltype.get_cell_list.each{ |cell|
                     # cellport = cell.get_real_port(port.get_name)
                     # print "cellport: #{cellport.get_name}\n"
@@ -524,8 +607,13 @@ class RustGenCelltypePlugin < CelltypePlugin
                     # join_cell = item.get_cell
                     # print "join_cell: #{join_cell.get_name}\n"
                     # @use_string_list.push("#{snake_case(port.get_real_callee_cell.get_celltype.get_global_name.to_s)}")
-                    @use_string_list.push("#{snake_case(cell.get_join_list.get_item(port.get_name).get_celltype.get_global_name.to_s)}")
+                    @mod_celltypes_list.push(snake_case(cell.get_join_list.get_item(port.get_name).get_celltype.get_global_name.to_s))
+                    @@mod_global_celltypes_list.push(snake_case(cell.get_join_list.get_item(port.get_name).get_celltype.get_global_name.to_s))
                 }
+            elsif port.get_port_type == :ENTRY then
+                @mod_impls_list.push(snake_case(@celltype.get_global_name.to_s) + "_impl")
+                @@mod_global_impls_list.push(snake_case(@celltype.get_global_name.to_s) + "_impl")
+                @@mod_global_signatures_list.push(snake_case(port.get_signature.get_global_name.to_s))
             end
         }
     end
@@ -609,7 +697,7 @@ class RustGenCelltypePlugin < CelltypePlugin
         #     file.print "where\n"
         # end
         if get_number_of_jenerics(use_jenerics_alphabet) != 0 then
-            file.print "where\n"
+            file.print "\nwhere\n"
         end
 
         callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
@@ -685,7 +773,7 @@ class RustGenCelltypePlugin < CelltypePlugin
     # セルの構造体の初期化の先頭部を生成
     def gen_rust_cell_structure_header_initialize file, cell
         file.print "#[link_section = \".rodata\"]\n"
-        file.print "pub static #{cell.get_global_name.to_s.upcase}: #{get_rust_celltype_name(cell.get_celltype)}"
+        file.print "static #{cell.get_global_name.to_s.upcase}: #{get_rust_celltype_name(cell.get_celltype)}"
     end
 
     # セル構造体のジェネリクス代入部を生成
@@ -761,7 +849,7 @@ class RustGenCelltypePlugin < CelltypePlugin
     # 変数構造体の初期化を生成
     def gen_rust_variable_structure_initialize file, cell
         if @celltype.get_var_list.length != 0 then
-            file.print "pub static #{cell.get_global_name.to_s.upcase}VAR: Mutex<#{get_rust_celltype_name(cell.get_celltype)}Var> = Mutex::new(#{get_rust_celltype_name(cell.get_celltype)}Var {\n"
+            file.print "static #{cell.get_global_name.to_s.upcase}VAR: Mutex<#{get_rust_celltype_name(cell.get_celltype)}Var> = Mutex::new(#{get_rust_celltype_name(cell.get_celltype)}Var {\n"
 
             # 変数構造体のフィールドの初期化を生成
             @celltype.get_var_list.each{ |var|
@@ -1115,25 +1203,40 @@ class RustGenCelltypePlugin < CelltypePlugin
 
     # implファイルのuse文を生成する
     def gen_use_for_impl_file file, celltype
-        use_list = []
-        use_list.push("#{snake_case(celltype.get_global_name.to_s)}")
+        signature_list = []
         celltype.get_port_list.each{ |port|
-            use_list.push("#{snake_case(port.get_signature.get_global_name.to_s)}")
+            signature_list.push("#{snake_case(port.get_signature.get_global_name.to_s)}")
         }
-        use_list.uniq!
+        signature_list.uniq!
         # implファイルに対して、排他制御に関するuse文は生成する必要がない
         # if @celltype.get_var_list.length != 0 then
         #     gen_use_mutex file
         # end
-        file.print "use crate::{"
-        use_list.each{ |use_str|
-            if use_str == use_list.last then
-                file.print "#{use_str}::*"
-            else
-                file.print "#{use_str}::*, "
-            end
-        }
-        file.print "};\n\n"
+
+        file.print "use crate::tecs_signature::#{snake_case(celltype.get_global_name.to_s)}::*;\n"
+
+        if signature_list.length == 1 then
+            file.print "use crate::tecs_signature::#{signature_list[0]}::*;\n"
+        elsif signature_list.length > 1 then
+            file.print "use crate::{"
+            signature_list.each{ |signature|
+                if signature == signature_list.last then
+                    file.print "#{signature}::*};\n"
+                else
+                    file.print "#{signature}::*, "
+                end
+            }
+        end
+
+        # file.print "use crate::{"
+        # signature_list.each{ |signature|
+        #     if signature == signature_list.last then
+        #         file.print "#{signature}::*"
+        #     else
+        #         file.print "#{signature}::*, "
+        #     end
+        # }
+        # file.print "};\n\n"
     end
 
     # セルタイプの呼び出し先が一意であるかどうかを判断する
@@ -1360,7 +1463,7 @@ class RustGenCelltypePlugin < CelltypePlugin
         
         return if Dir.exist?(path)
 
-        # TODO: Cargo の命名規則を考慮する必要がある
+        # TODO: Cargo の命名規則を考慮する必要があるが、makefile と同じ名前にしなければならない
         case file_name
         when "main"
             output = `cargo new #{path}`
@@ -1373,6 +1476,11 @@ class RustGenCelltypePlugin < CelltypePlugin
         else
             puts "Error: --main or --lib option is not set"
         end
+
+        # ディレクトリを生成する
+        FileUtils.mkdir_p("#{path}/src/tecs_signature")
+        FileUtils.mkdir_p("#{path}/src/tecs_impl")
+        FileUtils.mkdir_p("#{path}/src/tecs_celltype")
 
         change_cargo_toml path
 
@@ -1400,25 +1508,48 @@ class RustGenCelltypePlugin < CelltypePlugin
     end
 
     # 生成したファイルを Cargo にコピーする
-    def copy_gen_files_to_cargo file_name
-        require 'fileutils'
+    def copy_gen_files_to_cargo file_name, file_type
 
         gen_file_path = "#{$gen}/#{file_name}"
+        dir_path = "#{@@cargo_path}/src"
+
+        if file_type == "signature" then
+            gen_file_path = "#{$gen}/tecs_signature/#{file_name}"
+            dir_path = "#{@@cargo_path}/src/tecs_signature"
+        elsif file_type == "impl" then
+            gen_file_path = "#{$gen}/tecs_impl/#{file_name}"
+            dir_path = "#{@@cargo_path}/src/tecs_impl"
+        elsif file_type == "celltype" then
+            gen_file_path = "#{$gen}/tecs_celltype/#{file_name}"
+            dir_path = "#{@@cargo_path}/src/tecs_celltype"
+        end
 
         # Cargo プロジェクトがあるかどうかと、gen ディレクトリにコピー元のファイルがあるかどうかを確認
         return if Dir.exist?(@@cargo_path) == false || File.exist?(gen_file_path) == false
 
-        FileUtils.cp(gen_file_path, "#{@@cargo_path}/src")
+        FileUtils.cp(gen_file_path, dir_path)
 
-        add_diff_to_new_cargo_src file_name
+        # ユーザが追加した mod や use 文などの差分を、新しく生成されたファイルに追加する
+        add_diff_to_new_cargo_src file_name, file_type
     end
 
     # src と gen の差分を取得する
     # この関数を呼び出すのは、新しいファイル（最適化後ファイルなど）を生成する前を想定している
     # TODO: 現在は、use や mod の差分のみを想定しているが、より汎用的にする場合、差分取得ライブラリなどを利用する
-    def get_diff_between_gen_and_src file_name
+    def get_diff_between_gen_and_src file_name, file_type
         src_file = "#{@@cargo_path}/src/#{file_name}"
         gen_file = "#{$gen}/#{file_name}"
+
+        if file_type == "signature" then
+            src_file = "#{@@cargo_path}/src/tecs_signature/#{file_name}"
+            gen_file = "#{$gen}/tecs_signature/#{file_name}"
+        elsif file_type == "impl" then
+            src_file = "#{@@cargo_path}/src/tecs_impl/#{file_name}"
+            gen_file = "#{$gen}/tecs_impl/#{file_name}"
+        elsif file_type == "celltype" then
+            src_file = "#{@@cargo_path}/src/tecs_celltype/#{file_name}"
+            gen_file = "#{$gen}/tecs_celltype/#{file_name}"
+        end
 
         # puts "src_file: #{src_file}"
 
@@ -1446,8 +1577,16 @@ class RustGenCelltypePlugin < CelltypePlugin
 
     # 差分を Cargo の新しい生成ファイルに追加するため、この関数は Cargo へのコピー後に呼び出す
     # TODO: 現在差分は use や mod のみを想定しているが、将来的には他の差分も追加する？
-    def add_diff_to_new_cargo_src file_name
+    def add_diff_to_new_cargo_src file_name, file_type
         src_path = "#{@@cargo_path}/src/#{file_name}"
+
+        if file_type == "signature" then
+            src_path = "#{@@cargo_path}/src/tecs_signature/#{file_name}"
+        elsif file_type == "impl" then
+            src_path = "#{@@cargo_path}/src/tecs_impl/#{file_name}"
+        elsif file_type == "celltype" then
+            src_path = "#{@@cargo_path}/src/tecs_celltype/#{file_name}"
+        end
 
         if File.exist?(src_path) then
             src_file = File.read(src_path)
@@ -1537,13 +1676,11 @@ class RustGenCelltypePlugin < CelltypePlugin
             @@b_signature_header_generated = true
         end
 
-        @use_string_list = []
-
         # Cargo の新規プロジェクトを作成する
         cargo_new_project @@cargo_path
 
         # main.rs または lib.rs の gen ファイルと src ファイルの差分を取得する
-        get_diff_between_gen_and_src "#{check_option_main_or_lib}.rs"
+        get_diff_between_gen_and_src "#{check_option_main_or_lib}.rs", nil
 
         if @@main_lib_rs_cleaned != true then
 
@@ -1606,19 +1743,27 @@ class RustGenCelltypePlugin < CelltypePlugin
         # puts "@@json_parse_result: #{@@json_parse_result}"
         
         puts "#{@celltype.get_global_name.to_s}: get_diff_between_gen_and_src"
-        get_diff_between_gen_and_src "#{snake_case(@celltype.get_global_name.to_s)}.rs"
+        get_diff_between_gen_and_src "#{snake_case(@celltype.get_global_name.to_s)}.rs", "celltype"
 
-        file = CFile.open( "#{$gen}/#{snake_case(@celltype.get_global_name.to_s)}.rs", "w")
 
-        @use_string_list = []
-
-        print "#{@celltype.get_global_name.to_s}: gen_use_for_entry_port\n"
+        print "#{@celltype.get_global_name.to_s}: extract_mod_list\n"
         # セルタイプに受け口がある場合，use 文を生成する
-        gen_use_for_entry_port file
+        extract_mod_list
 
-        @use_string_list.uniq!
-        print "#{@celltype.get_global_name.to_s}: gen_use_header\n"
-        gen_use_header file
+        # 重複を削除
+        @mod_signatures_list.uniq!
+        @mod_celltypes_list.uniq!
+        @@mod_global_signatures_list.uniq!
+        @@mod_global_celltypes_list.uniq!
+
+        print "#{@celltype.get_global_name.to_s}: gen_tecs_celltype_rs\n"
+        gen_tecs_celltype_rs
+
+        print "#{@celltype.get_global_name.to_s}: gen_tecs_signature_rs\n"
+        gen_tecs_signature_rs
+
+        print "#{@celltype.get_global_name.to_s}: gen_tecs_impl_rs\n"
+        gen_tecs_impl_rs
 
         print "#{@celltype.get_global_name.to_s}: get_callport_list\n"
         # そのセルタイプの呼び口のリストを取得する
@@ -1627,6 +1772,12 @@ class RustGenCelltypePlugin < CelltypePlugin
         print "#{@celltype.get_global_name.to_s}: get_jenerics_alphabet_list\n"
         # ジェネリクスに使うアルファベットのリストを生成
         use_jenerics_alphabet = get_jenerics_alphabet_list callport_list
+
+
+        file = CFile.open( "#{$gen}/tecs_celltype/#{snake_case(@celltype.get_global_name.to_s)}.rs", "w")
+
+        print "#{@celltype.get_global_name.to_s}: gen_use_header\n"
+        gen_use_header file
 
         print "#{@celltype.get_global_name.to_s}: gen_rust_cell_structure_header\n"
         # セルの構造体の定義の先頭部を生成
@@ -1676,9 +1827,9 @@ class RustGenCelltypePlugin < CelltypePlugin
         # ロックガード構造体の定義を生成
         gen_rust_lock_guard_structure file, @celltype, callport_list, use_jenerics_alphabet
 
-        print "#{@celltype.get_global_name.to_s}: gen_mod_in_main_lib_rs_for_celltype\n"
+        print "#{@celltype.get_global_name.to_s}: gen_main_lib_rs\n"
         # main.rs もしくは lib.rs に mod を追加する
-        gen_mod_in_main_lib_rs_for_celltype @celltype
+        gen_main_lib_rs @celltype
 
         @celltype.get_cell_list.each{ |cell|
 
@@ -1747,7 +1898,10 @@ class RustGenCelltypePlugin < CelltypePlugin
 
             if port.get_port_type == :ENTRY then
 
-                impl_file = CFile.open( "#{$gen}/#{snake_case(@celltype.get_global_name.to_s)}_impl.rs", "w" )
+                puts "#{@celltype.get_global_name.to_s}: get_diff_between_gen_and_src"
+                get_diff_between_gen_and_src "#{snake_case(@celltype.get_global_name.to_s)}_impl.rs", "impl"
+
+                impl_file = CFile.open( "#{$gen}/tecs_impl/#{snake_case(@celltype.get_global_name.to_s)}_impl.rs", "w" )
 
                 print "#{@celltype.get_global_name.to_s}: gen_use_for_impl_file\n"
                 # implファイル用のuse文を生成
@@ -1761,9 +1915,9 @@ class RustGenCelltypePlugin < CelltypePlugin
 
                 # 既に Cargo プロジェクトにファイルがある場合、ユーザがコードを実装済みとして、コピーしない
                 # つまり、impl ファイルは最適化の際に更新しない
-                if File.exist?("#{@@cargo_path}/src/#{snake_case(@celltype.get_global_name.to_s)}_impl.rs") == false then
+                if File.exist?("#{@@cargo_path}/src/tecs_impl/#{snake_case(@celltype.get_global_name.to_s)}_impl.rs") == false then
                     puts "#{@celltype.get_global_name.to_s}: copy #{snake_case(@celltype.get_global_name.to_s)}_impl.rs to cargo\n"
-                    copy_gen_files_to_cargo "#{snake_case(@celltype.get_global_name.to_s)}_impl.rs"
+                    copy_gen_files_to_cargo "#{snake_case(@celltype.get_global_name.to_s)}_impl.rs", "impl"
                 end
 
                 break
@@ -1779,12 +1933,12 @@ class RustGenCelltypePlugin < CelltypePlugin
 
         # セルタイプコードは、最適化の際に更新するため、最適化後のファイルを生成する
         puts "#{@celltype.get_global_name.to_s}: copy #{snake_case(@celltype.get_global_name.to_s)}.rs to cargo\n"
-        copy_gen_files_to_cargo "#{snake_case(@celltype.get_global_name.to_s)}.rs"
+        copy_gen_files_to_cargo "#{snake_case(@celltype.get_global_name.to_s)}.rs", "celltype"
 
         # main.rs または lib.rs は最適化の際に更新しない <- セルタイプの度に更新するため、以下のコピーは必要
         # if File.exist?("#{@@cargo_path}/src/#{check_option_main_or_lib}.rs") == false then
             puts "#{@celltype.get_global_name.to_s}: copy #{check_option_main_or_lib}.rs to cargo\n"
-            copy_gen_files_to_cargo "#{check_option_main_or_lib}.rs"
+            copy_gen_files_to_cargo "#{check_option_main_or_lib}.rs", nil
         # end
 
         puts "#{@@diff_src_and_gen}"
