@@ -53,7 +53,7 @@ $b_print_all_token = false
 
 # 文字列を snake_case に変換する
 def snake_case(input_string)
-  input_string.gsub(/(.)([A-Z])/, '\\1_\\2').downcase
+  input_string.gsub(/([a-z0-9])([A-Z])/, '\1_\2').gsub(/([A-Z])([A-Z][a-z])/, '\1_\2').downcase
 end
 
 # 文字列を camelCase に変換する
@@ -71,7 +71,8 @@ def parse_rust_functions(rust_file)
 
   signature_impl_pattern = /impl\s+S\w*\s+for\s+E\w*ForT\w*/
   fn_pattern = /fn\s+\w+\s*\(.*?\)\s*/
-  callport_function_pattern = /c_\w+\.\w+/
+  # callport_function_pattern = /c_\w+\.\w+/
+  callport_function_pattern = /lg\.c_\w+\.\w+/
 
   rust_file_lines = File.readlines(rust_file, chomp: true)
 
@@ -123,10 +124,22 @@ def parse_rust_functions(rust_file)
     if brace_count >= 2
       c_calls = line.scan(callport_function_pattern)
       c_calls.each do |call|
-        before_dot = call.split('.').first
-        after_dot = call.split('.').last
-        cname = before_dot.split("_", 2).last
-        call = "c" + camel_case(cname) + "." + after_dot
+        # 旧バージョン
+        # before_dot = call.split('.').first
+        # after_dot = call.split('.').last
+        # cname = before_dot.split("_", 2).last
+        # call = "c" + camel_case(cname) + "." + after_dot
+
+        # 新バージョン
+        parts = call.split(".")
+        lockguard_name = parts[0]
+        call_port_name = parts[1]
+        function_name = parts[2]
+
+        cname = call_port_name.split("_", 2).last
+        call = "c" + camel_case(cname) + "." + function_name
+        # call = camel_case(call_port_name) + "." + function_name
+
         call.prepend("->")
         call << "__T"
         # print "\t\t#{call}\n"

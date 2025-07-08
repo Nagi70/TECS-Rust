@@ -49,14 +49,23 @@ $rustflow_option = nil
 $repeat = false
 
 $cell_list_hash = {}
+$flow_json_hash_init_flag = false # flow_json_hash の初期化を行うかどうかのフラグ
 $flow_json_hash = {}
-$flow_stack = []
-$path_item_stack = []
+$flow_stack = [] # 各 active cell から出力されるコールフローに関わる cell を格納するスタック (次の active cell のコールフローになるとリセットされる)
+$path_item_stack = [] # 各 active cell から出力されるコールフローをスタックで保存するための変数 (次の active cell のコールフローになるとリセットされる)
 $reentry_cell_list = {}
 
 require "#{$tecsflow_base_path}/flowlib/classes.rb"
 require "#{$tecsflow_base_path}/tecslib/version.rb"
 require "#{$tecsflow_base_path}/tecsgen.rb"
+
+# FMP3+TECS/Rust用の require
+$tecsgen_base_path = $tecsflow_base_path
+$library_path = [ $tecsgen_base_path ]
+require "#{$tecsflow_base_path}/tecslib/core/syntaxobj/node.rb"
+require "#{$tecsflow_base_path}/tecslib/core/plugin.rb"
+require "#{$tecsflow_base_path}/tecslib/plugin/ClassPlugin.rb"
+require "#{$tecsflow_base_path}/tecslib/plugin/FMPPlugin.rb"
 
 def analyze_option
 
@@ -94,7 +103,7 @@ end # analyze_option
 
   # 文字列を snake_case に変換する
   def snake_case(input_string)
-    input_string.gsub(/(.)([A-Z])/, '\\1_\\2').downcase
+    input_string.gsub(/([a-z0-9])([A-Z])/, '\1_\2').gsub(/([A-Z])([A-Z][a-z])/, '\1_\2').downcase
   end
   
   # 文字列を camelCase に変換する
@@ -141,24 +150,29 @@ class Namespace
   # end
 
   def create_cell_list_json_hash
-    @cell_list.each{ |cell|
-      # next if cell.get_celltype.is_active? == true
-      # if cell.get_celltype.is_active? == true then
-      #   $flow_stack.push [cell, 0]
-      #   next
-      # end
-      cellname = cell.get_name.to_s
-      celltype = cell.get_celltype.get_name.to_s
-      cell_obj = {
-        "Cell": cellname,
-        "Celltype": celltype,
-        "ExclusiveControl": "false",
-        "Accessed": []
-      }
-      $flow_json_hash[cellname] = cell_obj
 
-      # print "cell.get.namespace_path: #{cell.get_namespace_path}\n"
-    }
+    # 名前空間の数だけ再帰的に呼ばれてしまうため、一度だけ呼ぶようにする
+    if $flow_json_hash_init_flag == false then
+      $flow_json_hash_init_flag = true
+    else
+      return
+    end
+
+    name_space_list = @@root_namespace.get_namespace_list
+
+    name_space_list.each do |name_space|
+      name_space.get_cell_list.each do |cell|
+        cellname = cell.get_global_name.to_s
+        celltype = cell.get_celltype.get_name.to_s
+        cell_obj = {
+          "Cell": cellname,
+          "Celltype": celltype,
+          "ExclusiveControl": "false",
+          "Accessed": []
+        }
+        $flow_json_hash[cellname] = cell_obj
+      end
+    end
   end
 
   #=== print_all_cells
@@ -306,7 +320,7 @@ class Cell
   def create_path_item_hash indent_level, no_caller_cell, call_port_name, call_subsc, callee_cell, entry_port_name, callee_subsc, func_name
 
     path_item = {
-      "CellName": callee_cell.get_name,
+      "CellName": callee_cell.get_global_name,
       "Celltype": callee_cell.get_celltype.get_name,
       "Callport": call_port_name, # この値は、自分のセルの呼び口を入れたいが、この時点では呼び元のセルのポート名であるため、正しくない
       "Calleeport": entry_port_name, # この値は、自分のセルの受け口を入れたいが、この時点では呼び元のセルの呼び先ポート名であるため、正しくない
@@ -336,7 +350,7 @@ class Cell
 
     # $path_item_stack を全て accessed_item に追加
     accessed_item = {
-      "ActiveCell": $flow_stack.first[0].get_name,
+      "ActiveCell": $flow_stack.first[0].get_global_name,
       "Priority": task_priority,
       "Celltype": $flow_stack.first[0].get_celltype.get_name,
       "Callport": $path_item_stack[0][0][:Callport],
@@ -365,7 +379,13 @@ class Cell
       accessed_item[:Path].push path_item_temp[0]
     }
 
+    # print "$path_item_stack = #{$path_item_stack}\n"
+
     $flow_json_hash[$path_item_stack.last[0][:CellName].to_s][:Accessed] << Marshal.load(Marshal.dump(accessed_item))
+
+    # print "accessed_item[#{callee_cell.get_global_name}] = #{$flow_json_hash[$path_item_stack.last[0][:CellName].to_s][:Accessed]}\n"
+    # print "accessed_item[rProcessor1Symmetric_Led}] = #{$flow_json_hash["rProcessor1Symmetric_Led"][:Accessed]}\n"
+
 
     while $flow_stack.any? && $flow_stack.last[1] >= indent_level
       $flow_stack.pop
@@ -398,9 +418,13 @@ class Cell
   end
 
   def extract_printed_func_json func_nsp
-    cell_name = func_nsp.to_s.split(".")[0]
+    legion_cell_name = func_nsp.to_s.split(".")[0]
     entry_port_name = func_nsp.to_s.split(".")[1]
     entry_func_name = func_nsp.to_s.split(".")[2]
+
+    legion_name = legion_cell_name.split("::").first
+    cell_name = legion_cell_name.split("::").last
+    cell_name.prepend(legion_name + "_")
 
     # Path のなかに存在する func_nsp の次以降の Path を取得
     results = []
@@ -410,6 +434,7 @@ class Cell
           if path[:Calleeport].to_s == entry_port_name && path[:Function].to_s == entry_func_name then
             accessed[:Path][i+1..-1].each do |path|
               break if accessed[:Path][i+1][:CellName] != cell_name.to_sym
+              # next if accessed[:Path][i+1][:CellName] != cell_name.to_sym
               # print "check\n"
               results << path
             end
@@ -448,7 +473,9 @@ class Cell
       # TODO: printed のときに json に上手く出力できるようにする
       # print "func_nsp: ", func_nsp, "\n"
       # print "self.get_name: ", self.get_name, "\n"
+
       printed_func_json = extract_printed_func_json func_nsp
+
       # print "$flow_json_hash[#{self.get_name.to_s}][:Accessed][:Path]: ", $flow_json_hash[self.get_name.to_s][:Accessed][:Path], "\n"
       # $flow_json_hash[self.get_name.to_s][:Accessed][:Path] << Marshal.load(Marshal.dump(printed_func_json))
       # print "result: ", result, "\n"
@@ -921,12 +948,38 @@ module TECSFlow
     $root_namespace.print_all_cells
     print_unref_function
 
-    cell_list = $root_namespace.get_cell_list
     json_list = []
-    cell_list.each{ |cell|
-      next if cell.get_celltype.is_active?
-      json_list << $flow_json_hash[cell.get_name.to_s]
-    }
+    cell_list = []
+
+    # cell_list = $root_namespace.get_cell_list
+    # cell_list.each{ |cell|
+    #   next if cell.get_celltype.is_active?
+    #   json_list << $flow_json_hash[cell.get_name.to_s]
+    # }
+
+    name_space_list = $root_namespace.get_namespace_list
+    
+    # name_space_list.each do |name_space|
+    #   print "name_space.get_name.to_s = ", name_space.get_name.to_s, "\n"
+    # end
+
+    # print "$flow_json_hash = #{$flow_json_hash}\n"
+
+    name_space_list.each do |name_space|
+      name_space.get_cell_list.each do |cell|
+        cell_list << cell
+        next if cell.get_celltype.is_active?
+        # json_list << $flow_json_hash[cell.get_name.to_s]
+        json_list << $flow_json_hash[cell.get_global_name.to_s]
+      end
+    end
+
+    # print "json_list = #{json_list}\n"
+
+    # cell_list.each do |cell|
+    #   # print "cell.get_name.to_s = ", cell.get_name.to_s, "\n"
+    #   print "cell.get_name.to_s = ", cell.get_global_name.to_s, "\n"
+    # end
 
     analyze_deadlock json_list, cell_list
 
@@ -976,135 +1029,144 @@ module TECSFlow
     }
   end
 
-  def self.generate_json_file
+  # def self.generate_json_file
 
-    log_file = File.open( "#{$gen}/tecsflow.log", "w" )
-    $stdout = log_file
+  #   log_file = File.open( "#{$gen}/tecsflow.log", "w" )
+  #   $stdout = log_file
 
-    Cell.class_variable_set(:$repeat, true)
-    Cell.class_variable_set(:@@printed_func_nsp_list, {})
-    Cell.class_variable_set(:@@printed_cell_list, {})
-    Cell.class_variable_set(:@@printed_celltype_list, {})
+  #   Cell.class_variable_set(:$repeat, true)
+  #   Cell.class_variable_set(:@@printed_func_nsp_list, {})
+  #   Cell.class_variable_set(:@@printed_cell_list, {})
+  #   Cell.class_variable_set(:@@printed_celltype_list, {})
 
-    $root_namespace.print_all_cells
+  #   $root_namespace.print_all_cells
 
-    $stdout = STDOUT
-    log_file.close
+  #   $stdout = STDOUT
+  #   log_file.close
 
-    trees = process_file("#{$gen}/tecsflow.log")
+  #   trees = process_file("#{$gen}/tecsflow.log")
 
-    cell_list = $root_namespace.get_cell_list
+  #   cell_list = []
+  #   name_space_list = $root_namespace.get_namespace_list
+    
+  #   name_space_list.each do |name_space|
+  #     name_space.get_cell_list.each do |cell|
+  #       cell_list << cell
+  #     end
+  #   end
 
-    json_obj = []
+  #   json_obj = []
 
-    cell_list.each{ |cell|
+  #   cell_list.each{ |cell|
 
-      next if cell.get_celltype.is_active?
+  #     next if cell.get_celltype.is_active?
 
-      cellname = cell.get_name.to_s
-      celltype = cell.get_celltype.get_name.to_s
+  #     # cellname = cell.get_name.to_s
+  #     cellname = cell.get_global_name.to_s
+  #     celltype = cell.get_celltype.get_name.to_s
 
-      cell_obj = {
-        "Cell": cellname,
-        "Celltype": celltype,
-        "Accessed": []
-      }
+  #     cell_obj = {
+  #       "Cell": cellname,
+  #       "Celltype": celltype,
+  #       "Accessed": []
+  #     }
 
-      trees.each_with_index do |tree, index|
+  #     trees.each_with_index do |tree, index|
 
-        # その active_cell tree のなかに、cellname があるかどうかを探す
-        found_nodes = tree.find_nodes_by_cellname(cellname)
+  #       # その active_cell tree のなかに、cellname があるかどうかを探す
+  #       found_nodes = tree.find_nodes_by_cellname(cellname)
 
-        # あれば、以下の処理を行う
-        if found_nodes.any?
+  #       # あれば、以下の処理を行う
+  #       if found_nodes.any?
 
-          # JSONオブジェクトの初期化
+  #         # JSONオブジェクトの初期化
 
-          found_nodes.each do |node|
+  #         found_nodes.each do |node|
 
-            path = node.formatted_path_to_root
-            array = path.split("=>").map(&:strip)
+  #           path = node.formatted_path_to_root
+  #           array = path.split("=>").map(&:strip)
 
-            # 最初の要素の処理
-            first_element = array[0]
-            first_split = first_element.split("->")
-            active_cell = first_split[0].strip
-            callport = first_split[1].strip.split(".")[0]
-            function = first_split[1].strip.split(".")[1]
+  #           # 最初の要素の処理
+  #           first_element = array[0]
+  #           first_split = first_element.split("->")
+  #           active_cell = first_split[0].strip
+  #           callport = first_split[1].strip.split(".")[0]
+  #           function = first_split[1].strip.split(".")[1]
 
-            # 二番目の要素の処理
-            second_element = array[1]
-            second_split = second_element.split("->")
-            calleeport = second_split[0].strip.split(".")[1]
+  #           # 二番目の要素の処理
+  #           second_element = array[1]
+  #           second_split = second_element.split("->")
+  #           calleeport = second_split[0].strip.split(".")[1]
 
-            accessed_celltype = nil
-            cell_list.each do |c|
-              if c.get_name.to_s == active_cell then
-                accessed_celltype = c.get_celltype.get_name.to_s
-                break
-              end
-            end
+  #           accessed_celltype = nil
+  #           cell_list.each do |c|
+  #             if c.get_name.to_s == active_cell then
+  #               accessed_celltype = c.get_celltype.get_name.to_s
+  #               break
+  #             end
+  #           end
 
-            # 最初の要素の情報をJSONオブジェクトに追加
-            accessed_item = {
-              "ActiveCell": active_cell,
-              "Celltype": accessed_celltype,
-              "Callport": callport,
-              "Calleeport": calleeport,
-              "Function": function,
-              "Path": []
-            }
+  #           # 最初の要素の情報をJSONオブジェクトに追加
+  #           accessed_item = {
+  #             "ActiveCell": active_cell,
+  #             "Celltype": accessed_celltype,
+  #             "Callport": callport,
+  #             "Calleeport": calleeport,
+  #             "Function": function,
+  #             "Path": []
+  #           }
 
-            # 二番目以降の要素の処理
-            (array[1..-1] || []).each_with_index do |element, index|
-              break if index == array.size - 2
-              next_split = element.split("->")
-              cell_name = next_split[0].strip.split(".")[0]
-              callport = next_split[1].strip.split(".")[0]
-              function = next_split[1].strip.split(".")[1]
-              calleeport = if array[index + 2]
-                             array[index + 2].split("->")[0].strip.split(".")[1]
-                           else
-                             ""
-                           end
+  #           # 二番目以降の要素の処理
+  #           (array[1..-1] || []).each_with_index do |element, index|
+  #             break if index == array.size - 2
+  #             next_split = element.split("->")
+  #             cell_name = next_split[0].strip.split(".")[0]
+  #             callport = next_split[1].strip.split(".")[0]
+  #             function = next_split[1].strip.split(".")[1]
+  #             calleeport = if array[index + 2]
+  #                            array[index + 2].split("->")[0].strip.split(".")[1]
+  #                          else
+  #                            ""
+  #                          end
               
-              path_celltype = nil
-              cell_list.each do |c|
-                if c.get_name.to_s == cell_name then
-                  path_celltype = c.get_celltype.get_name.to_s
-                  break
-                end
-              end
+  #             path_celltype = nil
+  #             cell_list.each do |c|
+  #               if c.get_name.to_s == cell_name then
+  #                 path_celltype = c.get_celltype.get_name.to_s
+  #                 break
+  #               end
+  #             end
 
-              path_item = {
-                "CellName": cell_name,
-                "Celltype": path_celltype,
-                "Callport": callport,
-                "Calleeport": calleeport,
-                "Function": function
-              }
-              accessed_item[:Path] << path_item
+  #             path_item = {
+  #               "CellName": cell_name,
+  #               "Celltype": path_celltype,
+  #               "Callport": callport,
+  #               "Calleeport": calleeport,
+  #               "Function": function
+  #             }
+  #             accessed_item[:Path] << path_item
             
-            end
-            cell_obj[:Accessed] << accessed_item
+  #           end
+  #           cell_obj[:Accessed] << accessed_item
 
-          end
-        end
-      end
+  #         end
+  #       end
+  #     end
 
-      json_obj.push(cell_obj)
-    }
+  #     json_obj.push(cell_obj)
+  #   }
 
-    json_file = File.open( "#{$gen}/tecsflow.json", "w" ) do |f|
-      f.write(JSON.pretty_generate(json_obj))
-    end
-  end
+  #   json_file = File.open( "#{$gen}/tecsflow.json", "w" ) do |f|
+  #     f.write(JSON.pretty_generate(json_obj))
+  #   end
+  # end
 
   def self.analyze_deadlock json_list, cell_list
 
     cell_list_to_s = []
     cell_list.each{ |cell|
-      cell_list_to_s << cell.get_name.to_s
+      # cell_list_to_s << cell.get_name.to_s
+      cell_list_to_s << cell.get_global_name.to_s
     }
 
     # アクティブセルのリストを取得
@@ -1116,13 +1178,13 @@ module TECSFlow
     # アクティブセルの String リストを取得
     active_cell_list_to_s = []
     active_cell_list.each{ |task|
-      active_cell_list_to_s << task.get_name.to_s
+      active_cell_list_to_s << task.get_global_name.to_s
     }
 
     # すべてのセルに対して、アクティブセル名のキーと、"ExclusiveControl" のキーを作成
     accessed_cell_hash = cell_list_to_s.each_with_object({}) do |cell, h|
       h[cell] = active_cell_list.each_with_object({}) do |task, sub_h|
-        sub_h[task.get_name.to_s] = false
+        sub_h[task.get_global_name.to_s] = false
       end
       h[cell]["ExclusiveControl"] = false
     end
@@ -1145,19 +1207,20 @@ module TECSFlow
 
         next if cell.get_join_list.get_item(port.get_name) == nil
 
-        callee_cell_name = cell.get_join_list.get_item(port.get_name).get_cell.get_name.to_s
+        callee_cell_name = cell.get_join_list.get_item(port.get_name).get_cell.get_global_name.to_s
 
         # 呼び先のセルがアクセスされるアクティブセルの数をカウント
         callee_cell_count = 0
         active_cell_list.each do |task|
-          if accessed_cell_hash[callee_cell_name][task.get_name.to_s] then
+          if accessed_cell_hash[callee_cell_name][task.get_global_name.to_s] then
             callee_cell_count += 1
           end
         end
 
         # 呼び元と呼び先が同じアクセスされるアクティブセルを持っているかどうかを判定
         same_accessed = true
-        current_cell_hash = accessed_cell_hash[cell.get_name.to_s].dup
+        # current_cell_hash = accessed_cell_hash[cell.get_name.to_s].dup
+        current_cell_hash = accessed_cell_hash[cell.get_global_name.to_s].dup
         current_cell_hash.delete("ExclusiveControl")
         callee_cell_hash = accessed_cell_hash[callee_cell_name].dup
         callee_cell_hash.delete("ExclusiveControl")
