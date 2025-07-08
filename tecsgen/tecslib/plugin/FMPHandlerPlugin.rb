@@ -53,6 +53,21 @@ class FMPHandlerPlugin < CelltypePlugin
         [:Any,        "ATT_TER({ {{attribute}}, $cbp$, tTerminateRoutine_start })"],
   }
 
+  @@handler_list_rs = {
+    "INT_REQUEST"   =>
+        [:InClass,    "CFG_INT( {{interruptNumber}}, { {{attribute}}, {{interruptPriority}} })"],
+    "INT_SERVICE_ROUTINE" =>
+        [:InClass,    "CRE_ISR( {{id}}, { {{attribute}}, 0, {{interruptNumber}}, <<tecs_rust_start>>, {{isrPriority}} })"],
+    "INT_HANDLER"   =>
+        [:InClass,    "DEF_INH( {{interruptHandlerNumber}}, { {{attribute}}, <<tecs_rust_start>>})"],
+    "CPU_EXCEPTION_HANDLER" =>
+        [:InClass,    "DEF_EXC( {{cpuExceptionHandlerNumber}}, { {{attribute}}, <<tecs_rust_start>>})"],
+    "INIT_ROUTINE"  =>   # InClassの場合、初期化ルーチン、OutOfClassの場合、グローバル初期化ルーチン
+        [:Any,        "ATT_INI({ {{attribute}}, 0, <<tecs_rust_start>> })"],
+    "TERM_ROUTINE"  =>   # InClassの場合、終了ルーチン、OutOfClassの場合、グローバル終了ルーチン
+        [:Any,        "ATT_TER({ {{attribute}}, 0, <<tecs_rust_start>> })"],
+  }
+
   #celltype::     Celltype        セルタイプ（インスタンス）
   def initialize( celltype, option )
     super
@@ -110,7 +125,13 @@ class FMPHandlerPlugin < CelltypePlugin
     if @@handler_list.has_key?(@class_name) == false
       raise "#{@class_name} is unknown"
     else
-      cfg_str = @@handler_list[@class_name][1]
+      case cell.get_celltype.get_impl_lang
+      when :C
+        cfg_str = @@handler_list[@class_name][1]
+      when :Rust
+        temp_str = @@handler_list_rs[@class_name][1]
+        cfg_str = temp_str.gsub("<<tecs_rust_start>>", "tecs_rust_start_#{cell.get_global_name.to_s.gsub(/([a-z0-9])([A-Z])/, '\1_\2').gsub(/([A-Z])([A-Z][a-z])/, '\1_\2').downcase}")
+      end
       file.print indent
     end
 
