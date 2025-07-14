@@ -92,7 +92,9 @@ class RustGenCelltypePlugin < CelltypePlugin
     # 文字列を snake_case に変換する
     def snake_case(input_string)
         # string = input_string.to_s
-        input_string.gsub(/(.)([A-Z])/, '\\1_\\2').downcase
+        input_string.gsub(/([a-z0-9])([A-Z])/, '\1_\2')      # 小文字→大文字の間
+        .gsub(/([A-Z])([A-Z][a-z])/, '\1_\2')    # 大文字→大文字＋小文字の間
+        .downcase
     end
 
     # 文字列を camelCase に変換する
@@ -847,6 +849,7 @@ class RustGenCelltypePlugin < CelltypePlugin
     end
 
     # 変数構造体の初期化を生成
+    # TODO: awkernel版のデータ構造と同じにできる
     def gen_rust_variable_structure_initialize file, cell
         if @celltype.get_var_list.length != 0 then
             file.print "static #{cell.get_global_name.to_s.upcase}VAR: Mutex<#{get_rust_celltype_name(cell.get_celltype)}Var> = Mutex::new(#{get_rust_celltype_name(cell.get_celltype)}Var {\n"
@@ -1409,7 +1412,58 @@ class RustGenCelltypePlugin < CelltypePlugin
         end
     end
 
+    # TODO: 現在は、ライブラリとしてコンパイルすることを前提としている
+    def check_call_chg_pri cargo_path, target_triple
+
+        # TODO: ライブラリ名は itron に固定しており、ビルドも release に固定しているため、柔軟にする必要がある
+        binary_bath = "#{cargo_path}/target/#{target_triple}/release/libitron.a"
+
+        command = "arm-none-eabi-nm #{binary_bath} > #{$gen}/arm-none-eabi-nm.txt"
+
+        if File.exist?(binary_bath) && check_option_main_or_lib == "lib" then
+            if @@arm_none_eabi_nm_gen == false then
+                system(command)
+                @@arm_none_eabi_nm_gen = true
+            end
+
+            # chg_pri 関数が含まれているかを確認
+            if File.readlines("#{$gen}/arm-none-eabi-nm.txt").any?{ |line| line.include?("chg_pri") } then
+                return true
+            else
+                return false
+            end
+        else
+            # *.a ファイルが存在しない場合、保守的に chg_pri が含まれていると判断する
+            puts "Error: #{binary_bath} does not exist"
+            return true
+        end
+    end
+
+    # cargo.toml の target を取得する
+    def extract_target_triple path
+        config_toml_path = "#{path}/.cargo/config.toml"
+        target_line = nil
+
+        File.foreach(config_toml_path) do |line|
+        # コメントされていない行かつ、"target =" を含む行を探す
+        # TODO: Rustコンパイラの生成物で上手く代用できそう
+            if line.strip.start_with?("target =")
+                target_line = line.strip
+                break
+            end
+        end
+        
+        # ターゲットトリプルを抽出
+        if target_line
+            match = target_line.match(/target = "(.*?)"/)
+            return match ? match[1] : nil
+        else
+            return nil
+        end
+    end
+
     # セルタイプ構造体の ex_ctrl_ref フィールドの定義を生成
+    # TODO: awkernel版のデータ構造と同じにすることで、将来的にこの関数を削除できる
     def gen_rust_cell_structure_ex_ctrl_ref file, celltype
         # ItronrsPlugin で実装
         # TODO: spinクレート版を実装する場合はこの関数を使う
@@ -1429,6 +1483,49 @@ class RustGenCelltypePlugin < CelltypePlugin
 
     # ロックガード構造体の定義を生成
     def gen_rust_lock_guard_structure file, celltype, callport_list, use_jenerics_alphabet
+        # ItronrsPlugin で実装
+        # TODO: spinクレート版を実装する場合はこの関数を使う
+        if check_only_entryport_celltype(celltype) then
+            return
+        end
+
+        gen_rust_lock_guard_structure_header file, celltype, callport_list, use_jenerics_alphabet
+
+        gen_rust_cell_structure_jenerics file, callport_list, use_jenerics_alphabet
+
+        file.print "{\n"
+
+        gen_rust_lock_guard_structure_callport file, callport_list, use_jenerics_alphabet
+
+        gen_rust_lock_guard_structure_attribute file, celltype
+
+        gen_rust_lock_guard_structure_variable file, celltype
+
+        gen_rust_cell_structure_ex_ctrl_ref file, celltype
+
+        file.print "}\n\n"
+    end
+
+    # ロックガード構造体のヘッダーを生成
+    def gen_rust_lock_guard_structure_header file, celltype, callport_list, use_jenerics_alphabet
+        # ItronrsPlugin で実装
+        # TODO: spinクレート版を実装する場合はこの関数を使う
+    end
+
+    # ロックガード構造体の呼び口への参照の定義を生成
+    def gen_rust_lock_guard_structure_callport file, callport_list, use_jenerics_alphabet
+        # ItronrsPlugin で実装
+        # TODO: spinクレート版を実装する場合はこの関数を使う
+    end
+
+    # ロックガード構造体の属性への参照の定義を生成
+    def gen_rust_lock_guard_structure_attribute file, celltype
+        # ItronrsPlugin で実装
+        # TODO: spinクレート版を実装する場合はこの関数を使う
+    end
+
+    # ロックガード構造体の変数への参照の定義を生成
+    def gen_rust_lock_guard_structure_variable file, celltype
         # ItronrsPlugin で実装
         # TODO: spinクレート版を実装する場合はこの関数を使う
     end
@@ -1490,16 +1587,7 @@ class RustGenCelltypePlugin < CelltypePlugin
 
     # Cargo.toml の設定を変更する
     def change_cargo_toml path
-        cargo_toml_path = "#{path}/Cargo.toml"
-
-        # TODO: main と lib の指定が混ざっている場合、どちらを選択するかを決める必要がある
-        if check_option_main_or_lib == "lib" then
-            File.open(cargo_toml_path, "a") do |file|
-                file.puts "[lib]"
-                file.puts "name = \"itron\""
-                file.puts "crate-type = [\"staticlib\"]"
-            end
-        end
+        # ItronrsPlugin で実装
     end
 
     # cargo.toml の設定を生成する
@@ -1645,7 +1733,7 @@ class RustGenCelltypePlugin < CelltypePlugin
         makefile.print( "# RUST_PLUGIN_SRCS: sources automatically generated by Rust plugin\n" )
         makefile.print( "RUST_PLUGIN_SRCS = \\\n" )
 
-        makefile.print( "\t$(GEN_DIR)/../$(APPLNAME)/src/#{check_option_main_or_lib} \\\n" )
+        makefile.print( "\t$(GEN_DIR)/../$(APPLNAME)/src/#{check_option_main_or_lib}.rs \\\n" )
 
         gen_extra_rust_plugin_tecsgen_srcs_for_makefile makefile
 
@@ -1655,6 +1743,7 @@ class RustGenCelltypePlugin < CelltypePlugin
     end
 
     # 他のRustプラグインで生成したい RUST_PLUGIN_TECSGEN_SRCS の要素
+    # オーバーライドすることで、makefile の RUST_PLUGIN_SRCS に要素を追加できる
     def gen_extra_rust_plugin_tecsgen_srcs_for_makefile makefile
         
     end

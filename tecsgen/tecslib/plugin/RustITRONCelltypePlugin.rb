@@ -414,16 +414,38 @@ class RustITRONCelltypePlugin < RustGenCelltypePlugin
 #         end
     end
 
+    # タスクや変数に適用されるカーネルオブジェクト以外のオブジェクトIDを生成する
+    # TODO: 現在はミューテックス、データキュー、セマフォのみ対応
+    def gen_kernel_object_id_in_kernel_cfg_rs celltype
+
+        obj = get_itronrs_kernel_obj_ref_str
+
+        if obj == "MutexRef" || obj == "DataqueueRef" || obj == "SemaphoreRef" then
+            celltype.get_cell_list.each{ |cell|
+                id = cell.get_attr_initializer("id".to_sym)
+                add_dummy_id_to_kernel_cfg_rs id, 1
+            }
+        end
+    end
+
     # ビルドのためのダミーオブジェクトIDを生成する
     def add_dummy_id_to_kernel_cfg_rs name, id
 
+        file_path = "#{$gen}/kernel_cfg.rs"
+
         # 初回のみファイルを生成する
         if @@kernel_cfg_rs_gen == false then
-            File.write("#{$gen}/kernel_cfg.rs", "")
+            File.write(file_path, "")
             @@kernel_cfg_rs_gen = true
         end
 
-        kernel_cfg_rs = File.open("#{$gen}/kernel_cfg.rs", "a")
+        # 既に同じ定義が存在する場合は追記しない
+        if File.exist?(file_path)
+            existing = File.read(file_path)
+            return if existing.include?("pub const #{name}:")
+        end
+
+        kernel_cfg_rs = File.open(file_path, "a")
 
         if id > 0 then
             kernel_cfg_rs.print "pub const #{name}: i32 = #{id};\t//Dummy id\n"
@@ -507,6 +529,58 @@ class RustITRONCelltypePlugin < RustGenCelltypePlugin
         file.print "use crate::kernel_cfg::*;\n"
     end
 
+    # ミューテックスを適用するセルとセマフォを適用するセルが混在するセルタイプかどうかを判断する
+    # TOPPERSでは、ミューテックスとセマフォどちらかを適用する
+    def check_gen_dyn_or_mutex_or_semaphore_for_celltype celltype
+        check_semaphore = []
+
+        celltype.get_cell_list.each{ |cell|
+            check_semaphore.push(check_gen_which_ex_ctrl cell).uniq!
+        }
+
+        # 動的ディスパッチを使うのは以下のケース
+        # ・セマフォを適用するセルとミューテックスを適用するセルが混在する場合
+        # ・セマフォを適用するセルとダミーを利用するセルが混在する場合
+        # ・ミューテックスを適用するセルとダミーを利用するセルが混在する場合
+        if check_semaphore.length >= 2 then
+            return "dyn"
+        end
+
+        if check_semaphore.length == 1 then
+            return check_semaphore.first
+        end
+    end
+
+    # セルの排他制御をセマフォにするかどうかを判断する
+    # TODO: chg_pri があるか無いかを判定する必要がある
+    def check_gen_which_ex_ctrl cell
+        # JSONファイルがパースされていない場合は，セマフォにしない
+        if @@json_parse_result.length == 0 then
+            puts "JSONファイルがパースされていません"
+            return "mutex"
+        end
+
+        celltype = cell.get_celltype.get_global_name.to_s
+        if @@json_parse_result[cell.get_global_name.to_s]["Celltype"] == celltype then
+            # 優先度が同じタスクからのみアクセスされる場合は，セマフォにする
+            if @@json_parse_result[cell.get_global_name.to_s]["ExclusiveControl"] == "true" && @@json_parse_result[cell.get_global_name.to_s]["PriorityList"].length == 1 then
+                # ターゲットトリプルを取得
+                target_triple = extract_target_triple @@cargo_path
+
+                # chg_pri がある場合は，ミューテックスにする
+                if target_triple != nil && check_call_chg_pri(@@cargo_path, target_triple) == true then
+                    return "mutex"
+                end
+                return "semaphore"
+
+            elsif @@json_parse_result[cell.get_global_name.to_s]["ExclusiveControl"] == "true" then
+                return "mutex"
+            end
+        end
+
+        return "none"
+    end
+
     def gen_use_header file
         kernel_obj = get_itronrs_kernel_obj_ref_str
         if kernel_obj != "unknown" then
@@ -571,7 +645,6 @@ class RustITRONCelltypePlugin < RustGenCelltypePlugin
         end
     end
 
-    
     # セル構造体の ex_ctrl_ref フィールドの定義を生成
     def gen_rust_cell_structure_ex_ctrl_ref file, celltype
         return if celltype.get_var_list.length == 0
@@ -592,57 +665,6 @@ class RustITRONCelltypePlugin < RustGenCelltypePlugin
                 file.print "\tex_ctrl_ref: &'a (dyn LockManager + Sync + Send),\n"
             end
         end
-    end
-
-    # ミューテックスを適用するセルとセマフォを適用するセルが混在するセルタイプかどうかを判断する
-    def check_gen_dyn_or_mutex_or_semaphore_for_celltype celltype
-        check_semaphore = []
-
-        celltype.get_cell_list.each{ |cell|
-            check_semaphore.push(check_gen_which_ex_ctrl cell).uniq!
-        }
-
-        # 動的ディスパッチを使うのは以下のケース
-        # ・セマフォを適用するセルとミューテックスを適用するセルが混在する場合
-        # ・セマフォを適用するセルとダミーを利用するセルが混在する場合
-        # ・ミューテックスを適用するセルとダミーを利用するセルが混在する場合
-        if check_semaphore.length >= 2 then
-            return "dyn"
-        end
-
-        if check_semaphore.length == 1 then
-            return check_semaphore.first
-        end
-    end
-
-    # セルの排他制御をセマフォにするかどうかを判断する
-    # TODO: chg_pri があるか無いかを判定する必要がある
-    def check_gen_which_ex_ctrl cell
-        # JSONファイルがパースされていない場合は，セマフォにしない
-        if @@json_parse_result.length == 0 then
-            puts "JSONファイルがパースされていません"
-            return "mutex"
-        end
-
-        celltype = cell.get_celltype.get_global_name.to_s
-        if @@json_parse_result[cell.get_global_name.to_s]["Celltype"] == celltype then
-            # 優先度が同じタスクからのみアクセスされる場合は，セマフォにする
-            if @@json_parse_result[cell.get_global_name.to_s]["ExclusiveControl"] == "true" && @@json_parse_result[cell.get_global_name.to_s]["PriorityList"].length == 1 then
-                # ターゲットトリプルを取得
-                target_triple = extract_target_triple @@cargo_path
-
-                # chg_pri がある場合は，ミューテックスにする
-                if target_triple != nil && check_call_chg_pri(@@cargo_path, target_triple) == true then
-                    return "mutex"
-                end
-                return "semaphore"
-
-            elsif @@json_parse_result[cell.get_global_name.to_s]["ExclusiveControl"] == "true" then
-                return "mutex"
-            end
-        end
-
-        return "none"
     end
 
     # Sync変数構造体の定義を生成
@@ -722,30 +744,30 @@ class RustITRONCelltypePlugin < RustGenCelltypePlugin
     # ロックガード構造体の属性への参照の定義を生成
     def gen_rust_lock_guard_structure_attribute file, celltype
         celltype.get_attribute_list.each{ |attr|
-        if attr.is_omit? then
-            next
-        else
-            file.print "\tpub #{attr.get_name.to_s}: "
-            # file.print "#{c_type_to_rust_type(attr.get_type)}"
-            str = c_type_to_rust_type(attr.get_type)
-            # 属性や変数のフィールドに構造体がある場合は，ライフタイムを付与する必要がある
-            # itron-rsオブジェクトに対する，特別な生成
-            # ライフタイムを付与
-            case str
-            when "TaskRef"
-                str = "TaskRef<'a>"
-            when "SemaphoreRef"
-                str = "SemaphoreRef<'a>"
-            when "EventflagRef"
-                str = "EventflagRef<'a>"
-            when "DataqueueRef"
-                str = "DataqueueRef<'a>"
-            when "MutexRef"
-                str = "MutexRef<'a>"
+            if attr.is_omit? then
+                next
+            else
+                file.print "\tpub #{attr.get_name.to_s}: "
+                # file.print "#{c_type_to_rust_type(attr.get_type)}"
+                str = c_type_to_rust_type(attr.get_type)
+                # 属性や変数のフィールドに構造体がある場合は，ライフタイムを付与する必要がある
+                # itron-rsオブジェクトに対する，特別な生成
+                # ライフタイムを付与
+                case str
+                when "TaskRef"
+                    str = "TaskRef<'a>"
+                when "SemaphoreRef"
+                    str = "SemaphoreRef<'a>"
+                when "EventflagRef"
+                    str = "EventflagRef<'a>"
+                when "DataqueueRef"
+                    str = "DataqueueRef<'a>"
+                when "MutexRef"
+                    str = "MutexRef<'a>"
+                end
+                file.print "&'a #{str},\n"
             end
-            file.print "&'a #{str},\n"
-        end
-    }
+        }
     end
 
     # ロックガード構造体の変数への参照の定義を生成
@@ -810,20 +832,6 @@ class RustITRONCelltypePlugin < RustGenCelltypePlugin
 
         # file.print "}\n\n"
 
-    end
-
-    def creat_itron_rs_use cell
-        # 書き込んでいるファイルの行を取得する
-        global_file_name = snake_case(cell.get_global_name.to_s)
-        lines = File.readlines("#{$gen}/#{global_file_name}.rs")
-        # use 文を追加する
-        lines.insert(0, "use crate::kernel_obj_ref::*;  //特別な生成部\n")
-        lines.insert(0, "use itron::task::TaskRef;  //特別な生成部\n")
-        lines.insert(0, "use itron::abi::*;  //特別な生成部\n")
-        File.open("#{$gen}/#{global_file_name}.rs", 'w') do |file|
-            file.puts lines
-        end
-        # file.close
     end
 
     # セル構造体の属性フィールドの定義を生成
@@ -928,9 +936,9 @@ class RustITRONCelltypePlugin < RustGenCelltypePlugin
                 end
                 file.print " {\n"
                 # インライン化
-                if port.is_inline? then
+                # if port.is_inline? then
                     file.print "\t#[inline]\n"
-                end
+                # end
                 # get_cell_ref 関数の定義を生成
                 file.print "\tpub fn get_cell_ref"
                 # ライフタイムアノテーションの生成部
@@ -1421,17 +1429,16 @@ class RustITRONCelltypePlugin < RustGenCelltypePlugin
 
     # Cargo.toml の設定を変更する
     def change_cargo_toml path
-        # cargo_toml_path = "#{path}/Cargo.toml"
+        cargo_toml_path = "#{path}/Cargo.toml"
 
-        # # TODO: asp3 か fmp3 かは、何かしらで判断する必要がある
-        # itron_rs_depenence = "itron = { version = \"= 0.1.9\", features = [\"asp3\", \"nightly\", \"unstable\"] }"
-
-        # File.open(cargo_toml_path, "a") do |file|
-        #     file.puts itron_rs_depenence
-        #     file.puts ""
-        # end
-
-        super(path)
+        # TODO: main と lib の指定が混ざっている場合、どちらを選択するかを決める必要がある
+        if check_option_main_or_lib == "lib" then
+            File.open(cargo_toml_path, "a") do |file|
+                file.puts "[lib]"
+                file.puts "name = \"itron\""
+                file.puts "crate-type = [\"staticlib\"]"
+            end
+        end
     end
 
     # cargo.toml の設定を生成する
@@ -1446,55 +1453,6 @@ class RustITRONCelltypePlugin < RustGenCelltypePlugin
             file.puts "[build]"
             file.puts "# target = \"thumbv7em-none-eabihf\"     # Cortex-M4F and Cortex-M7F (with FPU) (e.g., Spike-rt)"
             file.puts "# target = \"armv7a-none-eabi\"          # Bare Armv7-A (e.g., Zynq-7000 (Xilinx))"
-        end
-    end
-
-    def extract_target_triple path
-        config_toml_path = "#{path}/.cargo/config.toml"
-        target_line = nil
-
-        File.foreach(config_toml_path) do |line|
-        # コメントされていない行かつ、"target =" を含む行を探す
-        # TODO: Rustコンパイラの生成物で上手く代用できそう
-            if line.strip.start_with?("target =")
-                target_line = line.strip
-                break
-            end
-        end
-        
-        # ターゲットトリプルを抽出
-        if target_line
-            match = target_line.match(/target = "(.*?)"/)
-            return match ? match[1] : nil
-        else
-            return nil
-        end
-    end
-
-    # TODO: 現在は、ライブラリとしてコンパイルすることを前提としている
-    def check_call_chg_pri cargo_path, target_triple
-
-        # TODO: ライブラリ名は itron に固定しており、ビルドも release に固定しているため、柔軟にする必要がある
-        binary_bath = "#{cargo_path}/target/#{target_triple}/release/libitron.a"
-
-        command = "arm-none-eabi-nm #{binary_bath} > #{$gen}/arm-none-eabi-nm.txt"
-
-        if File.exist?(binary_bath) && check_option_main_or_lib == "lib" then
-            if @@arm_none_eabi_nm_gen == false then
-                system(command)
-                @@arm_none_eabi_nm_gen = true
-            end
-
-            # chg_pri 関数が含まれているかを確認
-            if File.readlines("#{$gen}/arm-none-eabi-nm.txt").any?{ |line| line.include?("chg_pri") } then
-                return true
-            else
-                return false
-            end
-        else
-            # *.a ファイルが存在しない場合、保守的に chg_pri が含まれていると判断する
-            puts "Error: #{binary_bath} does not exist"
-            return true
         end
     end
 
@@ -1904,7 +1862,10 @@ impl LockManager for TECSSemaphoreRef<'_>{
 
         gen_tecs_print_rs
 
-        copy_gen_files_to_cargo "kernel_cfg.rs", nil
+        # カーネルオブジェクトコンポーネントの ID を生成する
+        gen_kernel_object_id_in_kernel_cfg_rs @celltype
+
+        copy_gen_files_to_cargo "kernel_cfg.rs"
     end
 
 end
