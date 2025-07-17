@@ -47,7 +47,7 @@ class RustAWKSignaturePlugin < SignaturePlugin
     super
 
     if ! @@b_no_banner
-      STDERR << "MrubyBridgePlugin: version 2.0.0 (Suitable for mruby above ver 1.2.0).\n"
+      # STDERR << "MrubyBridgePlugin: version 2.0.0 (Suitable for mruby above ver 1.2.0).\n"
       @@b_no_banner = true
     end
 
@@ -59,7 +59,7 @@ class RustAWKSignaturePlugin < SignaturePlugin
     @auto_exclude_list = {}
     @b_auto_exclude = true     # auto_exclude = true by default 
 
-    @plugin_arg_check_proc_tab = MrubyBridgePluginArgProc
+    @plugin_arg_check_proc_tab = RustAWKSignaturePluginArgProc
     parse_plugin_arg
 
     @celltype_name = :"t#{@signature.get_global_name}"
@@ -67,77 +67,11 @@ class RustAWKSignaturePlugin < SignaturePlugin
         # this variable is sometimes not used. rhs coded directry.
     @class_name = :"T#{@signature.get_global_name}"
 
+    print "RustAWKSignaturePlugin: #{@plugin_arg_str}\n"
+
   end
 
-  #=== check function name & return type
-  def check_name_and_return_type func_head_array
-  end
-
-  #=== check paramter type
-  def check_parameter_type func_head_array
-  end
-
-  #=== 構造体のメンバーの型のチェック
-  def check_struct_member struct_type, fh
-  end
-
-  def register_ptr_type ttype, fh
-  end
-
-  def get_type_map_ent ttype
-  end
-
-  #===  CDL ファイルの生成
-  #      typedef, signature, celltype, cell コードを生成
-  #file::        FILE       生成するファイル
-  def gen_cdl_file(file)
-  end
-
-  #=== gen_cdl_file で定義したセルタイプに 新しいセルが定義された
-  # cell のセルタイプの名前は @celltype_name
-  def new_cell cell
-  end
-
-  #=== プラグインが CDL の POST コードを生成
-  # tmp_plugin_post_code.cdl への出力
-  def self.gen_post_code file
-  end
-
-  def self.gen_post_code_body file
-  end
-
-  ####### 以下コード生成段階 ######
-
-  #===  受け口関数の本体コードを生成（頭部と末尾は別途出力）
-  #ct_name:: Symbol    (プラグインで生成された) セルタイプ名 ．Symbol として送られてくる
-  def gen_ep_func_body( file, b_singleton, ct_name, global_ct_name, sig_name, ep_name, func_name, func_global_name, func_type, params )
-  end
-
-  def gen_ep_func_body_bridge( file, b_singleton, ct_name, global_ct_name, sig_name, ep_name, func_name, func_global_name, func_type, params )
-  end
-
-  def gen_ep_func_body_bridge_init( file, b_singleton, ct_name, global_ct_name, sig_name, ep_name, func_name, func_global_name, func_type, params )
-  end
-
-  #===  受け口関数の preamble (C言語)を生成する
-  #     必要なら preamble 部に出力する
-  #file::           FILE        出力先ファイル
-  #b_singleton::    bool        true if singleton
-  #ct_name::        Symbol
-  #global_ct_name:: string
-  def gen_preamble( file, b_singleton, ct_name, global_ct_name )
-  end
-
-  def gen_preamble_mruby( file, b_singleton, ct_name, global_ct_name )
-  end
-
-  def gen_preamble_instance_proto( file, b_singleton, ct_name, global_ct_name )
-  end
-
-  def gen_preamble_instance_initialize( file, b_singleton, ct_name, global_ct_name )
-  end
-
-  def gen_preamble_bridge_func( file, b_singleton, ct_name, global_ct_name )
+  def parse_plugin_arg
   end
 end
 

@@ -49,6 +49,10 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
     @@rust_task_func_list = []
     @@rust_hadler_func_list = []
     @@rust_tecs_header_include = false
+    @@use_periodic_reactor_gen = false
+    @@use_reactor_gen = false
+    @@use_sink_reactor_gen = false
+    @@reactor_api_list = []
 
     #celltype::     Celltype        セルタイプ（インスタンス）
     def initialize( celltype, option )
@@ -94,130 +98,231 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
     end
 
     # mod記述をlib.rsに生成
-    def gen_main_lib_rs celltype
-        plugin_option = @plugin_arg_str.split(",").map(&:strip)
+    # def gen_main_lib_rs celltype
+    #     plugin_option = @plugin_arg_str.split(",").map(&:strip)
 
-        write_list = ["#![no_std]"]
-        tempfile = File.read("#{$gen}/lib.rs")
+    #     write_list = ["#![no_std]"]
+    #     tempfile = File.read("#{$gen}/lib.rs")
 
-        write_list.each do |write|
-            if tempfile.include?(write) then
-                next
-            else
-                tempfile << write + "\n"
-            end
-        end
-        File.write("#{$gen}/lib.rs", tempfile)
+    #     write_list.each do |write|
+    #         if tempfile.include?(write) then
+    #             next
+    #         else
+    #             tempfile << write + "\n"
+    #         end
+    #     end
+    #     File.write("#{$gen}/lib.rs", tempfile)
 
-        case reactor_type
+    #     case get_reactor_type
+    #     when "Reactor"
+    #         gen_register_reactor celltype
+    #     when "SincReactor"
+    #         gen_register_sink_reactor celltype
+    #     when "PeriodicReactor"
+    #         gen_register_periodic_reactor celltype
+    #     end
+
+    #     super(celltype)
+    # end
+
+    # no_std や feature などのコンパイルオプションを生成する
+    def gen_compile_option_in_main_lib_rs file, celltype
+        file.print "#![no_std]\n"
+    end
+
+    def gen_entryport_function_in_main_lib_rs file, celltype
+        return if @@use_periodic_reactor_gen == false && @@use_reactor_gen == false && @@use_sink_reactor_gen == false
+
+        file.print "extern crate alloc;\n"
+        file.print "use alloc::{borrow::Cow, vec};\n"
+        file.print "use awkernel_async_lib::dag::{create_dag, finish_create_dags};\n"
+        file.print "use awkernel_async_lib::scheduler::SchedulerType;\n"
+        # TODO: delay の時間単位をユーザの指定に応じて変更する
+        file.print "use awkernel_lib::delay::wait_microsec;\n"
+        file.print "use core::time::Duration;\n"
+
+        file.print "pub async fn run() {\n"
+        file.print "\twait_microsec(1000000);\n\n"
+        file.print "\tlet dag = create_dag();\n\n"
+
+        case get_reactor_type
         when "Reactor"
-            gen_register_reactor celltype
+            add_reactor_api file, celltype
         when "SincReactor"
-            gen_register_sink_reactor celltype
+            add_sink_reactor_api file, celltype
         when "PeriodicReactor"
-            gen_register_periodic_reactor celltype
+            add_periodic_reactor_api file, celltype
         end
 
-        super(celltype)
+        if @@use_periodic_reactor_gen then
+            file.print "use tecs_celltype::t_periodic_reactor::*;\n"
+            file.print "use tecs_signature::s_periodic_reactorbody::*;\n"
+        end
+        if @@use_reactor_gen then
+            file.print "use tecs_celltype::t_reactor::*;\n"
+            file.print "use tecs_signature::s_reactorbody::*;\n"
+        end
+        if @@use_sink_reactor_gen then
+            file.print "use tecs_celltype::t_sink_reactor::*;\n"
+            file.print "use tecs_signature::s_sink_reactorbody::*;\n"
+        end
+
+        @@reactor_api_list.each do |reactor_api|
+            file.print reactor_api
+            file.print "\n"
+        end
     end
 
-    def gen_register_reactor celltype
-        file = File.read("#{$gen}/lib.rs")
+    def add_periodic_reactor_api file, celltype
+        @@use_periodic_reactor_gen = true
 
-        # 一番最初のタスク関数生成の時だけ、二つのuse文を追加する
-        # TODO: この2つのuse文は、ユーザの定義するセルタイプとシグニチャのインクルードを表すため、情報を抽出する必要がある
-        if !file.include?("use crate::" + snake_case(celltype.get_global_name.to_s) + "::*;") then
-            file << "\nuse crate::" + snake_case(celltype.get_global_name.to_s) + "::*;\n"
-        end
+        celltype.get_cell_list.each do |cell|
 
-        if !file.include?("use s_reactor_body::*;") then
-            file << "use s_reactor_body::*;\n"
-        end
-        
-        # TODO: リアクターの登録を生成する
-        celltype.get_cell_list.each{ |cell|
-            search_pattern = /
-                \#\[\s*no_mangle\s*\]\n
-                pub\s+extern\s*"C"\s+fn\s+tecs_rust_start_#{snake_case(cell.get_global_name.to_s)}\(\s*_\s*:\s*usize\s*\)\s*\{\n
-                \s*#{cell.get_global_name.to_s.upcase}\.c_task_body\.main\(\);\n
-            \}/x
-            if !file.match?(search_pattern) then
-                file << "\n#[no_mangle]\n"
-                file << "pub extern \"C\" fn tecs_rust_start_" + snake_case(cell.get_global_name.to_s) + "(_: usize) {\n"
-                file << "\t#{cell.get_global_name.to_s.upcase}.c_task_body.main();\n" # TODO: 呼び口である c_task_body が sTaskBody でつながっていることを前提としている
-                file << "}\n"
+            # tPeriodicReactor のセルの cPeriodicReactor に接続されているセルに対して探索を開始する
+            body_join = cell.get_join_list.get_item("cPeriodicReactor")
+            next unless body_join                    # 接続が無ければスキップ
+            start_cell = body_join.get_rhs_cell2     # 接続先セルを取得
 
-                gen_task_static_api_for_configuration cell
+            # [async] 指定のある呼び口を幅優先的に探索
+            found = find_async_callport(start_cell)
+            # next unless found                        # 見つからなければスキップ
+            if found == nil then
+                puts "error: Can't find async callport in #{cell.get_global_name.to_s}"
+                exit 1
             end
-        }
+            target_cell, async_callport = found
 
-        File.write("#{$gen}/#{file_option}.rs", file)
+            publish_topic_hash, subscribe_topic_hash = get_topic_list(async_callport)
+
+            publish_topic_name_list = cell.get_attr_initializer("publish_topic_names".to_sym).to_s.split(",")
+            subscribe_topic_name_list = cell.get_attr_initializer("subscribe_topic_names".to_sym).to_s.split(",")
+
+            # TODO: publish_topic_type_hash と publish_topic_name_list の整合性をシグニチャプラグインのオプションで確認する
+            # TODO: subscribe_topic_type_hash と subscribe_topic_name_list の整合性をシグニチャプラグインのオプションで確認する
+            publish_topic_hash.each do |topic_arg_name, (topic_type, topic_name)|
+                topic_name = publish_topic_name_list.find { |name| name == topic_arg_name }
+            end
+            subscribe_topic_hash.each do |topic_arg_name, (topic_type, topic_name)|
+                topic_name = subscribe_topic_name_list.find { |name| name == topic_arg_name }
+            end
+
+            # TODO: プラグインのオプションから、返り値の型を特定する
+            reactor_api = "\tdag.register_periodic_reactor::<_, ("
+            publish_topic_hash.each do |topic_arg_name, (topic_type, topic_name)|
+                reactor_api += "#{topic_type},"
+            end
+            reactor_api += ")>(\n"
+
+            reactor_api += "\t\t\"#{cell.get_attr_initializer("name".to_sym).to_s}\".into(),\n"
+            
+            # TODO: プラグインのオプションから、返り値の型を特定する
+            reactor_api += "\t\t|| -> ("
+            publish_topic_hash.each do |topic_arg_name, (topic_type, topic_name)|
+                reactor_api += "#{topic_type},"
+            end
+            reactor_api += ")> {\n"
+
+
+            # TODO: 型に応じて適切な初期化をする必要がある
+            # TODO: オリジナルの型に対応させるのは難しいかもしれない
+            publish_topic_hash.each do |topic_arg_name, (topic_type, topic_name)|
+                reactor_api += "\t\t\tlet mut #{topic_arg_name} = #{topic_type};\n"
+            end
+
+            reactor_api += "\t\t\t#{target_cell.get_global_name.to_s}.c_periodic_reactorbody.main("
+            publish_topic_hash.each do |topic_arg_name, (topic_type, topic_name)|
+                reactor_api += "&mut #{topic_arg_name},"
+            end
+            reactor_api += ");\n"
+
+            reactor_api += "\t\t\t("
+            publish_topic_hash.each do |topic_arg_name, (topic_type, topic_name)|
+                reactor_api += "\t\t\t#{topic_arg_name},"
+            end
+            reactor_api += ")\n"
+
+            reactor_api += "\t\t},\n"
+
+            # TODO: コンマの位置
+            reactor_api += "\t\tvec!["
+            publish_topic_hash.each do |topic_arg_name, (topic_type, topic_name)|
+                reactor_api += "Cow::from(\"#{topic_name}\"),"
+            end
+            reactor_api += "],\n"
+
+            reactor_api += "\t\tSchedulerType::#{cell.get_attr_initializer("scheduler_type".to_sym).to_s},\n"
+            reactor_api += "\t\t#{cell.get_attr_initializer("period".to_sym).to_s},\n"
+            reactor_api += "\t)\n"
+            reactor_api += "\t.await;"
+            @@reactor_api_list << reactor_api
+        end
+
+        @@reactor_api_list.uniq!
     end
 
-    # lib.rs や main.rs に対して、extern関数を生成する
-    # TODO: リファクタリングの際に、タスクや他のハンドラの関数と一緒にしたい
-    def gen_register_sink_reactor celltype
-        file = File.read("#{$gen}/#{file_option}.rs")
+    #----------------------------------------
+    # 指定セルを起点に [async] 呼び口を探索する
+    # アルゴリズム:
+    # 1. セルの全呼び口を調査し [async] があれば即返す
+    # 2. 見つからない場合は最初の呼び口に接続されているセルを再帰的に探索
+    # （幅優先探索に近いが，手順はユーザ指定に従い最初の呼び口のみ深掘り）
+    # 戻り値: [見つかったセル, 呼び口] もしくは nil
+    #----------------------------------------
+    def find_async_callport(cell, visited = {})
+        return nil if cell.nil? || visited[cell]
+        visited[cell] = true
 
-        # TODO: この2つのuse文は、ユーザの定義するセルタイプとシグニチャのインクルードを表すため、情報を抽出する必要がある
-        if !file.include?("use crate::" + snake_case(celltype.get_global_name.to_s) + "::*;") then
-            file << "\nuse crate::" + snake_case(celltype.get_global_name.to_s) + "::*;\n"
-        end
+        callports = cell.get_port_list.select { |p| p.get_port_type == :CALL }
+        async_port = callports.find { |p| p.is_async? }
+        return [cell, async_port] if async_port
 
-        if !file.include?("use s_sink_reactor_body::*;") then
-            file << "use s_sink_reactor_body::*;\n"
-        end
-        
-        # TODO: リアクターの登録を生成する
-        celltype.get_cell_list.each{ |cell|
-            search_pattern = /
-                \#\[\s*no_mangle\s*\]\n
-                pub\s+extern\s*"C"\s+fn\s+tecs_rust_start_#{snake_case(cell.get_global_name.to_s)}\(\s*_\s*:\s*usize\s*\)\s*\{\n
-                \s*#{cell.get_global_name.to_s.upcase}\.ci_isr_body\.main\(\);\n
-            \}/x
-            if !file.match?(search_pattern) then
-                file << "\n#[no_mangle]\n"
-                file << "pub extern \"C\" fn tecs_rust_start_" + snake_case(cell.get_global_name.to_s) + "(_: usize) {\n"
-                file << "\t#{cell.get_global_name.to_s.upcase}.ci_isr_body.main();\n" # TODO: 呼び口である c_task_body が sTaskBody でつながっていることを前提としている
-                file << "}\n"
+        first_port = callports.first
+        return nil unless first_port
 
-                gen_isr_static_api_for_configuration cell
-            end
-        }
+        join = cell.get_join_list.get_item(first_port.get_name.to_s)
+        return nil unless join
 
-        File.write("#{$gen}/#{file_option}.rs", file)
+        next_cell = join.get_rhs_cell2
+        find_async_callport(next_cell, visited)
     end
 
-    def gen_register_periodic_reactor celltype
-        file = File.read("#{$gen}/#{file_option}.rs")
+    # async 呼び口につながれているシグニチャの関数の引数名を取得する
+    # 戻り値: 引数名 -> [型、トピック名] のハッシュ
+    # TODO: トピック名は、シグニチャプラグインのオプションで指定されたものを使用する
+    def get_topic_list async_callport
 
-        # TODO: この2つのuse文は、ユーザの定義するセルタイプとシグニチャのインクルードを表すため、情報を抽出する必要がある
-        if !file.include?("use crate::" + snake_case(celltype.get_global_name.to_s) + "::*;") then
-            file << "\nuse crate::" + snake_case(celltype.get_global_name.to_s) + "::*;\n"
-        end
-
-        if !file.include?("use s_periodic_reactor_body::*;") then
-            file << "use s_periodic_reactor_body::*;\n"
-        end
+        return nil if async_callport.is_async? == false
         
-        # TODO: リアクターの登録を生成する
-        celltype.get_cell_list.each{ |cell|
-            search_pattern = /
-                \#\[\s*no_mangle\s*\]\n
-                pub\s+extern\s*"C"\s+fn\s+tecs_rust_start_#{snake_case(cell.get_global_name.to_s)}\(\s*_\s*:\s*usize\s*\)\s*\{\n
-                \s*#{cell.get_global_name.to_s.upcase}\.c_initialize_routine_body\.main\(\);\n
-            \}/x
-            if !file.match?(search_pattern) then
-                file << "\n#[no_mangle]\n"
-                file << "pub extern \"C\" fn tecs_rust_start_" + snake_case(cell.get_global_name.to_s) + "(_: usize) {\n"
-                file << "\t#{cell.get_global_name.to_s.upcase}.c_initialize_routine_body.main();\n" # TODO: 呼び口である c_task_body が sTaskBody でつながっていることを前提としている
-                file << "}\n"
+        # パブリッシュするトピックとサブスクライブするトピックを取得する
+        publish_topic_hash = {}
+        subscribe_topic_hash = {}
 
-                gen_ini_static_api_for_configuration cell
+        if async_callport.get_signature.get_function_head_array.length > 1 then
+            puts "error: #{async_callport.get_signature.get_global_name.to_s} has multiple functions, connected by async callport #{async_callport.get_global_name.to_s}"
+            exit 1
+        end
+
+        # async 呼び口につながれているシグニチャの関数の引数名を取得する
+        async_callport.get_signature.get_function_head_array.each do |func_head|
+            func_head.get_paramlist.get_items.each do |param|
+                case param.get_direction
+                when :IN
+                    subscribe_topic_hash[param.get_name.to_s] = [ c_type_to_rust_type(param.get_type.get_type_str), nil]
+                when :OUT
+                    publish_topic_hash[param.get_name.to_s] = [ c_type_to_rust_type(param.get_type.get_type_str), nil]
+                end
             end
-        }
+        end
 
-        File.write("#{$gen}/#{file_option}.rs", file)
+        return publish_topic_hash, subscribe_topic_hash
+    end
+
+    def add_reactor_api file, celltype
+
+    end
+
+    def add_sink_reactor_api file, celltype
+
     end
 
     # セルタイプが変数を持つ場合、呼び出される
@@ -266,9 +371,9 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
         plugin_option = @plugin_arg_str.split(",").map(&:strip)
 
         callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
-            # TODO: プラグインのオプションに "callback: 呼び口" がある場合は、その呼び口のみをpublicにする
+            # async 指定子がある場合は、pub を付与する
             # リアクターAPIのコールバック関数で、各ルーチンの呼び口を呼び出す生成をするため、pub が必要になる
-            if plugin_option.include?("callback") then
+            if callport.is_async? then
                 file.print "\tpub #{snake_case(callport.get_name.to_s)}: &'a "
             else
                 file.print "\t#{snake_case(callport.get_name.to_s)}: &'a "
@@ -280,6 +385,26 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
                 file.print "(#{check_gen_dyn_for_port(callport)} + Sync + Send),\n"
             end
         end
+    end
+
+    # セルの構造体の初期化の先頭部を生成
+    # rodata セクション指定を削除
+    def gen_rust_cell_structure_header_initialize file, cell
+        file.print "static #{cell.get_global_name.to_s.upcase}: #{get_rust_celltype_name(cell.get_celltype)}"
+    end
+
+    # 受け口構造体の初期化を生成
+    # rodata セクション指定を削除
+    def gen_rust_entryport_structure_initialize file, celltype, cell
+        celltype.get_port_list.each{ |port|
+            if port.get_port_type == :ENTRY then
+                # 受け口構造体の初期化を生成
+                # 一つの受け口構造体がもつセルは１つ
+                file.print "pub static #{port.get_name.to_s.upcase}FOR#{cell.get_global_name.to_s.upcase}: #{camel_case(snake_case(port.get_name.to_s))}For#{get_rust_celltype_name(celltype)} = #{camel_case(snake_case(port.get_name.to_s))}For#{get_rust_celltype_name(celltype)} {\n"
+                file.print "\tcell: &#{cell.get_global_name.to_s.upcase},\n"
+                file.print "};\n\n"
+            end
+        }
     end
 
     # セル構造体の変数フィールドの定義を生成
@@ -563,9 +688,9 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
                 end
 
                 file.print "\n\twhere\n"
-                file.print "\t'b: 'a,\n"
+                file.print "\t\t'b: 'a,\n"
 
-                file.print " {\n"
+                file.print "\t{\n"
 
                 lock_guard_filed_name = []
                 lock_guard_field_value = []
@@ -795,6 +920,11 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
 
 # 2025/07/04 ここまで
 
+    def gen_use_for_impl_file file, celltype
+        super(file, celltype)
+        file.print "use awkernel_lib::sync::mutex::MCSNode;\n"
+    end
+
     # セルタイプに受け口がある場合，受け口関数を生成する
     def gen_rust_entryport_function file, celltype, callport_list
         # セルタイプに受け口がある場合，impl を生成する
@@ -877,7 +1007,8 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
                         # file.print " = self.cell.get_cell_ref();\n"
 
                         # ロックガードで覆う場合の生成
-                        file.print "\t\tlet lg = self.cell.get_cell_ref();\n"
+                        file.print "\t\tlet mut node = MCSNode::new();\n"
+                        file.print "\t\tlet mut lg = self.cell.get_cell_ref(&mut node);\n"
                     end
                     file.print "\n"
                     file.print"\t}\n"
@@ -890,27 +1021,17 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
         }
     end
 
-    # Cargo の新規プロジェクトを作成する
-    def cargo_new_project path
-        super(path)
-
-        gen_config_toml path
-
-    end
-
     # Cargo.toml の設定を変更する
     # def change_cargo_toml path
-    #     # cargo_toml_path = "#{path}/Cargo.toml"
+    #     cargo_toml_path = "#{path}/Cargo.toml"
 
-    #     # # TODO: asp3 か fmp3 かは、何かしらで判断する必要がある
-    #     # itron_rs_depenence = "itron = { version = \"= 0.1.9\", features = [\"asp3\", \"nightly\", \"unstable\"] }"
+    #     # TODO: asp3 か fmp3 かは、何かしらで判断する必要がある
+    #     itron_rs_depenence = "itron = { version = \"= 0.1.9\", features = [\"asp3\", \"nightly\", \"unstable\"] }"
 
-    #     # File.open(cargo_toml_path, "a") do |file|
-    #     #     file.puts itron_rs_depenence
-    #     #     file.puts ""
-    #     # end
-
-    #     super(path)
+    #     File.open(cargo_toml_path, "a") do |file|
+    #         file.puts itron_rs_depenence
+    #         file.puts ""
+    #     end
     # end
 
     # cargo.toml の設定を生成する
@@ -994,7 +1115,7 @@ impl<'a, T: core::marker::Send> core::ops::DerefMut for TECSVarGuard<'a, T> {
         variable_file.close
 
         if File.exist?("#{@@cargo_path}}/tecs_variable.rs") == false then
-            copy_gen_files_to_cargo "tecs_variable.rs"
+            copy_gen_files_to_cargo "tecs_variable.rs", nil
         end
     end
 
@@ -1019,7 +1140,7 @@ impl<'a, T: core::marker::Send> core::ops::DerefMut for TECSVarGuard<'a, T> {
         super(file)
 
         # TODO: 必要なときにのみ生成するようにする
-        gen_tecs_ex_ctrl_rs
+        # gen_tecs_ex_ctrl_rs
 
         # TODO: 必要なときにのみ生成するようにする
         # gen_tecs_mutex_rs
@@ -1027,9 +1148,11 @@ impl<'a, T: core::marker::Send> core::ops::DerefMut for TECSVarGuard<'a, T> {
         # TODO: 必要なときにのみ生成するようにする
         # gen_tecs_semaphore_rs
 
-        gen_tecs_print_rs
+        # gen_tecs_print_rs
 
-        copy_gen_files_to_cargo "kernel_cfg.rs"
+        # copy_gen_files_to_cargo "kernel_cfg.rs", nil
+
+        gen_tecs_variable_rs
     end
 
 end
