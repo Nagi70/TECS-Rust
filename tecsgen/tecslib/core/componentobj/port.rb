@@ -64,6 +64,7 @@ class Port < BDNode
 # @b_optional:: bool : call port のみ
 # @b_ref_desc:: bool :  ref_desc キーワードが指定された
 # @b_dynamic:: bool :  dynamic キーワードが指定された (呼び口のみ)
+# @b_async:: bool :  async 指定子が指定された (呼び口のみ)
 #
 # optimize::
 # @celltype:: 属するセルタイプ
@@ -171,6 +172,7 @@ class Port < BDNode
     @b_omit = false
     @b_ref_desc = false
     @b_dynamic = false
+    @b_async = false
     reset_optimize
   end
 
@@ -281,6 +283,14 @@ class Port < BDNode
     @b_omit = true
   end
 
+  def is_async?
+    @b_async
+  end
+
+  def set_async
+    @b_async = true
+  end
+
   def set_VMT_useless                     # VMT 関数テーブルを使用しない
    @b_VMT_useless = true
   end
@@ -337,6 +347,12 @@ class Port < BDNode
           next
         end
         @allocator_instance_tmp = s[1]
+      when :ASYNC
+        if @port_type == :ENTRY then
+          cdl_error( "S9999 async: cannnot be specified for entry port" )
+          next
+        end
+        @b_async = true
       else
         raise "unknown specifier #{s[0]}"
       end

@@ -1005,6 +1005,7 @@ celltype_statement_specifier
     | REF_DESC { result = [ :REF_DESC ] }
     | DYNAMIC { result = [ :DYNAMIC ] }
     | OMIT { result = [ :OMIT ] }
+    | ASYNC { result = [ :ASYNC ] }
 
 alloc_list2
     : alloc2                   { result = [ val[0] ] }    # 受け口のアロケータ指定
@@ -1328,6 +1329,7 @@ composite_celltype_statement_specifier
     | OPTIONAL    { result = [ :OPTIONAL ] }
     | REF_DESC    { result = [ :REF_DESC ] }
     | DYNAMIC    { result = [ :DYNAMIC ] }
+    | ASYNC    { result = [ :ASYNC ] }
 
 composite_port
     : port
@@ -1618,6 +1620,7 @@ end
     # port (call)
     'optional' => :OPTIONAL,
     'dynamic' => :DYNAMIC,
+    'async' => :ASYNC,
 
     # port (call), attribute
     'omit' => :OMIT,
