@@ -251,29 +251,30 @@ class RustGenCelltypePlugin < CelltypePlugin
 
         if @mod_signatures_list.length == 1 then
             file.print "use crate::tecs_signature::#{@mod_signatures_list[0]}::*;\n"
-        elsif @mod_signatures_list.length != 0 then
+        elsif @mod_signatures_list.length > 1 then
             file.print "use crate::tecs_signature::{"
+            @mod_signatures_list.each{ |mod_signature|
+                if mod_signature != @mod_signatures_list.last then
+                    file.print "#{mod_signature}::*, "
+                else
+                    file.print "#{mod_signature}::*};\n\n"
+                end
+            }
         end
-        @mod_signatures_list.each{ |mod_signature|
-            if mod_signature != @mod_signatures_list.last then
-                file.print "#{mod_signature}::*, "
-            else
-                file.print "#{mod_signature}::*};\n\n"
-            end
-        }
+
 
         if @mod_celltypes_list.length == 1 then
             file.print "use crate::tecs_celltype::#{@mod_celltypes_list[0]}::*;\n"
-        elsif @mod_celltypes_list.length != 0 then
+        elsif @mod_celltypes_list.length > 1 then
             file.print "use crate::tecs_celltype::{"
+            @mod_celltypes_list.each{ |mod_celltype|
+                if mod_celltype != @mod_celltypes_list.last then
+                    file.print "#{mod_celltype}::*, "
+                else
+                    file.print "#{mod_celltype}::*};\n\n"
+                end
+            }
         end
-        @mod_celltypes_list.each{ |mod_celltype|
-            if mod_celltype != @mod_celltypes_list.last then
-                file.print "#{mod_celltype}::*, "
-            else
-                file.print "#{mod_celltype}::*};\n\n"
-            end
-        }
     end
 
     # tecs_celltype.rs と tecs_celltype ディレクトリを生成する
@@ -621,10 +622,12 @@ class RustGenCelltypePlugin < CelltypePlugin
     end
 
     # そのセルタイプの呼び口のリストを取得する
+    # omit 指定子がついている場合と、関数を持たない signature が接続されている場合は除外
     def get_callport_list
         callport_list = []
         @celltype.get_port_list.each{ |port|
-            if port.get_port_type == :CALL then
+            # is_omit? は signature 含めて判定している
+            if port.get_port_type == :CALL && port.is_omit? == false then
                 callport_list.push(port)
             end
         }
@@ -804,8 +807,8 @@ class RustGenCelltypePlugin < CelltypePlugin
     end
 
     # セルの構造体の呼び口フィールドの初期化を生成
-    def gen_rust_cell_structure_callport_initialize file, celltype, cell
-        celltype.get_port_list.each{ |port|
+    def gen_rust_cell_structure_callport_initialize file, cell, callport_list
+        callport_list.each{ |port|
             if port.get_port_type == :CALL then
                 callee_port_name = camel_case(snake_case(cell.get_join_list.get_item(port.get_name).get_port_name.to_s))
                 callee_cell_name = cell.get_join_list.get_item(port.get_name).get_cell.get_global_name.to_s
@@ -1221,7 +1224,7 @@ class RustGenCelltypePlugin < CelltypePlugin
         if signature_list.length == 1 then
             file.print "use crate::tecs_signature::#{signature_list[0]}::*;\n"
         elsif signature_list.length > 1 then
-            file.print "use crate::{"
+            file.print "use crate::tecs_signature::{"
             signature_list.each{ |signature|
                 if signature == signature_list.last then
                     file.print "#{signature}::*};\n"
@@ -1563,11 +1566,11 @@ class RustGenCelltypePlugin < CelltypePlugin
         # TODO: Cargo の命名規則を考慮する必要があるが、makefile と同じ名前にしなければならない
         case file_name
         when "main"
-            output = `cargo new #{path}`
+            output = `cargo new --vcs none #{path}`
             puts output
             File.delete("#{path}/src/main.rs")
         when "lib"
-            output = `cargo new --lib #{path}`
+            output = `cargo new --lib --vcs none #{path}`
             puts output
             File.delete("#{path}/src/lib.rs")
         else
@@ -1934,7 +1937,7 @@ class RustGenCelltypePlugin < CelltypePlugin
 
             print "#{@celltype.get_global_name.to_s}: gen_rust_cell_structure_callport_initialize\n"
             # セルの構造体の呼び口フィールドの初期化を生成
-            gen_rust_cell_structure_callport_initialize file, @celltype, cell
+            gen_rust_cell_structure_callport_initialize file, cell, callport_list
 
             print "#{@celltype.get_global_name.to_s}: gen_rust_cell_structure_attribute_initialize\n"
             # セルの構造体の属性フィールドの初期化を生成
@@ -2030,8 +2033,9 @@ class RustGenCelltypePlugin < CelltypePlugin
             copy_gen_files_to_cargo "#{check_option_main_or_lib}.rs", nil
         # end
 
-        puts "#{@@diff_src_and_gen}"
+        # puts "#{@@diff_src_and_gen}"
 
+        puts "#{@celltype.get_global_name.to_s}: gen_rust_plugin_tecsgen_srcs_for_makefile"
         gen_rust_plugin_tecsgen_srcs_for_makefile
     end # gen_factory
 
