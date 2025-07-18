@@ -372,7 +372,7 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
             subscribe_topic_hash.each do |topic_arg_name, (topic_type, topic_name)|
                 reactor_api += "#{topic_arg_name},"
             end
-            reactor_api += ": "
+            reactor_api += "): "
             reactor_api += "("
             subscribe_topic_hash.each do |topic_arg_name, (topic_type, topic_name)|
                 reactor_api += "#{topic_type},"
