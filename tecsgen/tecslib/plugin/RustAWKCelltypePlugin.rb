@@ -88,8 +88,8 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
         plugin_option = @plugin_arg_str.split(",").map(&:strip)
         if plugin_option.include?("REACTOR") then
             return "Reactor"
-        elsif plugin_option.include?("SINC_REACTOR") then
-            return "SincReactor"
+        elsif plugin_option.include?("SINK_REACTOR") then
+            return "SinkReactor"
         elsif plugin_option.include?("PERIODIC_REACTOR") then
             return "PeriodicReactor"
         else
@@ -131,7 +131,19 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
     end
 
     def gen_entryport_function_in_main_lib_rs file, celltype
-        return if @@use_periodic_reactor_gen == false && @@use_reactor_gen == false && @@use_sink_reactor_gen == false
+
+        case get_reactor_type
+        when "Reactor"
+            add_reactor_api file, celltype
+        when "SinkReactor"
+            add_sink_reactor_api file, celltype
+        when "PeriodicReactor"
+            add_periodic_reactor_api file, celltype
+        end
+
+        return if @@use_periodic_reactor_gen == false && 
+                  @@use_reactor_gen == false && 
+                  @@use_sink_reactor_gen == false
 
         file.print "extern crate alloc;\n"
         file.print "use alloc::{borrow::Cow, vec};\n"
@@ -139,38 +151,32 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
         file.print "use awkernel_async_lib::scheduler::SchedulerType;\n"
         # TODO: delay の時間単位をユーザの指定に応じて変更する
         file.print "use awkernel_lib::delay::wait_microsec;\n"
-        file.print "use core::time::Duration;\n"
-
-        file.print "pub async fn run() {\n"
-        file.print "\twait_microsec(1000000);\n\n"
-        file.print "\tlet dag = create_dag();\n\n"
-
-        case get_reactor_type
-        when "Reactor"
-            add_reactor_api file, celltype
-        when "SincReactor"
-            add_sink_reactor_api file, celltype
-        when "PeriodicReactor"
-            add_periodic_reactor_api file, celltype
-        end
+        file.print "use core::time::Duration;\n\n"
 
         if @@use_periodic_reactor_gen then
             file.print "use tecs_celltype::t_periodic_reactor::*;\n"
-            file.print "use tecs_signature::s_periodic_reactorbody::*;\n"
+            file.print "use tecs_signature::s_periodic_reactorbody::*;\n\n"
         end
         if @@use_reactor_gen then
             file.print "use tecs_celltype::t_reactor::*;\n"
-            file.print "use tecs_signature::s_reactorbody::*;\n"
+            file.print "use tecs_signature::s_reactorbody::*;\n\n"
         end
         if @@use_sink_reactor_gen then
             file.print "use tecs_celltype::t_sink_reactor::*;\n"
-            file.print "use tecs_signature::s_sink_reactorbody::*;\n"
+            file.print "use tecs_signature::s_sink_reactorbody::*;\n\n"
         end
+
+        file.print "pub async fn run() {\n\n"
+        file.print "\twait_microsec(1000000);\n\n"
+        file.print "\tlet dag = create_dag();\n\n"
 
         @@reactor_api_list.each do |reactor_api|
             file.print reactor_api
-            file.print "\n"
+            file.print "\n\n"
         end
+
+        file.print "\tlet _ = finish_create_dags(&[dag.clone()]).await;\n"
+        file.print "}\n"
     end
 
     def add_periodic_reactor_api file, celltype
@@ -179,7 +185,7 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
         celltype.get_cell_list.each do |cell|
 
             # tPeriodicReactor のセルの cPeriodicReactor に接続されているセルに対して探索を開始する
-            body_join = cell.get_join_list.get_item("cPeriodicReactor")
+            body_join = cell.get_join_list.get_item("cPeriodicReactorbody".to_sym)
             next unless body_join                    # 接続が無ければスキップ
             start_cell = body_join.get_rhs_cell2     # 接続先セルを取得
 
@@ -190,22 +196,40 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
                 puts "error: Can't find async callport in #{cell.get_global_name.to_s}"
                 exit 1
             end
+
+            puts "periodic1"
             target_cell, async_callport = found
 
+            puts "periodic2"
             publish_topic_hash, subscribe_topic_hash = get_topic_list(async_callport)
+            
+            puts "periodic3"
+            publish_topic_name_list = cell.get_attr_initializer("publishTopicNames".to_sym).to_s.split(",").map(&:strip)
 
-            publish_topic_name_list = cell.get_attr_initializer("publish_topic_names".to_sym).to_s.split(",")
-            subscribe_topic_name_list = cell.get_attr_initializer("subscribe_topic_names".to_sym).to_s.split(",")
+            puts "periodic4"
+            # 周期リアクターは、サブスクライブできないため、それを検査する
+            if subscribe_topic_hash.size != 0 then
+                puts "error: tPeriodicReactor can't subscribe topic, #{cell.get_global_name.to_s} has subscribe topic"
+                exit 1
+            end
 
+            puts "periodic5"
+            # ── publish の処理
+            # 現在は、CDLのtPeriodicReactorの属性で定義されたpublishTopicNamesと、シグニチャプラグインのオプションで定義された[out]引数を、前から順番に対応づける
             # TODO: publish_topic_type_hash と publish_topic_name_list の整合性をシグニチャプラグインのオプションで確認する
-            # TODO: subscribe_topic_type_hash と subscribe_topic_name_list の整合性をシグニチャプラグインのオプションで確認する
-            publish_topic_hash.each do |topic_arg_name, (topic_type, topic_name)|
-                topic_name = publish_topic_name_list.find { |name| name == topic_arg_name }
-            end
-            subscribe_topic_hash.each do |topic_arg_name, (topic_type, topic_name)|
-                topic_name = subscribe_topic_name_list.find { |name| name == topic_arg_name }
+            if publish_topic_hash.size == publish_topic_name_list.size
+                # 要素数が一致していれば、インデックスで対応づけ
+                publish_topic_hash.keys.each_with_index do |arg_name, idx|
+                    topic_type, _old_name = publish_topic_hash[arg_name]
+                    # 同じインデックスの表示名をセット
+                    publish_topic_hash[arg_name] = [topic_type, publish_topic_name_list[idx]]
+                end
+            else
+                puts "error: Number of publish topic names in tPeriodicReactor is not equal to the number of publish topic argements in signature #{async_callport.get_signature.get_global_name.to_s} connected"
+                exit 1
             end
 
+            puts "periodic6"
             # TODO: プラグインのオプションから、返り値の型を特定する
             reactor_api = "\tdag.register_periodic_reactor::<_, ("
             publish_topic_hash.each do |topic_arg_name, (topic_type, topic_name)|
@@ -222,6 +246,144 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
             end
             reactor_api += ")> {\n"
 
+            puts "periodic7"
+            # TODO: 型に応じて適切な初期化をする必要がある
+            # TODO: オリジナルの型に対応させるのは難しいかもしれない
+            publish_topic_hash.each do |topic_arg_name, (topic_type, topic_name)|
+                reactor_api += "\t\t\tlet mut #{topic_arg_name} = #{topic_type};\n"
+            end
+
+            puts "periodic8"
+            reactor_api += "\t\t\t#{target_cell.get_global_name.to_s.upcase}.c_periodic_reactorbody.main("
+            async_callport.get_signature.get_function_head_array.each do |func_head|
+                func_head.get_paramlist.get_items.each do |param|
+                    case param.get_direction
+                    when :OUT
+                        reactor_api += "&mut #{param.get_name.to_s}"
+                    end
+                    reactor_api += "," unless param == func_head.get_paramlist.get_items.last
+                end
+                break
+            end
+            reactor_api += ");\n"
+
+            puts "periodic9"
+            reactor_api += "\t\t\t("
+            publish_topic_hash.each do |topic_arg_name, (topic_type, topic_name)|
+                reactor_api += "#{topic_arg_name},"
+            end
+            reactor_api += ")\n"
+
+            reactor_api += "\t\t},\n"
+
+            reactor_api += "\t\tvec!["
+            publish_topic_hash.each do |topic_arg_name, (topic_type, topic_name)|
+                reactor_api += "Cow::from(\"#{topic_name}\")"
+                reactor_api += "," unless topic_arg_name == publish_topic_hash.keys.last
+            end
+            reactor_api += "],\n"
+
+            puts "periodic10"
+            # TODO: sched_type 属性の初期値を明確にする必要がある。現在は、スケジューラ名 (FIFOなど)のみを想定している
+            reactor_api += "\t\tSchedulerType::#{cell.get_attr_initializer("schedType".to_sym).to_s},\n"
+            # TODO: period 属性の初期値を明確にする必要がある。現在は、関数を含めた形 (Duration::from_secs(1) など) のみを想定している
+            reactor_api += "\t\t#{cell.get_attr_initializer("period".to_sym).to_s},\n"
+            reactor_api += "\t)\n"
+            reactor_api += "\t.await;"
+            puts "periodic11"
+
+            puts reactor_api
+            @@reactor_api_list << reactor_api
+            # puts @@reactor_api_list
+        end
+
+        @@reactor_api_list.uniq!
+    end
+
+    def add_reactor_api file, celltype
+        @@use_reactor_gen = true
+
+        celltype.get_cell_list.each do |cell|
+
+            # tReactor のセルの cReactor に接続されているセルに対して探索を開始する
+            body_join = cell.get_join_list.get_item("cReactorbody".to_sym)
+            next unless body_join                    # 接続が無ければスキップ
+            start_cell = body_join.get_rhs_cell2     # 接続先セルを取得
+
+            # [async] 指定のある呼び口を幅優先的に探索
+            found = find_async_callport(start_cell)
+            # next unless found                        # 見つからなければスキップ
+            if found == nil then
+                puts "error: Can't find async callport in #{cell.get_global_name.to_s}"
+                exit 1
+            end
+            target_cell, async_callport = found
+
+            publish_topic_hash, subscribe_topic_hash = get_topic_list(async_callport)
+
+            publish_topic_name_list = cell.get_attr_initializer("publishTopicNames".to_sym).to_s.split(",").map(&:strip)
+            subscribe_topic_name_list = cell.get_attr_initializer("subscribeTopicNames".to_sym).to_s.split(",").map(&:strip)
+
+            # ── publish の処理
+            # 現在は、CDLのtReactorの属性で定義されたpublishTopicNamesと、シグニチャプラグインのオプションで定義された[out]引数を、前から順番に対応づける
+            # TODO: publish_topic_type_hash と publish_topic_name_list の整合性をシグニチャプラグインのオプションで確認する
+            if publish_topic_hash.size == publish_topic_name_list.size
+                # 要素数が一致していれば、インデックスで対応づけ
+                publish_topic_hash.keys.each_with_index do |arg_name, idx|
+                    topic_type, _old_name = publish_topic_hash[arg_name]
+                    # 同じインデックスの表示名をセット
+                    publish_topic_hash[arg_name] = [topic_type, publish_topic_name_list[idx]]
+                end
+            else
+                puts "error: Number of publish topic names in tReactor is not equal to the number of publish topic argements in signature #{async_callport.get_signature.get_global_name.to_s} connected"
+                exit 1
+            end
+
+            # ── subscribe の処理
+            # 現在は、CDLのtReactorの属性で定義されたsubscribeTopicNamesと、シグニチャプラグインのオプションで定義された[in]引数を、前から順番に対応づける
+            # TODO: subscribe_topic_type_hash と subscribe_topic_name_list の整合性をシグニチャプラグインのオプションで確認する
+            if subscribe_topic_hash.size == subscribe_topic_name_list.size
+                subscribe_topic_hash.keys.each_with_index do |arg_name, idx|
+                    topic_type, _old_name = subscribe_topic_hash[arg_name]
+                    subscribe_topic_hash[arg_name] = [topic_type, subscribe_topic_name_list[idx]]
+                end
+            else
+                puts "error: Number of subscribe topic names in tReactor is not equal to the number of subscribe topic argements in signature #{async_callport.get_signature.get_global_name.to_s} connected"
+                exit 1
+            end
+
+            # TODO: プラグインのオプションから、返り値の型を特定する
+            reactor_api = "\tdag.register_reactor::<_, ("
+            publish_topic_hash.each do |topic_arg_name, (topic_type, topic_name)|
+                reactor_api += "#{topic_type},"
+            end
+            reactor_api += "), ("
+            subscribe_topic_hash.each do |topic_arg_name, (topic_type, topic_name)|
+                reactor_api += "#{topic_type},"
+            end
+            reactor_api += ")>(\n"
+
+            # reactor_name 引数を生成する
+            reactor_api += "\t\t\"#{cell.get_attr_initializer("name".to_sym).to_s}\".into(),\n"
+            
+            # f 引数を生成する
+            # TODO: プラグインのオプションから、返り値の型を特定する
+            reactor_api += "\t\t|("
+            subscribe_topic_hash.each do |topic_arg_name, (topic_type, topic_name)|
+                reactor_api += "#{topic_arg_name},"
+            end
+            reactor_api += ": "
+            reactor_api += "("
+            subscribe_topic_hash.each do |topic_arg_name, (topic_type, topic_name)|
+                reactor_api += "#{topic_type},"
+            end
+            reactor_api += ")"
+            reactor_api += "| -> ("
+            publish_topic_hash.each do |topic_arg_name, (topic_type, topic_name)|
+                reactor_api += "#{topic_type},"
+            end
+            reactor_api += ")> {\n"
+
 
             # TODO: 型に応じて適切な初期化をする必要がある
             # TODO: オリジナルの型に対応させるのは難しいかもしれない
@@ -229,31 +391,153 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
                 reactor_api += "\t\t\tlet mut #{topic_arg_name} = #{topic_type};\n"
             end
 
-            reactor_api += "\t\t\t#{target_cell.get_global_name.to_s}.c_periodic_reactorbody.main("
-            publish_topic_hash.each do |topic_arg_name, (topic_type, topic_name)|
-                reactor_api += "&mut #{topic_arg_name},"
+            reactor_api += "\t\t\t#{target_cell.get_global_name.to_s.upcase}.c_reactorbody.main("
+            async_callport.get_signature.get_function_head_array.each do |func_head|
+                func_head.get_paramlist.get_items.each do |param|
+                    case param.get_direction
+                    when :IN
+                        reactor_api += "&#{param.get_name.to_s},"
+                    when :OUT
+                        reactor_api += "&mut #{param.get_name.to_s}"
+                    end
+                    reactor_api += "," unless param == func_head.get_paramlist.get_items.last
+                end
+                break
             end
             reactor_api += ");\n"
 
             reactor_api += "\t\t\t("
             publish_topic_hash.each do |topic_arg_name, (topic_type, topic_name)|
-                reactor_api += "\t\t\t#{topic_arg_name},"
+                reactor_api += "#{topic_arg_name},"
             end
             reactor_api += ")\n"
 
             reactor_api += "\t\t},\n"
 
-            # TODO: コンマの位置
+            # subscribeTopicNames 引数を生成する
             reactor_api += "\t\tvec!["
-            publish_topic_hash.each do |topic_arg_name, (topic_type, topic_name)|
-                reactor_api += "Cow::from(\"#{topic_name}\"),"
+            subscribe_topic_hash.each do |topic_arg_name, (topic_type, topic_name)|
+                reactor_api += "Cow::from(\"#{topic_name}\")"
+                reactor_api += "," unless topic_arg_name == subscribe_topic_hash.keys.last
             end
             reactor_api += "],\n"
 
-            reactor_api += "\t\tSchedulerType::#{cell.get_attr_initializer("scheduler_type".to_sym).to_s},\n"
-            reactor_api += "\t\t#{cell.get_attr_initializer("period".to_sym).to_s},\n"
+            # publishTopicNames 引数を生成する
+            reactor_api += "\t\tvec!["
+            publish_topic_hash.each do |topic_arg_name, (topic_type, topic_name)|
+                reactor_api += "Cow::from(\"#{topic_name}\")"
+                reactor_api += "," unless topic_arg_name == publish_topic_hash.keys.last
+            end
+            reactor_api += "],\n"
+
+            # TODO: sched_type 属性の初期値を明確にする必要がある。現在は、スケジューラ名 (FIFOなど)のみを想定している
+            reactor_api += "\t\tSchedulerType::#{cell.get_attr_initializer("schedType".to_sym).to_s},\n"
             reactor_api += "\t)\n"
             reactor_api += "\t.await;"
+
+            puts reactor_api
+
+            @@reactor_api_list << reactor_api
+        end
+
+        @@reactor_api_list.uniq!
+    end
+
+    def add_sink_reactor_api file, celltype
+        @@use_sink_reactor_gen = true
+
+        celltype.get_cell_list.each do |cell|
+
+            # tSinkReactor のセルの cSinkReactor に接続されているセルに対して探索を開始する
+            body_join = cell.get_join_list.get_item("cSinkReactorbody".to_sym)
+            next unless body_join                    # 接続が無ければスキップ
+            start_cell = body_join.get_rhs_cell2     # 接続先セルを取得
+
+            # [async] 指定のある呼び口を幅優先的に探索
+            found = find_async_callport(start_cell)
+            # next unless found                        # 見つからなければスキップ
+            if found == nil then
+                puts "error: Can't find async callport in #{cell.get_global_name.to_s}"
+                exit 1
+            end
+            target_cell, async_callport = found
+
+            publish_topic_hash, subscribe_topic_hash = get_topic_list(async_callport)
+
+            subscribe_topic_name_list = cell.get_attr_initializer("subscribeTopicNames".to_sym).to_s.split(",").map(&:strip)
+
+            if publish_topic_hash.size != 0 then
+                puts "error: tSinkReactor can't publish topic, #{cell.get_global_name.to_s} has publish topic"
+                exit 1
+            end
+
+            # ── subscribe の処理
+            # 現在は、CDLのtReactorの属性で定義されたsubscribeTopicNamesと、シグニチャプラグインのオプションで定義された[in]引数を、前から順番に対応づける
+            # TODO: subscribe_topic_type_hash と subscribe_topic_name_list の整合性をシグニチャプラグインのオプションで確認する
+            if subscribe_topic_hash.size == subscribe_topic_name_list.size
+                subscribe_topic_hash.keys.each_with_index do |arg_name, idx|
+                    topic_type, _old_name = subscribe_topic_hash[arg_name]
+                    subscribe_topic_hash[arg_name] = [topic_type, subscribe_topic_name_list[idx]]
+                end
+            else
+                puts "error: Number of subscribe topic names in tReactor is not equal to the number of subscribe topic argements in signature #{async_callport.get_signature.get_global_name.to_s} connected"
+                exit 1
+            end
+
+            # TODO: プラグインのオプションから、返り値の型を特定する
+            reactor_api = "\tdag.register_sink_reactor::<_, ("
+            subscribe_topic_hash.each do |topic_arg_name, (topic_type, topic_name)|
+                reactor_api += "#{topic_type},"
+            end
+            reactor_api += ")>(\n"
+
+            # reactor_name 引数を生成する
+            reactor_api += "\t\t\"#{cell.get_attr_initializer("name".to_sym).to_s}\".into(),\n"
+            
+            # f 引数を生成する
+            # TODO: プラグインのオプションから、返り値の型を特定する
+            reactor_api += "\t\t|("
+            subscribe_topic_hash.each do |topic_arg_name, (topic_type, topic_name)|
+                reactor_api += "#{topic_arg_name},"
+            end
+            reactor_api += "): "
+            reactor_api += "("
+            subscribe_topic_hash.each do |topic_arg_name, (topic_type, topic_name)|
+                reactor_api += "#{topic_type},"
+            end
+            reactor_api += ")| {\n"
+
+            reactor_api += "\t\t\t#{target_cell.get_global_name.to_s.upcase}.c_sink_reactorbody.main("
+            async_callport.get_signature.get_function_head_array.each do |func_head|
+                func_head.get_paramlist.get_items.each do |param|
+                    case param.get_direction
+                    when :IN
+                        reactor_api += "&#{param.get_name.to_s},"
+                    end
+                    reactor_api += "," unless param == func_head.get_paramlist.get_items.last
+                end
+                break
+            end
+            reactor_api += ");\n"
+
+            reactor_api += "\t\t},\n"
+
+            # subscribeTopicNames 引数を生成する
+            reactor_api += "\t\tvec!["
+            subscribe_topic_hash.each do |topic_arg_name, (topic_type, topic_name)|
+                reactor_api += "Cow::from(\"#{topic_name}\")"
+                reactor_api += "," unless topic_arg_name == subscribe_topic_hash.keys.last
+            end
+            reactor_api += "],\n"
+
+            # TODO: sched_type 属性の初期値を明確にする必要がある。現在は、スケジューラ名 (FIFOなど)のみを想定している
+            reactor_api += "\t\tSchedulerType::#{cell.get_attr_initializer("schedType".to_sym).to_s},\n"
+            reactor_api += "\t\t#{cell.get_attr_initializer("relative_deadline".to_sym).to_s},\n"
+            reactor_api += "\t)\n"
+            reactor_api += "\t.await;"
+
+            puts reactor_api
+
             @@reactor_api_list << reactor_api
         end
 
@@ -269,20 +553,31 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
     # 戻り値: [見つかったセル, 呼び口] もしくは nil
     #----------------------------------------
     def find_async_callport(cell, visited = {})
+        puts "check"
         return nil if cell.nil? || visited[cell]
         visited[cell] = true
+        puts "check1"
 
-        callports = cell.get_port_list.select { |p| p.get_port_type == :CALL }
+        callports = cell.get_celltype.get_port_list.select { |p| p.get_port_type == :CALL }
+        callports.each do |p|
+            puts "check1-1"
+            print p.get_name.to_s
+            puts p.is_async?
+        end
         async_port = callports.find { |p| p.is_async? }
+        puts "check2"
         return [cell, async_port] if async_port
 
         first_port = callports.first
+        puts "check3"
         return nil unless first_port
 
         join = cell.get_join_list.get_item(first_port.get_name.to_s)
+        puts "check4"
         return nil unless join
-
+    
         next_cell = join.get_rhs_cell2
+        puts "check5"
         find_async_callport(next_cell, visited)
     end
 
@@ -291,38 +586,42 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
     # TODO: トピック名は、シグニチャプラグインのオプションで指定されたものを使用する
     def get_topic_list async_callport
 
+        puts "get_topic_list1"
+
         return nil if async_callport.is_async? == false
+
+        puts "get_topic_list2"
         
         # パブリッシュするトピックとサブスクライブするトピックを取得する
         publish_topic_hash = {}
         subscribe_topic_hash = {}
 
+        # シグニチャの関数が複数ある場合はエラー
         if async_callport.get_signature.get_function_head_array.length > 1 then
             puts "error: #{async_callport.get_signature.get_global_name.to_s} has multiple functions, connected by async callport #{async_callport.get_global_name.to_s}"
             exit 1
         end
 
+        puts "get_topic_list3"
+
         # async 呼び口につながれているシグニチャの関数の引数名を取得する
         async_callport.get_signature.get_function_head_array.each do |func_head|
+            puts "get_topic_list3-1"
             func_head.get_paramlist.get_items.each do |param|
                 case param.get_direction
                 when :IN
-                    subscribe_topic_hash[param.get_name.to_s] = [ c_type_to_rust_type(param.get_type.get_type_str), nil]
+                    puts "get_topic_list3-IN"
+                    subscribe_topic_hash[param.get_name.to_s] = [ c_type_to_rust_type(param.get_type), nil]
                 when :OUT
-                    publish_topic_hash[param.get_name.to_s] = [ c_type_to_rust_type(param.get_type.get_type_str), nil]
+                    puts "get_topic_list3-OUT"
+                    publish_topic_hash[param.get_name.to_s] = [ c_type_to_rust_type(param.get_type), nil]
                 end
             end
         end
 
+        puts "get_topic_list4"
+
         return publish_topic_hash, subscribe_topic_hash
-    end
-
-    def add_reactor_api file, celltype
-
-    end
-
-    def add_sink_reactor_api file, celltype
-
     end
 
     # セルタイプが変数を持つ場合、呼び出される

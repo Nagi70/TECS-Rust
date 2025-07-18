@@ -59,7 +59,8 @@ class RustAWKSignaturePlugin < SignaturePlugin
     @auto_exclude_list = {}
     @b_auto_exclude = true     # auto_exclude = true by default 
 
-    @plugin_arg_check_proc_tab = RustAWKSignaturePluginArgProc
+    # TODO: シグニチャプラグインのオプションをチェックする
+    # @plugin_arg_check_proc_tab = RustAWKSignaturePluginArgProc
     parse_plugin_arg
 
     @celltype_name = :"t#{@signature.get_global_name}"
