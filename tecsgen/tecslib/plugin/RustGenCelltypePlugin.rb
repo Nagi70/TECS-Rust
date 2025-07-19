@@ -52,6 +52,9 @@ class RustGenCelltypePlugin < CelltypePlugin
     @@mod_global_signatures_list = []
     @@mod_global_celltypes_list = []
     @@mod_global_impls_list = []
+    @@struct_type_list = []
+    # tecs_struct_def.rs を 1 度だけ生成したかどうかを示すフラグ
+    @@struct_def_generated = false
 
     #celltype::     Celltype        セルタイプ（インスタンス）
     def initialize( celltype, option )
@@ -66,6 +69,7 @@ class RustGenCelltypePlugin < CelltypePlugin
       @mod_signatures_list = []
       @mod_celltypes_list = []
       @mod_impls_list = []
+      @gen_use_struct_def = false
 
       require 'fileutils'
 
@@ -249,6 +253,10 @@ class RustGenCelltypePlugin < CelltypePlugin
             gen_use_mutex file
         end
 
+        if @gen_use_struct_def then
+            file.print "use crate::tecs_struct_def::*;\n"
+        end
+
         if @mod_signatures_list.length == 1 then
             file.print "use crate::tecs_signature::#{@mod_signatures_list[0]}::*;\n"
         elsif @mod_signatures_list.length > 1 then
@@ -350,6 +358,12 @@ class RustGenCelltypePlugin < CelltypePlugin
             type = c_type_to_rust_type(c_type.get_type)
             subscript = c_type.get_subscript
             str = "[#{type}; #{subscript}]"
+        elsif c_type.kind_of?( StructType ) then
+            str = c_type.get_name.to_s
+            # TODO: 構造体の定義がある場合は、その構造体の定義を生成する。
+            # すべてのオリジナル構造体の定義を tecs_struct_def.rs に生成する
+            @@struct_type_list.push(c_type)
+            @gen_use_struct_def = true
         elsif c_type.kind_of?( PtrType ) then
             if c_type.get_string != nil then
                 # str = "#{c_type.has_sized_pointer?}"
@@ -402,6 +416,43 @@ class RustGenCelltypePlugin < CelltypePlugin
         end
         return str
     end
+    
+    # オリジナル構造体の定義を tecs_struct_def.rs に生成する
+    def gen_tecs_struct_def_rs
+        # 既に生成済み、または構造体が 1 つも収集されていない場合は何もしない
+        return if @@struct_def_generated || @@struct_type_list.empty?
+
+        @@struct_def_generated = true
+
+        # 重複を除去（同じタグ名で比較）
+        uniq_list = {}
+        @@struct_type_list.each do |st|
+            uniq_list[st.get_name] = st unless uniq_list.key?(st.get_name)
+        end
+
+        # ファイルを生成
+        require 'fileutils'
+        out_path = "#{$gen}/tecs_struct_def.rs"
+        file = CFile.open(out_path, "w")
+
+        uniq_list.each_value do |st|
+            rust_name = camel_case(snake_case(st.get_name.to_s.sub(/^_+/, "")))
+            file.print("pub struct #{rust_name} {\n")
+
+            st.get_members_decl.get_items.each do |m|
+                field_name = snake_case(m.get_name.to_s)
+                field_type = c_type_to_rust_type(m.get_type)
+                file.print("    pub #{field_name}: #{field_type},\n")
+            end
+
+            file.print("}\n\n")
+        end
+
+        file.close
+
+        # Cargo プロジェクトへコピー（トップレベルなので file_type=nil）
+        copy_gen_files_to_cargo "tecs_struct_def.rs", nil
+    end
 
     # セルタイプに呼び口がある場合，その呼び口につながっているシグニチャのトレイトファイルを生成する
     def gen_trait_files celltype
@@ -417,6 +468,10 @@ class RustGenCelltypePlugin < CelltypePlugin
             # gen_mod_in_main_lib_rs_for_signature sig
             trait_file = CFile.open( "#{$gen}/tecs_signature/#{snake_case(sig_name)}.rs", "w" )
             # gen_use_mutex trait_file
+
+            if @gen_use_struct_def then
+                trait_file.print "use crate::tecs_struct_def::*;\n"
+            end
 
             trait_file.print "pub trait #{camel_case(snake_case(sig_name))} {\n"
 
@@ -1218,6 +1273,10 @@ class RustGenCelltypePlugin < CelltypePlugin
         # if @celltype.get_var_list.length != 0 then
         #     gen_use_mutex file
         # end
+
+        if @gen_use_struct_def then
+            file.print "use crate::tecs_struct_def::*;\n"
+        end
 
         file.print "use crate::tecs_signature::#{snake_case(celltype.get_global_name.to_s)}::*;\n"
 
@@ -2037,6 +2096,10 @@ class RustGenCelltypePlugin < CelltypePlugin
 
         puts "#{@celltype.get_global_name.to_s}: gen_rust_plugin_tecsgen_srcs_for_makefile"
         gen_rust_plugin_tecsgen_srcs_for_makefile
+
+
+        puts "#{@celltype.get_global_name.to_s}: gen_tecs_struct_def_rs"
+        gen_tecs_struct_def_rs
     end # gen_factory
 
 end
