@@ -1,0 +1,5 @@
+# Celltype: tPubsub  #_MDEP_#
+$(_TECS_OBJ_DIR)tPubsub_tecsgen.o : tPubsub_tecsgen.c $(GEN_DIR)/global_tecsgen.h $(GEN_DIR)/sPubsub_tecsgen.h $(GEN_DIR)/tPubsub_factory.h $(GEN_DIR)/tPubsub_tecsgen.h
+$(_TECS_OBJ_DIR)tPubsub_templ.o : tPubsub_templ.c $(GEN_DIR)/global_tecsgen.h $(GEN_DIR)/sPubsub_tecsgen.h $(GEN_DIR)/tPubsub_factory.h $(GEN_DIR)/tPubsub_tecsgen.h
+$(_TECS_OBJ_DIR)tPubsub.o : tPubsub.c $(GEN_DIR)/global_tecsgen.h $(GEN_DIR)/sPubsub_tecsgen.h $(GEN_DIR)/tPubsub_factory.h $(GEN_DIR)/tPubsub_tecsgen.h
+

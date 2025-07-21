@@ -1,0 +1,171 @@
+typedef uint32_t Cow;
+typedef uint32_t SchedulerType;
+typedef uint32_t Duration;
+
+struct Test {
+    int8_t temp[10];
+};
+
+signature sTask {
+    void temp(void);
+};
+
+//*** リアクター共通シグニチャ ***//
+signature sReactorbody {
+    void main(void);
+};
+
+
+//*** 周期リアクター定義 ***//
+signature sPeriodicReactorbody {
+    void main(void);
+};
+
+[active, generate( RustAWKPlugin, "PERIODIC_REACTOR")]
+celltype tPeriodicReactor {
+    call sReactorbody cPeriodicReactorbody;
+    entry sTask eTask;
+    
+    attr{
+        [omit] Cow name = C_EXP("task_id");
+        [omit] Cow publishTopicNames = C_EXP("Topic1, Topic2");
+        [omit] SchedulerType schedType = C_EXP("SchedulerType::FIFO");
+        [omit] Duration period = C_EXP("Duration::from_sec(1)");
+    };
+};
+//*** ***//
+
+
+//*** リアクター定義 ***//
+//signature sReactorbody {
+//    void main(void);
+//};
+
+[active, generate( RustAWKPlugin, "REACTOR")]
+celltype tReactor {
+    call sReactorbody cReactorbody;
+    entry sTask eTask;
+    
+    attr{
+        [omit] Cow name = C_EXP("task_id");
+        [omit] Cow subscribeTopicNames = C_EXP("Topic1, Topic2");
+        [omit] Cow publishTopicNames = C_EXP("Topic3, Topic4");
+        [omit] SchedulerType schedType = C_EXP("SchedulerType::FIFO");
+    };
+};
+//*** ***//
+
+
+//*** シンクリアクター定義　***//
+signature sSinkReactorbody {
+    void main(void);
+};
+
+[active, generate( RustAWKPlugin, "SINK_REACTOR")]
+celltype tSinkReactor {
+    call sReactorbody cSinkReactorbody;
+    entry sTask eTask;
+    
+    attr{
+        [omit] Cow name = C_EXP("task_id");
+        [omit] Cow subscribeTopicNames = C_EXP("Topic3, Topic4");
+        [omit] SchedulerType schedType = C_EXP("SchedulerType::FIFO");
+        [omit] Duration relative_deadline = C_EXP("Duration::from_sec(1)");
+    };
+};
+//*** ***//
+
+
+//*** 周期リアクター側定義 ***//
+signature sCamerabody {
+    void main([out] struct Test* camera_info);
+};
+
+[generate( RustAWKPlugin, "")]
+celltype tCamerabody {
+    entry sReactorbody eCamerabody;
+    [async] call sCamerabody cCamera; // publishすることを明示的にするための [async] 指定子
+};
+
+signature sCameraInfo {
+    void send([in] struct Test camera_info);
+};
+
+generate(RustAWKPlugin, sCameraInfo, "CameraInfo: u32");
+
+[generate( RustAWKPlugin, "")]
+celltype tCamera {
+    [omit] call sCameraInfo cCameraInfo;
+    entry sCamerabody eCamera;
+
+    var{
+        uint32_t temp = 0;
+    };
+};
+//*** ***//
+
+
+//*** リアクター側定義 ***//
+signature sBevbody {
+    // void main([in] struct Test camera_info, [out] uint32_t* image); // reactor向け
+    void main([in] struct Test camera_info); // sink_reactor向け
+};
+
+[generate( RustAWKPlugin, "")]
+celltype tBevbody {
+    entry sReactorbody eBevbody;
+    [async] call sBevbody cBev; // publishとsubscribe両方することを明示的にするための [async] 指定子
+};
+
+[generate( RustAWKPlugin, "")]
+celltype tBev {
+    entry sBevbody eBev;
+    entry sCameraInfo eCmaeraInfo;
+};
+//*** ***//
+
+
+//*** 周期リアクター向け組上げ ***//
+cell tPeriodicReactor PeriodicReactor {
+    cPeriodicReactorbody = Camerabody.eCamerabody;
+    name = C_EXP("periodic_reactor");
+    schedType = C_EXP("FIFO");
+    publishTopicNames = C_EXP("CameraInfo"); // PL_EXP的なもの、ジェネレータは解釈せず、プラグインのみで解釈する
+    period = C_EXP("Duration::from_sec(1)");
+};
+
+cell tCamerabody Camerabody {
+    cCamera = Camera.eCamera;
+};
+
+cell tCamera Camera {
+    cCameraInfo = Bev.eCmaeraInfo;
+};
+//*** ***//
+
+//*** リアクター向け組上げ ***//
+//cell tReactor Reactor {
+//    cReactorbody = Bevbody.eBevbody;
+//    name = C_EXP("reactor");
+//    schedType = C_EXP("FIFO");
+//    subscribeTopicNames = C_EXP("CameraInfo");
+//};
+
+cell tBevbody Bevbody {
+    cBev = Bev.eBev;
+};
+
+cell tBev Bev {
+
+};
+//*** ***//
+
+//*** シンクリアクター向け組上げ ***//
+cell tSinkReactor SinkReactor {
+    cSinkReactorbody = Bevbody.eBevbody;
+    name = C_EXP("sink_reactor");
+    schedType = C_EXP("FIFO");
+    relative_deadline = C_EXP("Duration::from_sec(1)");
+    subscribeTopicNames = C_EXP("CameraInfo");
+};
+//*** ***//

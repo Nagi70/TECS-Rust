@@ -1,0 +1,105 @@
+typedef uint32_t Cow;
+typedef uint32_t SchedulerType;
+
+signature sReactorbody {
+	void main([in] uint32_t input, [out] uint32_t* output);
+};
+
+signature sSinkReactorbody {
+	void main([in] uint32_t input);
+};
+
+signature sPeriodicReactorbody {
+	void main([out] uint32_t* output);
+};
+
+signature sPubsub {
+    void send(void);
+    void receive(void);
+};
+
+signature sTask {
+    void temp(void);
+};
+
+
+
+[active, generate( RustASP3Plugin, "lib, TASK")]
+celltype tReactor {
+	call sReactorbody cTaskbody;
+	call sPubsub cPublisher;
+	call sPubsub cSubscriber;
+	entry sTask eTask;
+	
+	attr{
+		Cow name = C_EXP("task_id");
+		[omit] SchedulerType schedType = C_EXP("FIFO");
+        [omit] uint32_t id = 0; // プラグインでエラーになるためいれている
+        [omit] uint32_t attribute = 0; // プラグインでエラーになるためいれている
+        [omit] uint32_t priority = 0; // プラグインでエラーになるためいれている
+        [omit] uint32_t stackSize = 0; // プラグインでエラーになるためいれている
+	};
+
+	var{
+		uint32_t unsafeVar = 0;
+	};
+};
+
+[active, generate( RustASP3Plugin, "lib, TASK")]
+celltype tSinkReactor {
+	call sSinkReactorbody cTaskbody;
+	call sPubsub cSubscriber;
+	entry sTask eTask;
+	
+	attr{
+		Cow name = C_EXP("task_id");
+		[omit] SchedulerType schedType = C_EXP("FIFO");
+        [omit] uint32_t id = 0; // プラグインでエラーになるためいれている
+        [omit] uint32_t attribute = 0; // プラグインでエラーになるためいれている
+        [omit] uint32_t priority = 0; // プラグインでエラーになるためいれている
+        [omit] uint32_t stackSize = 0; // プラグインでエラーになるためいれている
+	};
+
+	var{
+		uint32_t unsafeVar = 0;
+	};
+};
+
+[active, generate( RustASP3Plugin, "lib, TASK")]
+celltype tPeriodicReactor {
+	call sPeriodicReactorbody cTaskbody;
+	call sPubsub cPublisher;
+	entry sTask eTask;
+	
+	attr{
+		Cow name = C_EXP("task_id");
+		[omit] SchedulerType schedType = C_EXP("FIFO");
+        [omit] uint32_t id = 0; // プラグインでエラーになるためいれている
+        [omit] uint32_t attribute = 0; // プラグインでエラーになるためいれている
+        [omit] uint32_t priority = 0; // プラグインでエラーになるためいれている
+        [omit] uint32_t stackSize = 0; // プラグインでエラーになるためいれている
+	};
+};
+
+celltype tPubsub {
+	entry sPubsub ePubsub;
+	
+	attr {
+		[omit] Cow type = C_EXP("u32");
+	};
+};
+
+[generate( RustASP3Plugin, "lib")]
+celltype tImu {
+    entry sPeriodicReactorbody eImu;
+};
+
+[generate( RustASP3Plugin, "lib")]
+celltype tImuCorrector {
+    entry sReactorbody eImuCorrector;
+};
+
+[generate( RustASP3Plugin, "lib")]
+celltype tGyroOdometer {
+    entry sSinkReactorbody eGyroOdometer;
+};

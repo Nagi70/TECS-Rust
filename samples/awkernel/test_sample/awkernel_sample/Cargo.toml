@@ -1,0 +1,11 @@
+[package]
+name = "awkernel_sample"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+itron = { version = "= 0.1.9", features = ["asp3", "nightly", "unstable"] }
+
+[lib]
+name = "itron"
+crate-type = ["staticlib"]

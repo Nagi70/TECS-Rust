@@ -1,0 +1,52 @@
+import("awkernel_reactor.cdl");
+
+cell tPeriodicReactor PeriodicReactor {
+    cTaskbody = Imu.eImu;
+    cPublisher = Topic1.ePubsub;
+    name = C_EXP("periodic_reactor");
+    schedType = C_EXP("FIFO");
+    id = 0; // プラグインでエラーになるためいれている
+    attribute = 0; // プラグインでエラーになるためいれている
+    priority = 0; // プラグインでエラーになるためいれている
+    stackSize = 0; // プラグインでエラーになるためいれている
+};
+
+cell tReactor Reactor {
+    cTaskbody = Corrector.eImuCorrector;
+    cPublisher = Topic2.ePubsub;
+    cSubscriber = Topic1.ePubsub;
+    name = C_EXP("reactor");
+    schedType = C_EXP("FIFO");
+    id = 0; // プラグインでエラーになるためいれている
+    attribute = 0; // プラグインでエラーになるためいれている
+    priority = 0; // プラグインでエラーになるためいれている
+    stackSize = 0; // プラグインでエラーになるためいれている
+};
+
+cell tSinkReactor SinkReactor {
+    cTaskbody = Odometer.eGyroOdometer;
+    cSubscriber = Topic2.ePubsub;
+    name = C_EXP("sink_reactor");
+    schedType = C_EXP("FIFO");
+    id = 0; // プラグインでエラーになるためいれている
+    attribute = 0; // プラグインでエラーになるためいれている
+    priority = 0; // プラグインでエラーになるためいれている
+    stackSize = 0; // プラグインでエラーになるためいれている
+};
+
+cell tPubsub Topic1 {
+    type = C_EXP("u32");
+};
+
+cell tPubsub Topic2 {
+    type = C_EXP("u32");
+};
+
+cell tImu Imu {
+};
+
+cell tImuCorrector Corrector {
+};
+
+cell tGyroOdometer Odometer {
+};
