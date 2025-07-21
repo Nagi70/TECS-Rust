@@ -419,10 +419,8 @@ class RustGenCelltypePlugin < CelltypePlugin
     
     # オリジナル構造体の定義を tecs_struct_def.rs に生成する
     def gen_tecs_struct_def_rs
-        # 既に生成済み、または構造体が 1 つも収集されていない場合は何もしない
-        return if @@struct_def_generated || @@struct_type_list.empty?
-
-        @@struct_def_generated = true
+        # 構造体が 1 つも収集されていない場合は何もしない
+        return if @@struct_type_list.empty?
 
         # 重複を除去（同じタグ名で比較）
         uniq_list = {}
