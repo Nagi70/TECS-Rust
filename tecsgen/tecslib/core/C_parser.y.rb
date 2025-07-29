@@ -635,6 +635,8 @@ initializer			# mikan
 		{ result = val[1] }
 	| C_EXP '(' STRING_LITERAL ')'
 		{ result = C_EXP.new( val[2] ) }
+	| PL_EXP '(' STRING_LITERAL ')'
+		{ result = C_EXP.new( val[2] ) }
 
 initializer_list
         : initializer

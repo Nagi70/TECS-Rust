@@ -693,6 +693,8 @@ initializer            # mikan
 #    | C_EXP '(' STRING_LITERAL ')'
     | C_EXP '(' string_literal_list ')'
         { result = C_EXP.new( val[2] ) }
+    | PL_EXP '(' string_literal_list ')'
+        { result = C_EXP.new( val[2] ) }
 
 initializer_list
     : initializer
@@ -1596,6 +1598,7 @@ end
     'false'   => :FALSE,
 
     'C_EXP'   => :C_EXP,
+    'PL_EXP'  => :PL_EXP,
 
     'Descriptor'   => :DESCRIPTOR,
     'RType'   => :RTYPE,
