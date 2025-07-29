@@ -277,6 +277,9 @@ type_specifier
     | DESCRIPTOR '(' namespace_identifier ')' {      # namespace_identifier: signature name
             result = DescriptorType.new( val[2] )
         }
+    | RTYPE '(' string_literal_list ')' {
+            result = RTypeType.new( val[2] )
+        }
 
 char_type
     : CHAR_T    { result = IntType.new( -1 ) }
@@ -1595,6 +1598,7 @@ end
     'C_EXP'   => :C_EXP,
 
     'Descriptor'   => :DESCRIPTOR,
+    'RType'   => :RTYPE,
   }
 
   # 指定子 '[]' 内でのみ使用できるキーワード

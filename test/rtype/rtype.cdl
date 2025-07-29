@@ -1,0 +1,32 @@
+import_C( "tecs.h" );
+import( "cygwin_kernel.cdl" );
+
+typedef RType( "uint8_t" )      rUINT8_T;
+
+signature sRType {
+        RType( "int8_t" )  func(void);
+        void               func2([in]RType("int8_t") par1);
+        rUINT8_T           func3([in]RType("int8_t") par1);
+};
+
+celltype tCelltype {
+    entry sRType eEnt;
+};
+
+cell tCelltype Cell {};
+
+/****** cell ******/
+cell tTask Task {
+    cBody = Main.eMain;
+    priority = 11;
+    stackSize = 1024;
+};
+
+celltype tMain {
+    entry sTaskBody eMain;
+    call sRType cCall;
+};
+
+cell tMain Main {
+    cCall = Cell.eEnt;
+};

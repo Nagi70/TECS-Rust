@@ -1629,6 +1629,72 @@ class DescriptorType < Type
   end
 end
 
+#==  RTypeType クラス
+# 動的結合で渡すデスクリプタ型
+class RTypeType < Type
+  # @type_str::String
+
+  @@rtypes = {}
+
+  def initialize( type_str )
+    dbgPrint "RType: class=#{type_str.class} str=#{type_str.to_s}\n"
+    @type_str = type_str.to_s
+    # check_signature ##
+    @@rtypes[ self ] = false
+  end
+
+  def get_type_str
+    "RType( #{CDLString.remove_dquote @type_str} )"
+  end
+
+  def get_type_str_post
+    ""
+  end
+
+  def set_qualifier( qualifier )
+    cdl_error( "T9999 '$1' cannot be specified for RType", qualfier.to_s )
+  end
+
+  def check
+  end
+
+  def check_init( locale, ident, initializer, kind, attribute = nil )
+    case kind
+    when :PARAMETER
+      # 引数は初期化できない
+    else
+      cdl_error2( locale, "T9999 RType cannot be used for $1", kind)
+    end
+  end
+
+  def self.check_signature
+    @@rtypes.each{ |desc, val|
+      if val != true then
+        desc.check_signature
+        @@rtypes[ desc ] = true
+      end
+    }
+  end
+  
+  def check_signature
+    # p "Desc #{@signature_nsp.to_s}"
+    obj = Namespace.find @signature_nsp
+    if ! obj.kind_of? Signature then
+      cdl_error( "T9999 '$1': not signature or not found", @signature_nsp.to_s )
+    else
+      # if obj.has_rtype? then
+      # # cdl_error( "T9999 '$1': has RType in function parameter", @signature_nsp.to_s )
+      # end
+      # # @signature_nsp = obj.get_namespace_path
+    end
+  end
+
+  #== RTypeType#
+  def get_signature
+    Namespace.find @signature_nsp
+  end
+end
+
 # 以下単体テストコード
 if $unit_test then
   puts( "===== Unit Test: IntType ===== (types.rb)")
