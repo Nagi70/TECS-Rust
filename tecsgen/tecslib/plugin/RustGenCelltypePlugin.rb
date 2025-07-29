@@ -407,6 +407,8 @@ class RustGenCelltypePlugin < CelltypePlugin
                     str = "unknown"
                 end
             end
+        elsif c_type.kind_of?( RTypeType ) then
+            str = c_type.get_type_str_inner
         else
             str = c_type.get_type_str
             str = convert_rust_type_string(str)

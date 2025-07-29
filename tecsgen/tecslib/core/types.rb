@@ -1647,6 +1647,10 @@ class RTypeType < Type
     "RType( #{CDLString.remove_dquote @type_str} )"
   end
 
+  def get_type_str_inner
+    CDLString.remove_dquote @type_str
+  end
+
   def get_type_str_post
     ""
   end
