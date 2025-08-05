@@ -1,0 +1,17 @@
+import("struct_define.cdl");
+
+//*** TF 取得用 ***//
+signature sTfListener {
+    void get_transform(
+        [in]  char_t*   source_frame,
+        [in]  char_t*   target_frame,
+        [out] struct Transform *p_tf
+    );
+};
+
+//*** TF 取得セルタイプ ***//
+[generate( RustAWKPlugin, "")]
+celltype tTfListener {
+    entry sTfListener eTf;
+    /* 変更されないパラメータ（今回は無し） */
+};

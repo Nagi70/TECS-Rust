@@ -1,0 +1,79 @@
+import("awkernel_reactor.cdl");
+import("diagnostic.cdl");
+import("struct_define.cdl");
+import("topic_signature.cdl");
+
+typedef uint32_t Time;
+
+//*** IMUデバイスに関するシグニチャ ***///
+signature sImuDevice {
+    ER      open( void );
+    ER      read( [out] struct ImuData *p_data );
+    ER      close( void );
+};
+
+//*** コールバック用シグニチャ ***//
+signature sImuDriverbody {
+    void    main( [in] struct ImuMsg imu,[out] struct ImuMsg *imu_raw );
+};
+
+//*** IMUセルタイプ ***//
+[generate( RustAWKPlugin, "")]
+celltype tTamagawaImuDevice {
+    /* エントリポート */
+    entry sImuDevice eImuDevice;
+
+    /* 変更されないパラメータ */
+    attr {
+        // char_t  *port;          /* デバイスパス (Serial) */
+        int32_t  can_id_gyro;   /* CAN GYRO メッセージ ID (0x319) */
+        int32_t  can_id_accel;  /* CAN ACCEL メッセージ ID (0x31A) */
+        // int32_t  baudrate;      /* シリアルボーレート (115200) */
+        char_t  *imu_frame_id;  /* IMU frame id "imu" */
+    };
+
+    /* 実行中に変化するデータ */
+    var {
+        //int32_t  fd;                     /* ファイルディスクリプタ */
+        uint16_t counter;
+        int16_t  angular_velocity_x_raw;
+        int16_t  angular_velocity_y_raw;
+        int16_t  angular_velocity_z_raw;
+        int16_t  acceleration_x_raw;
+        int16_t  acceleration_y_raw;
+        int16_t  acceleration_z_raw;
+    };
+};
+
+//*** IMUノードルーチンセルタイプ ***//
+[generate( RustAWKPlugin, "")]
+celltype tImuDriverbody {
+    /* エントリポート (周期タスク等で呼び出す) */
+    entry sImuDriverbody eImuDriverbody;
+
+    /* imu_raw トピック送信ポート */
+    [omit] call sImuRaw cImuRaw;
+    /* IMU のデータを受け取る受信ポート */
+    entry sImu eImu;
+
+    /* 呼び口ポート */
+    call sImuDevice   cDev;   /* IMU デバイス制御 */
+    call sRateMonitor cRate;  /* 周波数診断 */
+
+    /* 変更されないパラメータ */
+    // attr {
+    //     Time period_ms;   /* 実行周期 [ms] 例:5 => 200Hz */
+    // };
+
+    /* 実行中に変化するデータ */
+    // var {
+    //     struct ImuData data;      /* 取得した IMU データ */
+    // };
+};
+
+//*** コールバック用セルタイプ ***///
+[generate( RustAWKPlugin, "")]
+celltype tImuDriver {
+    [async] call sImuDriverbody cImuDriverbody;
+    entry sReactorbody eImuDriver;
+};

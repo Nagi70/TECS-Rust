@@ -11,7 +11,8 @@ typedef uint32_t       Cow;
 typedef uint32_t       SchedulerType;
 typedef uint32_t       Duration;
 struct Test {
-                int8_t         temp[10];
+                int8_t         temp[2];
+                RType( Duration ) time;
 };
 
 #define INITIALIZE_TECS() 

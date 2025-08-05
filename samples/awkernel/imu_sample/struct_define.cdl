@@ -1,0 +1,63 @@
+struct ImuData {
+    Time     time_stamp;                /* [us] */
+    float    angular_velocity_x;        /* [rad/s] */
+    float    angular_velocity_y;        /* [rad/s] */
+    float    angular_velocity_z;        /* [rad/s] */
+    float    linear_acceleration_x;     /* [m/s^2] */
+    float    linear_acceleration_y;     /* [m/s^2] */
+    float    linear_acceleration_z;     /* [m/s^2] */
+};
+
+struct Quaternion {
+    double x;
+    double y;
+    double z;
+    double w;
+};
+
+struct Vector3 {
+    double x;
+    double y;
+    double z;
+};
+
+struct ImuMsg {
+    RType(Time)          time_stamp;                     /* Header.stamp の代替            */
+    char_t*       frame_id;                       /* Header.frame_id の代替          */
+
+    struct Quaternion    orientation;                    /* geometry_msgs/Quaternion        */
+    double        orientation_covariance[9];
+
+    struct Vector3       angular_velocity;               /* geometry_msgs/Vector3           */
+    double        angular_velocity_covariance[9];
+
+    struct Vector3       linear_acceleration;            /* geometry_msgs/Vector3           */
+    double        linear_acceleration_covariance[9];
+};
+
+struct Transform {
+    struct Vector3    translation;                /* TF translation */
+    struct Quaternion rotation;                   /* TF rotation    */
+};
+
+struct Twist {
+    struct Vector3 linear;
+    struct Vector3 angular;
+};
+
+struct TwistStamped {
+    uint64_t time_stamp;          /* Header.stamp の代替 [ns]            */
+    char_t  *frame_id;            /* Header.frame_id の代替               */
+    struct Twist twist;           /* geometry_msgs/Twist                  */
+};
+
+struct TwistWithCovariance {
+    struct Twist twist;           /* Twist 本体                           */
+    double       covariance[36];  /* 6x6 行列を 1 次元に展開               */
+};
+
+struct TwistWithCovarianceStamped {
+    uint64_t                        time_stamp;  /* Header.stamp [ns]          */
+    char_t                        *frame_id;    /* Header.frame_id            */
+    struct TwistWithCovariance      twist;      /* Twist + Covariance         */
+};

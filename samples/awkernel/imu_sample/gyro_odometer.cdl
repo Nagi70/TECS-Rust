@@ -1,0 +1,47 @@
+import("struct_define.cdl");
+import("diagnostic.cdl");
+
+//*** Gyro-Odometer のメイン処理 ***//
+signature sGyroOdometerbody {
+    void main(
+        [in]  struct TwistWithCovarianceStamped vehicle_twist,
+        [in]  struct ImuMsg                        imu,
+        [out] struct TwistStamped               twist_raw,
+        [out] struct TwistWithCovarianceStamped twist_with_covariance_raw,
+        [out] struct TwistStamped               twist,
+        [out] struct TwistWithCovarianceStamped twist_with_covariance);
+};
+
+/* Gyro-Odometer の本体処理 */
+[generate( RustAWKPlugin, "")]
+celltype tGyroOdometerbody {
+    /* リアクターから呼び出されるエントリ */
+    entry sGyroOdometerbody eGyroOdometerbody;
+
+    /* 外部サービス呼び口 */
+    call sRateMonitor       cRate;      /* 周波数診断 */
+    call sTransformListener cTf; /* TF 取得 ※[async] は 1 箇所のみ */
+
+    /* 不変パラメータ */
+    attr {
+        double  message_timeout_sec; /* トピックタイムアウト [s] */
+        char_t *output_frame;        /* 出力 frame_id 例: "base_link" */
+    };
+
+    /* 変化する値 */
+    var {
+        bool_t vehicle_twist_arrived;
+        bool_t imu_arrived;
+        /* 受信メッセージを一時保持するキュー (リングバッファ相当) */
+        struct TwistWithCovarianceStamped vehicle_twist_queue[100];
+        uint32_t vehicle_twist_queue_size;
+        struct ImuMsg gyro_queue[100];
+        uint32_t gyro_queue_size;
+    };
+};
+
+/* Gyro-Odometer ラッパセル (リアクターと本体を接続) */
+celltype tGyroOdometer {
+    [async] call sGyroOdometerbody cGyroOdometerbody; /* 本体呼び出し */
+    entry sReactorbody          eGyroOdometer;       /* リアクター向け受け口 */
+};

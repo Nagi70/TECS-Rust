@@ -1,4 +1,5 @@
 pub struct Test {
-    pub temp: [i8; 10],
+    pub temp: [i8; 2],
+    pub time: Duration,
 }
 

@@ -1,0 +1,49 @@
+//*** 診断用セル向けシグニチャ ***//
+signature sRateMonitor {
+    void    tick( void );
+};
+
+//*** 診断（周波数など） ***//
+signature sDiagMonitor {
+    void tick(void);
+};
+
+//*** 診断用セルタイプ ***//
+[generate( RustAWKPlugin, "")]
+celltype tRateBoundStatus {
+    entry sRateMonitor eRate;
+
+    attr {
+        double reference_hz;          /* 参照周波数 */
+        double ok_min_hz;
+        double ok_max_hz;
+        double warn_min_hz;
+        double warn_max_hz;
+        uint32_t num_frame_transition; /* ヒステリシス用連続フレーム数 */
+    };
+
+    var {
+        double   last_stamp;
+        double   frequency;
+        bool_t   zero_seen;
+    };
+};
+
+//*** 周波数診断セル ***//
+[generate( RustAWKPlugin, "")]
+celltype tDiagStatus {
+    entry sDiagMonitor eDiag;
+
+    /* 変更されないパラメータ */
+    attr{
+        double reference_hz;
+        double warn_min_hz;
+        double warn_max_hz;
+    };
+
+    /* 実行中に変化するデータ */
+    var{
+        double last_stamp;
+        double frequency;
+    };
+};

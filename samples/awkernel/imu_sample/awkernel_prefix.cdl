@@ -3,8 +3,7 @@ typedef uint32_t SchedulerType;
 typedef uint32_t Duration;
 
 struct Test {
-    int8_t temp[2];
-    RType("Duration") time;
+    int8_t temp[10];
 };
 
 signature sTask {
@@ -28,10 +27,10 @@ celltype tPeriodicReactor {
     entry sTask eTask;
     
     attr{
-        [omit] Cow name = PL_EXP("task_id");
-        [omit] Cow publishTopicNames = PL_EXP("Topic1, Topic2");
-        [omit] SchedulerType schedType = PL_EXP("SchedulerType::FIFO");
-        [omit] Duration period = PL_EXP("Duration::from_sec(1)");
+        [omit] Cow name = C_EXP("task_id");
+        [omit] Cow publishTopicNames = C_EXP("Topic1, Topic2");
+        [omit] SchedulerType schedType = C_EXP("SchedulerType::FIFO");
+        [omit] Duration period = C_EXP("Duration::from_sec(1)");
     };
 };
 //*** ***//
@@ -48,10 +47,10 @@ celltype tReactor {
     entry sTask eTask;
     
     attr{
-        [omit] Cow name = PL_EXP("task_id");
-        [omit] Cow subscribeTopicNames = PL_EXP("Topic1, Topic2");
-        [omit] Cow publishTopicNames = PL_EXP("Topic3, Topic4");
-        [omit] SchedulerType schedType = PL_EXP("SchedulerType::FIFO");
+        [omit] Cow name = C_EXP("task_id");
+        [omit] Cow subscribeTopicNames = C_EXP("Topic1, Topic2");
+        [omit] Cow publishTopicNames = C_EXP("Topic3, Topic4");
+        [omit] SchedulerType schedType = C_EXP("SchedulerType::FIFO");
     };
 };
 //*** ***//
@@ -68,10 +67,10 @@ celltype tSinkReactor {
     entry sTask eTask;
     
     attr{
-        [omit] Cow name = PL_EXP("task_id");
-        [omit] Cow subscribeTopicNames = PL_EXP("Topic3, Topic4");
-        [omit] SchedulerType schedType = PL_EXP("SchedulerType::FIFO");
-        [omit] Duration relative_deadline = PL_EXP("Duration::from_sec(1)");
+        [omit] Cow name = C_EXP("task_id");
+        [omit] Cow subscribeTopicNames = C_EXP("Topic3, Topic4");
+        [omit] SchedulerType schedType = C_EXP("SchedulerType::FIFO");
+        [omit] Duration relative_deadline = C_EXP("Duration::from_sec(1)");
     };
 };
 //*** ***//
@@ -101,7 +100,6 @@ celltype tCamera {
 
     var{
         uint32_t temp = 0;
-        //struct Test temp2 = { {1,2}, 7};
     };
 };
 //*** ***//
@@ -130,10 +128,10 @@ celltype tBev {
 //*** 周期リアクター向け組上げ ***//
 cell tPeriodicReactor PeriodicReactor {
     cPeriodicReactorbody = Camerabody.eCamerabody;
-    name = PL_EXP("periodic_reactor");
-    schedType = PL_EXP("FIFO");
-    publishTopicNames = PL_EXP("CameraInfo"); // PL_EXP的なもの、ジェネレータは解釈せず、プラグインのみで解釈する
-    period = PL_EXP("Duration::from_sec(1)");
+    name = C_EXP("periodic_reactor");
+    schedType = C_EXP("FIFO");
+    publishTopicNames = C_EXP("CameraInfo"); // PL_EXP的なもの、ジェネレータは解釈せず、プラグインのみで解釈する
+    period = C_EXP("Duration::from_sec(1)");
 };
 
 cell tCamerabody Camerabody {
@@ -148,9 +146,9 @@ cell tCamera Camera {
 //*** リアクター向け組上げ ***//
 //cell tReactor Reactor {
 //    cReactorbody = Bevbody.eBevbody;
-//    name = PL_EXP("reactor");
-//    schedType = PL_EXP("FIFO");
-//    subscribeTopicNames = PL_EXP("CameraInfo");
+//    name = C_EXP("reactor");
+//    schedType = C_EXP("FIFO");
+//    subscribeTopicNames = C_EXP("CameraInfo");
 //};
 
 cell tBevbody Bevbody {
@@ -165,9 +163,9 @@ cell tBev Bev {
 //*** シンクリアクター向け組上げ ***//
 cell tSinkReactor SinkReactor {
     cSinkReactorbody = Bevbody.eBevbody;
-    name = PL_EXP("sink_reactor");
-    schedType = PL_EXP("FIFO");
-    relative_deadline = PL_EXP("Duration::from_sec(1)");
-    subscribeTopicNames = PL_EXP("CameraInfo");
+    name = C_EXP("sink_reactor");
+    schedType = C_EXP("FIFO");
+    relative_deadline = C_EXP("Duration::from_sec(1)");
+    subscribeTopicNames = C_EXP("CameraInfo");
 };
 //*** ***//

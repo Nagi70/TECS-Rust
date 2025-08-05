@@ -1,0 +1,55 @@
+import("struct_define.cdl");
+import("tf.cdl");
+
+
+//*** ImuCorrector のメイン処理 ***//
+signature sImuCorrectorBody {
+    /* 1 回分のコールバック相当
+       受信 Imu を補正して送信 Imu を出力する                             */
+    void main([in]  struct ImuMsg imu_raw,
+              [out] struct ImuMsg *imu_data);
+};
+
+//*** ImuCorrector 本体（コールバック） ***//
+[generate( RustAWKPlugin, "")]
+celltype tImuCorrectorbody {
+    entry sImuCorrectorbody eBody;
+
+    /* imu_data トピック送信用ポート */
+    [omit] call sImuData cImuData;
+    /* imu_raw トピック受信用ポート */
+    entry sImuRaw eImuRaw;
+
+    /* 呼び口ポート */
+    call sTfListener   cTf;      /* TF 取得 */
+    call sDiagMonitor  cDiag;    /* 診断    */
+
+    /* 変更されないパラメータ（ROS パラメータに相当） */
+    attr{
+        double angular_velocity_offset_x;
+        double angular_velocity_offset_y;
+        double angular_velocity_offset_z;
+
+        double angular_velocity_stddev_xx;
+        double angular_velocity_stddev_yy;
+        double angular_velocity_stddev_zz;
+
+        double acceleration_stddev;
+
+        char_t *output_frame;          /* 例: "base_link" */
+    };
+
+    /* 実行中に変化するデータ（必要に応じて追加） */
+    var{
+        struct Transform tf_imu2base;  /* 最新 TF */
+    };
+};
+
+//*** リアクターに接続されるラッパセル（呼び口と受け口を1つずつ） ***//
+[generate( RustAWKPlugin, "")]
+celltype tImuCorrector {
+    /* ImuCorrectorbody を非同期に呼び出す */
+    [async] call sImuCorrectorbody cImuCorrectorbody;
+    /* リアクターへ渡す受け口 */
+    entry  sReactorbody          eImuCorrector;
+};

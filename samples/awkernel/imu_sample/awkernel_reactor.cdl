@@ -1,0 +1,50 @@
+typedef uint32_t Cow;
+typedef uint32_t SchedulerType;
+typedef uint32_t Duration;
+
+//*** リアクター共通シグニチャ ***//
+signature sReactorbody {
+    void main(void);
+};
+
+//*** 周期リアクターセルタイプ ***//
+[active, generate( RustAWKPlugin, "PERIODIC_REACTOR")]
+celltype tPeriodicReactor {
+    call sReactorbody cPeriodicReactorbody;
+    entry sTask eTask;
+    
+    attr{
+        [omit] Cow name = C_EXP("task_id");
+        [omit] Cow publishTopicNames = C_EXP("Topic1, Topic2");
+        [omit] SchedulerType schedType = C_EXP("SchedulerType::FIFO");
+        [omit] Duration period = C_EXP("Duration::from_sec(1)");
+    };
+};
+
+//*** 通常リアクターセルタイプ ***//
+[active, generate( RustAWKPlugin, "REACTOR")]
+celltype tReactor {
+    call sReactorbody cReactorbody;
+    entry sTask eTask;
+    
+    attr{
+        [omit] Cow name = C_EXP("task_id");
+        [omit] Cow subscribeTopicNames = C_EXP("Topic1, Topic2");
+        [omit] Cow publishTopicNames = C_EXP("Topic3, Topic4");
+        [omit] SchedulerType schedType = C_EXP("SchedulerType::FIFO");
+    };
+};
+
+//*** シンクリアクターセルタイプ ***//
+[active, generate( RustAWKPlugin, "SINK_REACTOR")]
+celltype tSinkReactor {
+    call sReactorbody cSinkReactorbody;
+    entry sTask eTask;
+    
+    attr{
+        [omit] Cow name = C_EXP("task_id");
+        [omit] Cow subscribeTopicNames = C_EXP("Topic3, Topic4");
+        [omit] SchedulerType schedType = C_EXP("SchedulerType::FIFO");
+        [omit] Duration relative_deadline = C_EXP("Duration::from_sec(1)");
+    };
+};
