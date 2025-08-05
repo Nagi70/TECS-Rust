@@ -1667,7 +1667,10 @@ class RTypeType < Type
     when :PARAMETER
       # 引数は初期化できない
     else
-      cdl_error2( locale, "T9999 RType cannot be used for $1", kind)
+      # PL_EXP や C_EXP による初期化のみ許容する
+      unless initializer.instance_of?( C_EXP )
+        cdl_error2( locale, "T9999 RType cannot be used for $1", kind)
+      end
     end
   end
 
