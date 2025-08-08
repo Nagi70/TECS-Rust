@@ -86,12 +86,12 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
     # オプションから、リアクターの種類を取得する
     def get_reactor_type
         plugin_option = @plugin_arg_str.split(",").map(&:strip)
-        if plugin_option.include?("REACTOR") then
-            return "Reactor"
-        elsif plugin_option.include?("SINK_REACTOR") then
-            return "SinkReactor"
-        elsif plugin_option.include?("PERIODIC_REACTOR") then
-            return "PeriodicReactor"
+        if plugin_option.include?("DAG_REACTOR") then
+            return "DagReactor"
+        elsif plugin_option.include?("DAG_SINK_REACTOR") then
+            return "DagSinkReactor"
+        elsif plugin_option.include?("DAG_PERIODIC_REACTOR") then
+            return "DagPeriodicReactor"
         else
             return "unknown"
         end
@@ -114,11 +114,11 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
     #     File.write("#{$gen}/lib.rs", tempfile)
 
     #     case get_reactor_type
-    #     when "Reactor"
+    #     when "DagReactor"
     #         gen_register_reactor celltype
     #     when "SincReactor"
     #         gen_register_sink_reactor celltype
-    #     when "PeriodicReactor"
+    #     when "DagPeriodicReactor"
     #         gen_register_periodic_reactor celltype
     #     end
 
@@ -133,12 +133,12 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
     def gen_entryport_function_in_main_lib_rs file, celltype
 
         case get_reactor_type
-        when "Reactor"
-            add_reactor_api file, celltype
-        when "SinkReactor"
-            add_sink_reactor_api file, celltype
-        when "PeriodicReactor"
-            add_periodic_reactor_api file, celltype
+        when "DagReactor"
+            add_dag_reactor_api file, celltype
+        when "DagSinkReactor"
+            add_dag_sink_reactor_api file, celltype
+        when "DagPeriodicReactor"
+            add_dag_periodic_reactor_api file, celltype
         end
 
         return if @@use_periodic_reactor_gen == false && 
@@ -154,15 +154,15 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
         file.print "use core::time::Duration;\n\n"
 
         if @@use_periodic_reactor_gen then
-            file.print "use tecs_celltype::t_periodic_reactor::*;\n"
+            file.print "use tecs_celltype::t_dag_periodic_reactor::*;\n"
             file.print "use tecs_signature::s_periodic_reactorbody::*;\n\n"
         end
         if @@use_reactor_gen then
-            file.print "use tecs_celltype::t_reactor::*;\n"
+            file.print "use tecs_celltype::t_dag_reactor::*;\n"
             file.print "use tecs_signature::s_reactorbody::*;\n\n"
         end
         if @@use_sink_reactor_gen then
-            file.print "use tecs_celltype::t_sink_reactor::*;\n"
+            file.print "use tecs_celltype::t_dag_sink_reactor::*;\n"
             file.print "use tecs_signature::s_sink_reactorbody::*;\n\n"
         end
 
@@ -179,13 +179,13 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
         file.print "}\n"
     end
 
-    def add_periodic_reactor_api file, celltype
+    def add_dag_periodic_reactor_api file, celltype
         @@use_periodic_reactor_gen = true
 
         celltype.get_cell_list.each do |cell|
 
-            # tPeriodicReactor のセルの cPeriodicReactor に接続されているセルに対して探索を開始する
-            body_join = cell.get_join_list.get_item("cPeriodicReactorbody".to_sym)
+            # tDagPeriodicReactor のセルの cDagPeriodicReactor に接続されているセルに対して探索を開始する
+            body_join = cell.get_join_list.get_item("cDagPeriodicReactorbody".to_sym)
             next unless body_join                    # 接続が無ければスキップ
             start_cell = body_join.get_rhs_cell2     # 接続先セルを取得
 
@@ -209,13 +209,13 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
             puts "periodic4"
             # 周期リアクターは、サブスクライブできないため、それを検査する
             if subscribe_topic_hash.size != 0 then
-                puts "error: tPeriodicReactor can't subscribe topic, #{cell.get_global_name.to_s} has subscribe topic"
+                puts "error: tDagPeriodicReactor can't subscribe topic, #{cell.get_global_name.to_s} has subscribe topic"
                 exit 1
             end
 
             puts "periodic5"
             # ── publish の処理
-            # 現在は、CDLのtPeriodicReactorの属性で定義されたpublishTopicNamesと、シグニチャプラグインのオプションで定義された[out]引数を、前から順番に対応づける
+            # 現在は、CDLのtDagPeriodicReactorの属性で定義されたpublishTopicNamesと、シグニチャプラグインのオプションで定義された[out]引数を、前から順番に対応づける
             # TODO: publish_topic_type_hash と publish_topic_name_list の整合性をシグニチャプラグインのオプションで確認する
             if publish_topic_hash.size == publish_topic_name_list.size
                 # 要素数が一致していれば、インデックスで対応づけ
@@ -225,7 +225,7 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
                     publish_topic_hash[arg_name] = [topic_type, publish_topic_name_list[idx]]
                 end
             else
-                puts "error: Number of publish topic names in tPeriodicReactor is not equal to the number of publish topic argements in signature #{async_callport.get_signature.get_global_name.to_s} connected"
+                puts "error: Number of publish topic names in tDagPeriodicReactor is not equal to the number of publish topic argements in signature #{async_callport.get_signature.get_global_name.to_s} connected"
                 exit 1
             end
 
@@ -300,13 +300,13 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
         @@reactor_api_list.uniq!
     end
 
-    def add_reactor_api file, celltype
+    def add_dag_reactor_api file, celltype
         @@use_reactor_gen = true
 
         celltype.get_cell_list.each do |cell|
 
-            # tReactor のセルの cReactor に接続されているセルに対して探索を開始する
-            body_join = cell.get_join_list.get_item("cReactorbody".to_sym)
+            # tDagReactor のセルの cReactor に接続されているセルに対して探索を開始する
+            body_join = cell.get_join_list.get_item("cDagReactorbody".to_sym)
             next unless body_join                    # 接続が無ければスキップ
             start_cell = body_join.get_rhs_cell2     # 接続先セルを取得
 
@@ -325,7 +325,7 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
             subscribe_topic_name_list = cell.get_attr_initializer("subscribeTopicNames".to_sym).to_s.split(",").map(&:strip)
 
             # ── publish の処理
-            # 現在は、CDLのtReactorの属性で定義されたpublishTopicNamesと、シグニチャプラグインのオプションで定義された[out]引数を、前から順番に対応づける
+            # 現在は、CDLのtDagReactorの属性で定義されたpublishTopicNamesと、シグニチャプラグインのオプションで定義された[out]引数を、前から順番に対応づける
             # TODO: publish_topic_type_hash と publish_topic_name_list の整合性をシグニチャプラグインのオプションで確認する
             if publish_topic_hash.size == publish_topic_name_list.size
                 # 要素数が一致していれば、インデックスで対応づけ
@@ -335,12 +335,12 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
                     publish_topic_hash[arg_name] = [topic_type, publish_topic_name_list[idx]]
                 end
             else
-                puts "error: Number of publish topic names in tReactor is not equal to the number of publish topic argements in signature #{async_callport.get_signature.get_global_name.to_s} connected"
+                puts "error: Number of publish topic names in tDagReactor is not equal to the number of publish topic argements in signature #{async_callport.get_signature.get_global_name.to_s} connected"
                 exit 1
             end
 
             # ── subscribe の処理
-            # 現在は、CDLのtReactorの属性で定義されたsubscribeTopicNamesと、シグニチャプラグインのオプションで定義された[in]引数を、前から順番に対応づける
+            # 現在は、CDLのtDagReactorの属性で定義されたsubscribeTopicNamesと、シグニチャプラグインのオプションで定義された[in]引数を、前から順番に対応づける
             # TODO: subscribe_topic_type_hash と subscribe_topic_name_list の整合性をシグニチャプラグインのオプションで確認する
             if subscribe_topic_hash.size == subscribe_topic_name_list.size
                 subscribe_topic_hash.keys.each_with_index do |arg_name, idx|
@@ -348,7 +348,7 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
                     subscribe_topic_hash[arg_name] = [topic_type, subscribe_topic_name_list[idx]]
                 end
             else
-                puts "error: Number of subscribe topic names in tReactor is not equal to the number of subscribe topic argements in signature #{async_callport.get_signature.get_global_name.to_s} connected"
+                puts "error: Number of subscribe topic names in tDagReactor is not equal to the number of subscribe topic argements in signature #{async_callport.get_signature.get_global_name.to_s} connected"
                 exit 1
             end
 
@@ -443,13 +443,13 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
         @@reactor_api_list.uniq!
     end
 
-    def add_sink_reactor_api file, celltype
+    def add_dag_sink_reactor_api file, celltype
         @@use_sink_reactor_gen = true
 
         celltype.get_cell_list.each do |cell|
 
-            # tSinkReactor のセルの cSinkReactor に接続されているセルに対して探索を開始する
-            body_join = cell.get_join_list.get_item("cSinkReactorbody".to_sym)
+            # tDagSinkReactor のセルの cDagSinkReactor に接続されているセルに対して探索を開始する
+            body_join = cell.get_join_list.get_item("cDagSinkReactorbody".to_sym)
             next unless body_join                    # 接続が無ければスキップ
             start_cell = body_join.get_rhs_cell2     # 接続先セルを取得
 
@@ -467,12 +467,12 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
             subscribe_topic_name_list = cell.get_attr_initializer("subscribeTopicNames".to_sym).to_s.split(",").map(&:strip)
 
             if publish_topic_hash.size != 0 then
-                puts "error: tSinkReactor can't publish topic, #{cell.get_global_name.to_s} has publish topic"
+                puts "error: tDagSinkReactor can't publish topic, #{cell.get_global_name.to_s} has publish topic"
                 exit 1
             end
 
             # ── subscribe の処理
-            # 現在は、CDLのtReactorの属性で定義されたsubscribeTopicNamesと、シグニチャプラグインのオプションで定義された[in]引数を、前から順番に対応づける
+            # 現在は、CDLのtDagReactorの属性で定義されたsubscribeTopicNamesと、シグニチャプラグインのオプションで定義された[in]引数を、前から順番に対応づける
             # TODO: subscribe_topic_type_hash と subscribe_topic_name_list の整合性をシグニチャプラグインのオプションで確認する
             if subscribe_topic_hash.size == subscribe_topic_name_list.size
                 subscribe_topic_hash.keys.each_with_index do |arg_name, idx|
@@ -480,7 +480,7 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
                     subscribe_topic_hash[arg_name] = [topic_type, subscribe_topic_name_list[idx]]
                 end
             else
-                puts "error: Number of subscribe topic names in tReactor is not equal to the number of subscribe topic argements in signature #{async_callport.get_signature.get_global_name.to_s} connected"
+                puts "error: Number of subscribe topic names in tDagReactor is not equal to the number of subscribe topic argements in signature #{async_callport.get_signature.get_global_name.to_s} connected"
                 exit 1
             end
 
