@@ -23,7 +23,7 @@ signature sPeriodicReactorbody {
 
 [active, generate( RustAWKPlugin, "PERIODIC_REACTOR")]
 celltype tPeriodicReactor {
-    call sReactorbody cPeriodicReactorbody;
+    call sReactorbody cDagPeriodicReactorbody;
     entry sTask eTask;
     
     attr{
@@ -43,7 +43,7 @@ celltype tPeriodicReactor {
 
 [active, generate( RustAWKPlugin, "REACTOR")]
 celltype tReactor {
-    call sReactorbody cReactorbody;
+    call sReactorbody cDagReactorbody;
     entry sTask eTask;
     
     attr{
@@ -63,7 +63,7 @@ signature sSinkReactorbody {
 
 [active, generate( RustAWKPlugin, "SINK_REACTOR")]
 celltype tSinkReactor {
-    call sReactorbody cSinkReactorbody;
+    call sReactorbody cDagSinkReactorbody;
     entry sTask eTask;
     
     attr{
@@ -127,7 +127,7 @@ celltype tBev {
 
 //*** 周期リアクター向け組上げ ***//
 cell tPeriodicReactor PeriodicReactor {
-    cPeriodicReactorbody = Camerabody.eCamerabody;
+    cDagPeriodicReactorbody = Camerabody.eCamerabody;
     name = C_EXP("periodic_reactor");
     schedType = C_EXP("FIFO");
     publishTopicNames = C_EXP("CameraInfo"); // PL_EXP的なもの、ジェネレータは解釈せず、プラグインのみで解釈する
@@ -145,7 +145,7 @@ cell tCamera Camera {
 
 //*** リアクター向け組上げ ***//
 //cell tReactor Reactor {
-//    cReactorbody = Bevbody.eBevbody;
+//    cDagReactorbody = Bevbody.eBevbody;
 //    name = C_EXP("reactor");
 //    schedType = C_EXP("FIFO");
 //    subscribeTopicNames = C_EXP("CameraInfo");

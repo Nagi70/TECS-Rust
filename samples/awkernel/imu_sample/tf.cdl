@@ -14,4 +14,8 @@ signature sTfListener {
 celltype tTfListener {
     entry sTfListener eTf;
     /* 変更されないパラメータ（今回は無し） */
+
+    var{
+        RType("Option<Subscriber<Transform>>") subscriber = PL_EXP("None");
+    };
 };

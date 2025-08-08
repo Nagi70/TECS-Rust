@@ -1,0 +1,38 @@
+signature sSend {
+    // sendはasyncなのでTECSから呼び出せない -> リアクターAPIの理念と合う？
+    // void send( [in] RType("%type%") data); 
+};
+
+signature sReceive {
+    // recvもasyncなのでTECSから呼び出せない
+    // RType("Data<%type%>") recv(void);
+    RType("Option<Data<%type%>>") try_recv(void);
+};
+
+celltype tPubSub {
+    entry sSend ePublisher;
+    entry sReceive eSubscriber;
+    attr {
+        [omit] RType("T") type = PL_EXP("TopicType");
+        [omit] RType("Cow") name = PL_EXP("topic_name");
+        [omit] RType("Attribute") = PL_EXP("Attribute::default()");
+    };
+
+    var {
+        RType("Option<Publisher<%type%>>") publisher = PL_EXP("None");
+        RType("Option<Subscriber<%type%>>") subscriber = PL_EXP("None");
+    };
+};
+
+celltype tSubscriber {
+    entry sReceive eSubscriber;
+    attr {
+        [omit] RType("T") type = PL_EXP("TopicType");
+        [omit] RType("Cow") name = PL_EXP("topic_name");
+        [omit] RType("Attribute") = PL_EXP("Attribute::default()");
+    };
+
+    var {
+        RType("Option<Subscriber<%type%>>") subscriber = PL_EXP("None");
+    };
+};

@@ -3,7 +3,7 @@ import("awkernel_reactor.cdl");
 import("diagnostic.cdl");
 
 cell tReactor ImuReactor {
-    cReactorbody = ImuDriver.eImuDriver;
+    cDagReactorbody = ImuDriver.eImuDriver;
     name = PL_EXP("imu_driver");
     schedType = PL_EXP("FIFO");
     publishTopicNames = PL_EXP("imu_raw");

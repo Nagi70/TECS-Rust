@@ -1,20 +1,20 @@
-import("awkernel_reactor.cdl");
 import("diagnostic.cdl");
 import("struct_define.cdl");
 import("topic_signature.cdl");
+import("awkernel_reactor.cdl");
 
-typedef uint32_t Time;
+//typedef uint32_t Time;
 
 //*** IMUデバイスに関するシグニチャ ***///
 signature sImuDevice {
-    ER      open( void );
-    ER      read( [out] struct ImuData *p_data );
-    ER      close( void );
+    void      open( void );
+    void      read( [out] struct ImuData *p_data );
+    void      close( void );
 };
 
 //*** コールバック用シグニチャ ***//
 signature sImuDriverbody {
-    void    main( [in] struct ImuMsg imu,[out] struct ImuMsg *imu_raw );
+    void    main( [in] struct ImuMsg imu, [out] struct ImuMsg *imu_raw );
 };
 
 //*** IMUセルタイプ ***//
@@ -35,13 +35,13 @@ celltype tTamagawaImuDevice {
     /* 実行中に変化するデータ */
     var {
         //int32_t  fd;                     /* ファイルディスクリプタ */
-        uint16_t counter;
-        int16_t  angular_velocity_x_raw;
-        int16_t  angular_velocity_y_raw;
-        int16_t  angular_velocity_z_raw;
-        int16_t  acceleration_x_raw;
-        int16_t  acceleration_y_raw;
-        int16_t  acceleration_z_raw;
+        uint16_t counter = 0;
+        int16_t  angular_velocity_x_raw = 0;
+        int16_t  angular_velocity_y_raw = 0;
+        int16_t  angular_velocity_z_raw = 0;
+        int16_t  acceleration_x_raw = 0;
+        int16_t  acceleration_y_raw = 0;
+        int16_t  acceleration_z_raw = 0;
     };
 };
 

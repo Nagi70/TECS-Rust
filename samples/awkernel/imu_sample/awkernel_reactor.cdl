@@ -1,6 +1,6 @@
-typedef uint32_t Cow;
-typedef uint32_t SchedulerType;
-typedef uint32_t Duration;
+//typedef uint32_t Cow;
+//typedef uint32_t SchedulerType;
+//typedef uint32_t Duration;
 
 //*** リアクター共通シグニチャ ***//
 signature sReactorbody {
@@ -8,16 +8,58 @@ signature sReactorbody {
 };
 
 //*** 周期リアクターセルタイプ ***//
+[active, generate( RustAWKPlugin, "DAG_PERIODIC_REACTOR")]
+celltype tDagPeriodicReactor {
+    call sReactorbody cDagPeriodicReactorbody;
+    //entry sTask eTask;
+    
+    attr{
+        [omit] RType("Cow") name = PL_EXP("task_id");
+        [omit] RType("Cow") publishTopicNames = PL_EXP("Topic1, Topic2");
+        [omit] RType("SchedulerType") schedType = PL_EXP("SchedulerType::FIFO");
+        [omit] RType("Duration") period = PL_EXP("Duration::from_sec(1)");
+    };
+};
+
+//*** 通常リアクターセルタイプ ***//
+[active, generate( RustAWKPlugin, "DAG_REACTOR")]
+celltype tDagReactor {
+    call sReactorbody cDagReactorbody;
+    //entry sTask eTask;
+    
+    attr{
+        [omit] RType("Cow") name = PL_EXP("task_id");
+        [omit] RType("Cow") subscribeTopicNames = PL_EXP("Topic1, Topic2");
+        [omit] RType("Cow") publishTopicNames = PL_EXP("Topic3, Topic4");
+        [omit] RType("SchedulerType") schedType = PL_EXP("SchedulerType::FIFO");
+    };
+};
+
+//*** シンクリアクターセルタイプ ***//
+[active, generate( RustAWKPlugin, "DAG_SINK_REACTOR")]
+celltype tDagSinkReactor {
+    call sReactorbody cDagSinkReactorbody;
+    //entry sTask eTask;
+    
+    attr{
+        [omit] RType("Cow") name = PL_EXP("task_id");
+        [omit] RType("Cow") subscribeTopicNames = PL_EXP("Topic3, Topic4");
+        [omit] RType("SchedulerType") schedType = PL_EXP("SchedulerType::FIFO");
+        [omit] RType("Duration") relative_deadline = PL_EXP("Duration::from_sec(1)");
+    };
+};
+
+//*** 周期リアクターセルタイプ ***//
 [active, generate( RustAWKPlugin, "PERIODIC_REACTOR")]
 celltype tPeriodicReactor {
     call sReactorbody cPeriodicReactorbody;
-    entry sTask eTask;
+    //entry sTask eTask;
     
     attr{
-        [omit] Cow name = C_EXP("task_id");
-        [omit] Cow publishTopicNames = C_EXP("Topic1, Topic2");
-        [omit] SchedulerType schedType = C_EXP("SchedulerType::FIFO");
-        [omit] Duration period = C_EXP("Duration::from_sec(1)");
+        [omit] RType("Cow") name = PL_EXP("task_id");
+        [omit] RType("Cow") publishTopicNames = PL_EXP("Topic1, Topic2");
+        [omit] RType("SchedulerType") schedType = PL_EXP("SchedulerType::FIFO");
+        [omit] RType("Duration") period = PL_EXP("Duration::from_sec(1)");
     };
 };
 
@@ -25,13 +67,13 @@ celltype tPeriodicReactor {
 [active, generate( RustAWKPlugin, "REACTOR")]
 celltype tReactor {
     call sReactorbody cReactorbody;
-    entry sTask eTask;
+    //entry sTask eTask;
     
     attr{
-        [omit] Cow name = C_EXP("task_id");
-        [omit] Cow subscribeTopicNames = C_EXP("Topic1, Topic2");
-        [omit] Cow publishTopicNames = C_EXP("Topic3, Topic4");
-        [omit] SchedulerType schedType = C_EXP("SchedulerType::FIFO");
+        [omit] RType("Cow") name = PL_EXP("task_id");
+        [omit] RType("Cow") subscribeTopicNames = PL_EXP("Topic1, Topic2");
+        [omit] RType("Cow") publishTopicNames = PL_EXP("Topic3, Topic4");
+        [omit] RType("SchedulerType") schedType = PL_EXP("SchedulerType::FIFO");
     };
 };
 
@@ -39,12 +81,12 @@ celltype tReactor {
 [active, generate( RustAWKPlugin, "SINK_REACTOR")]
 celltype tSinkReactor {
     call sReactorbody cSinkReactorbody;
-    entry sTask eTask;
+    //entry sTask eTask;
     
     attr{
-        [omit] Cow name = C_EXP("task_id");
-        [omit] Cow subscribeTopicNames = C_EXP("Topic3, Topic4");
-        [omit] SchedulerType schedType = C_EXP("SchedulerType::FIFO");
-        [omit] Duration relative_deadline = C_EXP("Duration::from_sec(1)");
+        [omit] RType("Cow") name = PL_EXP("task_id");
+        [omit] RType("Cow") subscribeTopicNames = PL_EXP("Topic3, Topic4");
+        [omit] RType("SchedulerType") schedType = PL_EXP("SchedulerType::FIFO");
+        [omit] RType("Duration") relative_deadline = PL_EXP("Duration::from_sec(1)");
     };
 };

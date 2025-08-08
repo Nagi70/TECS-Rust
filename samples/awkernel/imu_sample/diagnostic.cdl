@@ -14,18 +14,18 @@ celltype tRateBoundStatus {
     entry sRateMonitor eRate;
 
     attr {
-        double reference_hz;          /* 参照周波数 */
-        double ok_min_hz;
-        double ok_max_hz;
-        double warn_min_hz;
-        double warn_max_hz;
+        double64_t reference_hz;          /* 参照周波数 */
+        double64_t ok_min_hz;
+        double64_t ok_max_hz;
+        double64_t warn_min_hz;
+        double64_t warn_max_hz;
         uint32_t num_frame_transition; /* ヒステリシス用連続フレーム数 */
     };
 
     var {
-        double   last_stamp;
-        double   frequency;
-        bool_t   zero_seen;
+        RType("Time")   last_stamp = PL_EXP("awkernel_lib::time::Time::zero()");
+        double64_t   frequency = 0.0;
+        bool_t   zero_seen = false;
     };
 };
 
@@ -36,14 +36,14 @@ celltype tDiagStatus {
 
     /* 変更されないパラメータ */
     attr{
-        double reference_hz;
-        double warn_min_hz;
-        double warn_max_hz;
+        double64_t reference_hz;
+        double64_t warn_min_hz;
+        double64_t warn_max_hz;
     };
 
     /* 実行中に変化するデータ */
     var{
-        double last_stamp;
-        double frequency;
+        double64_t last_stamp;
+        double64_t frequency;
     };
 };
