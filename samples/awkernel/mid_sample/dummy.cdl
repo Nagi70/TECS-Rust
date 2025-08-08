@@ -1,0 +1,30 @@
+import("struct_define.cdl");
+import("topic_signature.cdl");
+
+signature sDummyImubody{
+    void main([out] struct ImuMsg* imu);
+};
+
+signature sDummyImuCorrectorbody{
+    void main([in] struct ImuMsg imu_raw);
+};
+
+celltype tDummyImu{
+    [async] call sDummyImubody cDummyImubody;
+    entry sReactorbody eDummyImu;
+};
+
+celltype tDummyImuCorrector{
+    [async] call sDummyImuCorrectorbody cDummyImuCorrectorbody;
+    entry sReactorbody eDummyImuCorrector;
+};
+
+celltype tDummyImubody{
+    [omit] call sImu cImu;
+    entry sDummyImubody eDummyImubody;
+};
+
+celltype tDummyImuCorrectorbody{
+    entry sImuRaw eImuRaw;
+    entry sDummyImuCorrectorbody eDummyImuCorrectorbody;
+};

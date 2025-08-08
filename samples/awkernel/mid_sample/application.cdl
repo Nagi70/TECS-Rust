@@ -1,0 +1,64 @@
+import("imu_driver.cdl");
+import("awkernel_reactor.cdl");
+import("dummy.cdl");
+
+cell tDagPeriodicReactor DummyPeriodicReactor{
+    cDagPeriodicReactorbody = DummyImu.eDummyImu;
+    name = PL_EXP("dummy_imu");
+    publishTopicNames = PL_EXP("imu");
+};
+
+cell tDummyImu DummyImu{
+    cDummyImubody = DummyImubody.eDummyImubody;
+};
+
+cell tDummyImubody DummyImubody{
+    cImu = ImuDriverbody.eImu;
+};
+
+cell tDagReactor ImuDriverReactor{
+    cDagReactorbody = ImuDriver.eImuDriver;
+    name = PL_EXP("imu_driver");
+    publishTopicNames = PL_EXP("imu_raw");
+    subscribeTopicNames = PL_EXP("imu");
+};
+
+cell tImuDriver ImuDriver{
+    cImuDriverbody = ImuDriverbody.eImuDriverbody;
+};
+
+cell tImuDriverbody ImuDriverbody{
+    cImuRaw = DummyImuCorrectorbody.eImuRaw;
+    cRate = ImuDriverDiag.eRate;
+    cDev = Can.eImuDevice;
+};
+
+cell tDagSinkReactor DummySinkReactor{
+    cDagSinkReactorbody = DummyImuCorrector.eDummyImuCorrector;
+    name = PL_EXP("imu_corrector");
+    subscribeTopicNames = PL_EXP("imu_raw");
+};
+
+cell tDummyImuCorrector DummyImuCorrector{
+    cDummyImuCorrectorbody = DummyImuCorrectorbody.eDummyImuCorrectorbody;
+};
+
+cell tDummyImuCorrectorbody DummyImuCorrectorbody{
+};
+
+cell tRateBoundStatus ImuDriverDiag{
+    reference_hz         = 200.0;
+    ok_min_hz            = 100.0;
+    ok_max_hz            = 10000.0;
+    warn_min_hz          = 50.0;
+    warn_max_hz          = 100000.0;
+    num_frame_transition = 2;
+};
+
+cell tTamagawaImuDevice Can {
+    can_id_gyro  = 0x319;
+    can_id_accel = 0x31A;
+    imu_frame_id = PL_EXP("imu");
+};
+
+

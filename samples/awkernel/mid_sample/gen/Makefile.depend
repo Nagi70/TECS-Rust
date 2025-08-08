@@ -1,0 +1,20 @@
+# Celltype: tDummyImu  #_MDEP_#
+$(_TECS_OBJ_DIR)tDummyImu_tecsgen.o : tDummyImu_tecsgen.c  $(GEN_DIR)/tDummyImubody_tecsgen.h $(GEN_DIR)/global_tecsgen.h $(GEN_DIR)/sDummyImubody_tecsgen.h $(GEN_DIR)/sReactorbody_tecsgen.h $(GEN_DIR)/tDummyImu_factory.h $(GEN_DIR)/tDummyImu_tecsgen.h
+$(_TECS_OBJ_DIR)tDummyImu_templ.o : tDummyImu_templ.c  $(GEN_DIR)/tDummyImubody_tecsgen.h $(GEN_DIR)/global_tecsgen.h $(GEN_DIR)/sDummyImubody_tecsgen.h $(GEN_DIR)/sReactorbody_tecsgen.h $(GEN_DIR)/tDummyImu_factory.h $(GEN_DIR)/tDummyImu_tecsgen.h
+$(_TECS_OBJ_DIR)tDummyImu.o : tDummyImu.c  $(GEN_DIR)/tDummyImubody_tecsgen.h $(GEN_DIR)/global_tecsgen.h $(GEN_DIR)/sDummyImubody_tecsgen.h $(GEN_DIR)/sReactorbody_tecsgen.h $(GEN_DIR)/tDummyImu_factory.h $(GEN_DIR)/tDummyImu_tecsgen.h
+
+# Celltype: tDummyImuCorrector  #_MDEP_#
+$(_TECS_OBJ_DIR)tDummyImuCorrector_tecsgen.o : tDummyImuCorrector_tecsgen.c  $(GEN_DIR)/tDummyImuCorrectorbody_tecsgen.h $(GEN_DIR)/global_tecsgen.h $(GEN_DIR)/sDummyImuCorrectorbody_tecsgen.h $(GEN_DIR)/sReactorbody_tecsgen.h $(GEN_DIR)/tDummyImuCorrector_factory.h $(GEN_DIR)/tDummyImuCorrector_tecsgen.h
+$(_TECS_OBJ_DIR)tDummyImuCorrector_templ.o : tDummyImuCorrector_templ.c  $(GEN_DIR)/tDummyImuCorrectorbody_tecsgen.h $(GEN_DIR)/global_tecsgen.h $(GEN_DIR)/sDummyImuCorrectorbody_tecsgen.h $(GEN_DIR)/sReactorbody_tecsgen.h $(GEN_DIR)/tDummyImuCorrector_factory.h $(GEN_DIR)/tDummyImuCorrector_tecsgen.h
+$(_TECS_OBJ_DIR)tDummyImuCorrector.o : tDummyImuCorrector.c  $(GEN_DIR)/tDummyImuCorrectorbody_tecsgen.h $(GEN_DIR)/global_tecsgen.h $(GEN_DIR)/sDummyImuCorrectorbody_tecsgen.h $(GEN_DIR)/sReactorbody_tecsgen.h $(GEN_DIR)/tDummyImuCorrector_factory.h $(GEN_DIR)/tDummyImuCorrector_tecsgen.h
+
+# Celltype: tDummyImubody  #_MDEP_#
+$(_TECS_OBJ_DIR)tDummyImubody_tecsgen.o : tDummyImubody_tecsgen.c $(GEN_DIR)/global_tecsgen.h $(GEN_DIR)/sDummyImubody_tecsgen.h $(GEN_DIR)/tDummyImubody_factory.h $(GEN_DIR)/tDummyImubody_tecsgen.h
+$(_TECS_OBJ_DIR)tDummyImubody_templ.o : tDummyImubody_templ.c $(GEN_DIR)/global_tecsgen.h $(GEN_DIR)/sDummyImubody_tecsgen.h $(GEN_DIR)/tDummyImubody_factory.h $(GEN_DIR)/tDummyImubody_tecsgen.h
+$(_TECS_OBJ_DIR)tDummyImubody.o : tDummyImubody.c $(GEN_DIR)/global_tecsgen.h $(GEN_DIR)/sDummyImubody_tecsgen.h $(GEN_DIR)/tDummyImubody_factory.h $(GEN_DIR)/tDummyImubody_tecsgen.h
+
+# Celltype: tDummyImuCorrectorbody  #_MDEP_#
+$(_TECS_OBJ_DIR)tDummyImuCorrectorbody_tecsgen.o : tDummyImuCorrectorbody_tecsgen.c $(GEN_DIR)/global_tecsgen.h $(GEN_DIR)/sDummyImuCorrectorbody_tecsgen.h $(GEN_DIR)/tDummyImuCorrectorbody_factory.h $(GEN_DIR)/tDummyImuCorrectorbody_tecsgen.h
+$(_TECS_OBJ_DIR)tDummyImuCorrectorbody_templ.o : tDummyImuCorrectorbody_templ.c $(GEN_DIR)/global_tecsgen.h $(GEN_DIR)/sDummyImuCorrectorbody_tecsgen.h $(GEN_DIR)/tDummyImuCorrectorbody_factory.h $(GEN_DIR)/tDummyImuCorrectorbody_tecsgen.h
+$(_TECS_OBJ_DIR)tDummyImuCorrectorbody.o : tDummyImuCorrectorbody.c $(GEN_DIR)/global_tecsgen.h $(GEN_DIR)/sDummyImuCorrectorbody_tecsgen.h $(GEN_DIR)/tDummyImuCorrectorbody_factory.h $(GEN_DIR)/tDummyImuCorrectorbody_tecsgen.h
+
