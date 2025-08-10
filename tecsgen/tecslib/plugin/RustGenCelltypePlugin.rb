@@ -55,6 +55,7 @@ class RustGenCelltypePlugin < CelltypePlugin
     @@struct_type_list = []
     # tecs_struct_def.rs を 1 度だけ生成したかどうかを示すフラグ
     @@struct_def_generated = false
+    @@default_impled_custom_struct_list = Hash.new { |hash, key| hash[key] = [] }
 
     #celltype::     Celltype        セルタイプ（インスタンス）
     def initialize( celltype, option )
@@ -70,6 +71,10 @@ class RustGenCelltypePlugin < CelltypePlugin
       @mod_celltypes_list = []
       @mod_impls_list = []
       @gen_use_struct_def = false
+      
+
+      require_tecsgen_lib 'lib/RustDefaultTypeChecker.rb'
+      @@default_type_checker = Default.load!(File.expand_path(File.join(__dir__, 'lib', 'RustDefaultTypeList.json')))
 
       require 'fileutils'
 
@@ -363,6 +368,23 @@ class RustGenCelltypePlugin < CelltypePlugin
             # TODO: 構造体の定義がある場合は、その構造体の定義を生成する。
             # すべてのオリジナル構造体の定義を tecs_struct_def.rs に生成する
             @@struct_type_list.push(c_type)
+
+            # まだチェックされていない構造体の場合は、チェックを行う
+            if @@default_impled_custom_struct_list.key?(str) == false then
+                # 構造体のメンバの型にdefaultが実装されていないものがあるかどうかをチェックする
+                c_type.get_members_decl.get_items.each do |m|
+                    # defaultが実装されていない型をフィールドに持つ場合は、#[derive(Default)]を付与しない
+                    if !@@default_type_checker.default_impl?(c_type_to_rust_type(m.get_type)) then
+                        # ここに到達するまでに、mの型にdefaultが実装されているかどうかはチェックされている
+                        if @@default_impled_custom_struct_list[c_type_to_rust_type(m.get_type)] != true then
+                            @@default_impled_custom_struct_list[str] = false
+                            break
+                        end
+                    end
+                    @@default_impled_custom_struct_list[str] = true
+                end
+            end
+
             @gen_use_struct_def = true
         elsif c_type.kind_of?( PtrType ) then
             if c_type.get_string != nil then
@@ -418,6 +440,11 @@ class RustGenCelltypePlugin < CelltypePlugin
         end
         return str
     end
+
+    # tecs_struct_def.rs に use 文を生成する
+    def gen_use_in_tecs_struct_def_rs file
+        file.print("use heapless::String;\n")
+    end
     
     # オリジナル構造体の定義を tecs_struct_def.rs に生成する
     def gen_tecs_struct_def_rs
@@ -435,8 +462,16 @@ class RustGenCelltypePlugin < CelltypePlugin
         out_path = "#{$gen}/tecs_struct_def.rs"
         file = CFile.open(out_path, "w")
 
+        gen_use_in_tecs_struct_def_rs file
+
         uniq_list.each_value do |st|
             rust_name = camel_case(snake_case(st.get_name.to_s.sub(/^_+/, "")))
+
+            # derive(Default)を付与するかどうかをチェックする
+            if @@default_impled_custom_struct_list[rust_name] == true then
+                file.print("#[derive(Default)]\n")
+            end
+
             file.print("pub struct #{rust_name} {\n")
 
             st.get_members_decl.get_items.each do |m|
@@ -446,12 +481,21 @@ class RustGenCelltypePlugin < CelltypePlugin
             end
 
             file.print("}\n\n")
+
+            if @@default_impled_custom_struct_list[rust_name] == false then
+                gen_default_impl_for_custom_struct file, st
+            end
         end
 
         file.close
 
         # Cargo プロジェクトへコピー（トップレベルなので file_type=nil）
         copy_gen_files_to_cargo "tecs_struct_def.rs", nil
+    end
+
+    # TODO: Timeなど、特別扱いをする型に対して、defaultを実装する
+    def gen_default_impl_for_custom_struct file, struct
+
     end
 
     # セルタイプに呼び口がある場合，その呼び口につながっているシグニチャのトレイトファイルを生成する

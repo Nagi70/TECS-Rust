@@ -53,6 +53,7 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
     @@use_reactor_gen = false
     @@use_sink_reactor_gen = false
     @@reactor_api_list = []
+    @@non_default_impl_type_list = ["Time"] # defaultの実装がない型のリスト(awkernelのTime型など)
 
     #celltype::     Celltype        セルタイプ（インスタンス）
     def initialize( celltype, option )
@@ -153,6 +154,8 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
         file.print "use awkernel_lib::delay::wait_microsec;\n"
         file.print "use core::time::Duration;\n\n"
 
+        file.print "use tecs_struct_def::*;\n\n"
+
         if @@use_periodic_reactor_gen then
             file.print "use tecs_celltype::t_dag_periodic_reactor::*;\n"
             file.print "use tecs_signature::s_periodic_reactorbody::*;\n\n"
@@ -197,23 +200,18 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
                 exit 1
             end
 
-            puts "periodic1"
             target_cell, async_callport = found
 
-            puts "periodic2"
             publish_topic_hash, subscribe_topic_hash = get_topic_list(async_callport)
             
-            puts "periodic3"
             publish_topic_name_list = cell.get_attr_initializer("publishTopicNames".to_sym).to_s.split(",").map(&:strip)
 
-            puts "periodic4"
             # 周期リアクターは、サブスクライブできないため、それを検査する
             if subscribe_topic_hash.size != 0 then
                 puts "error: tDagPeriodicReactor can't subscribe topic, #{cell.get_global_name.to_s} has subscribe topic"
                 exit 1
             end
 
-            puts "periodic5"
             # ── publish の処理
             # 現在は、CDLのtDagPeriodicReactorの属性で定義されたpublishTopicNamesと、シグニチャプラグインのオプションで定義された[out]引数を、前から順番に対応づける
             # TODO: publish_topic_type_hash と publish_topic_name_list の整合性をシグニチャプラグインのオプションで確認する
@@ -229,7 +227,6 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
                 exit 1
             end
 
-            puts "periodic6"
             # TODO: プラグインのオプションから、返り値の型を特定する
             reactor_api = "\tdag.register_periodic_reactor::<_, ("
             publish_topic_hash.each do |topic_arg_name, (topic_type, topic_name)|
@@ -246,28 +243,25 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
             end
             reactor_api += ")> {\n"
 
-            puts "periodic7"
             # TODO: 型に応じて適切な初期化をする必要がある
             # TODO: オリジナルの型に対応させるのは難しいかもしれない
             publish_topic_hash.each do |topic_arg_name, (topic_type, topic_name)|
-                reactor_api += "\t\t\tlet mut #{topic_arg_name} = #{topic_type};\n"
+                reactor_api += "\t\t\tlet mut #{topic_arg_name}: #{topic_type} = Default::default();\n"
             end
 
-            puts "periodic8"
-            reactor_api += "\t\t\t#{target_cell.get_global_name.to_s.upcase}.c_periodic_reactorbody.main("
+            reactor_api += "\t\t\t#{target_cell.get_global_name.to_s.upcase}.c_dag_periodic_reactorbody.main("
             async_callport.get_signature.get_function_head_array.each do |func_head|
                 func_head.get_paramlist.get_items.each do |param|
                     case param.get_direction
                     when :OUT
                         reactor_api += "&mut #{param.get_name.to_s}"
                     end
-                    reactor_api += "," unless param == func_head.get_paramlist.get_items.last
+                    reactor_api += ", " unless param == func_head.get_paramlist.get_items.last
                 end
                 break
             end
             reactor_api += ");\n"
 
-            puts "periodic9"
             reactor_api += "\t\t\t("
             publish_topic_hash.each do |topic_arg_name, (topic_type, topic_name)|
                 reactor_api += "#{topic_arg_name},"
@@ -283,18 +277,14 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
             end
             reactor_api += "],\n"
 
-            puts "periodic10"
             # TODO: sched_type 属性の初期値を明確にする必要がある。現在は、スケジューラ名 (FIFOなど)のみを想定している
             reactor_api += "\t\tSchedulerType::#{cell.get_attr_initializer("schedType".to_sym).to_s},\n"
             # TODO: period 属性の初期値を明確にする必要がある。現在は、関数を含めた形 (Duration::from_secs(1) など) のみを想定している
             reactor_api += "\t\t#{cell.get_attr_initializer("period".to_sym).to_s},\n"
             reactor_api += "\t)\n"
             reactor_api += "\t.await;"
-            puts "periodic11"
 
-            puts reactor_api
             @@reactor_api_list << reactor_api
-            # puts @@reactor_api_list
         end
 
         @@reactor_api_list.uniq!
@@ -388,19 +378,19 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
             # TODO: 型に応じて適切な初期化をする必要がある
             # TODO: オリジナルの型に対応させるのは難しいかもしれない
             publish_topic_hash.each do |topic_arg_name, (topic_type, topic_name)|
-                reactor_api += "\t\t\tlet mut #{topic_arg_name} = #{topic_type};\n"
+                reactor_api += "\t\t\tlet mut #{topic_arg_name}: #{topic_type} = Default::default();\n"
             end
 
-            reactor_api += "\t\t\t#{target_cell.get_global_name.to_s.upcase}.c_reactorbody.main("
+            reactor_api += "\t\t\t#{target_cell.get_global_name.to_s.upcase}.c_dag_reactorbody.main("
             async_callport.get_signature.get_function_head_array.each do |func_head|
                 func_head.get_paramlist.get_items.each do |param|
                     case param.get_direction
                     when :IN
-                        reactor_api += "&#{param.get_name.to_s},"
+                        reactor_api += "&#{param.get_name.to_s}"
                     when :OUT
                         reactor_api += "&mut #{param.get_name.to_s}"
                     end
-                    reactor_api += "," unless param == func_head.get_paramlist.get_items.last
+                    reactor_api += ", " unless param == func_head.get_paramlist.get_items.last
                 end
                 break
             end
@@ -434,8 +424,6 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
             reactor_api += "\t\tSchedulerType::#{cell.get_attr_initializer("schedType".to_sym).to_s},\n"
             reactor_api += "\t)\n"
             reactor_api += "\t.await;"
-
-            puts reactor_api
 
             @@reactor_api_list << reactor_api
         end
@@ -507,14 +495,14 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
             end
             reactor_api += ")| {\n"
 
-            reactor_api += "\t\t\t#{target_cell.get_global_name.to_s.upcase}.c_sink_reactorbody.main("
+            reactor_api += "\t\t\t#{target_cell.get_global_name.to_s.upcase}.c_dag_sink_reactorbody.main("
             async_callport.get_signature.get_function_head_array.each do |func_head|
                 func_head.get_paramlist.get_items.each do |param|
                     case param.get_direction
                     when :IN
-                        reactor_api += "&#{param.get_name.to_s},"
+                        reactor_api += "&#{param.get_name.to_s}"
                     end
-                    reactor_api += "," unless param == func_head.get_paramlist.get_items.last
+                    reactor_api += ", " unless param == func_head.get_paramlist.get_items.last
                 end
                 break
             end
@@ -536,8 +524,6 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
             reactor_api += "\t)\n"
             reactor_api += "\t.await;"
 
-            puts reactor_api
-
             @@reactor_api_list << reactor_api
         end
 
@@ -553,31 +539,21 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
     # 戻り値: [見つかったセル, 呼び口] もしくは nil
     #----------------------------------------
     def find_async_callport(cell, visited = {})
-        puts "check"
         return nil if cell.nil? || visited[cell]
         visited[cell] = true
-        puts "check1"
 
         callports = cell.get_celltype.get_port_list.select { |p| p.get_port_type == :CALL }
-        callports.each do |p|
-            puts "check1-1"
-            print p.get_name.to_s
-            puts p.is_async?
-        end
+
         async_port = callports.find { |p| p.is_async? }
-        puts "check2"
         return [cell, async_port] if async_port
 
         first_port = callports.first
-        puts "check3"
         return nil unless first_port
 
         join = cell.get_join_list.get_item(first_port.get_name.to_s)
-        puts "check4"
         return nil unless join
     
         next_cell = join.get_rhs_cell2
-        puts "check5"
         find_async_callport(next_cell, visited)
     end
 
@@ -586,12 +562,8 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
     # TODO: トピック名は、シグニチャプラグインのオプションで指定されたものを使用する
     def get_topic_list async_callport
 
-        puts "get_topic_list1"
-
         return nil if async_callport.is_async? == false
 
-        puts "get_topic_list2"
-        
         # パブリッシュするトピックとサブスクライブするトピックを取得する
         publish_topic_hash = {}
         subscribe_topic_hash = {}
@@ -602,24 +574,17 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
             exit 1
         end
 
-        puts "get_topic_list3"
-
         # async 呼び口につながれているシグニチャの関数の引数名を取得する
         async_callport.get_signature.get_function_head_array.each do |func_head|
-            puts "get_topic_list3-1"
             func_head.get_paramlist.get_items.each do |param|
                 case param.get_direction
                 when :IN
-                    puts "get_topic_list3-IN"
                     subscribe_topic_hash[param.get_name.to_s] = [ c_type_to_rust_type(param.get_type), nil]
                 when :OUT
-                    puts "get_topic_list3-OUT"
                     publish_topic_hash[param.get_name.to_s] = [ c_type_to_rust_type(param.get_type), nil]
                 end
             end
         end
-
-        puts "get_topic_list4"
 
         return publish_topic_hash, subscribe_topic_hash
     end
@@ -816,7 +781,7 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
                 next
             else
                 file.print "\tpub #{attr.get_name.to_s}: "
-                file.print "#{c_type_to_rust_type(attr.get_type)}"
+                file.print "&'a #{c_type_to_rust_type(attr.get_type)},\n"
                 # str = c_type_to_rust_type(attr.get_type)
                 # 属性や変数のフィールドに構造体がある場合は，ライフタイムを付与する必要がある
                 # file.print "&'a #{str},\n"
@@ -829,6 +794,34 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
         if celltype.get_var_list.length != 0 then
             file.print "\tpub var: TECSVarGuard<'a, #{get_rust_celltype_name(celltype)}>,\n"
         end
+    end
+
+    def gen_use_in_tecs_struct_def_rs file
+        file.print("use awkernel_lib::time::Time;\n")
+    end
+
+    # awkernelのTime型など、defaultの実装がない型への特別な対応を生成する
+    def gen_default_impl_for_custom_struct file, struct
+        file.print("impl Default for #{camel_case(snake_case(struct.get_name.to_s.sub(/^_+/, "")))} {\n")
+        file.print("\tfn default() -> Self {\n")
+        file.print("\t\tSelf {\n")
+        struct.get_members_decl.get_items.each do |m|
+            if @@non_default_impl_type_list.include?(c_type_to_rust_type(m.get_type)) then
+                # defaultの実装がない型の場合は、特別な値を生成する
+                case c_type_to_rust_type(m.get_type)
+                    when "Time"
+                        file.print("\t\t\t#{m.get_name}: Time::zero(),\n")
+                    else
+                        file.print("\t\t\t#{m.get_name}: Default::default(),\n")
+                end
+            else
+                # defaultの実装がある型の場合は、Default::default()を生成する
+                file.print("\t\t\t#{m.get_name}: Default::default(),\n")
+            end
+        end
+        file.print("\t\t}\n")
+        file.print("\t}\n")
+        file.print("}\n\n")
     end
 
     # ロックガード構造体の定義を生成
