@@ -20,7 +20,7 @@ struct tag_sImuDriverbody_VDES {
 
 /* signature function table #_SFT_# */
 struct tag_sImuDriverbody_VMT {
-    void           (*main__T)( const struct tag_sImuDriverbody_VDES *edp, struct ImuMsg imu, struct ImuMsg* imu_raw );
+    void           (*main__T)( const struct tag_sImuDriverbody_VDES *edp, struct Frame imu, struct ImuMsg* imu_raw );
 };
 
 /* signature descriptor #_SDES_# for dynamic join */

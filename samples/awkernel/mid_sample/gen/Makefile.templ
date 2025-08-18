@@ -104,15 +104,3 @@ $(GEN_DIR)/tcflow.rbdmp : $(CELLTYPE_SRCS) $(PLUGIN_CELLTYPE_SRCS)
 $(_TECS_OBJ_DIR)%.o : %.c
 	$(CC) -c $(CFLAGS) -o $@ $<
 
-$(_TECS_OBJ_DIR)tDummyImu.o : tDummyImu.c
-	$(CC) -c $(CFLAGS) -o $@ $<
- 
-$(_TECS_OBJ_DIR)tDummyImuCorrector.o : tDummyImuCorrector.c
-	$(CC) -c $(CFLAGS) -o $@ $<
- 
-$(_TECS_OBJ_DIR)tDummyImubody.o : tDummyImubody.c
-	$(CC) -c $(CFLAGS) -o $@ $<
- 
-$(_TECS_OBJ_DIR)tDummyImuCorrectorbody.o : tDummyImuCorrectorbody.c
-	$(CC) -c $(CFLAGS) -o $@ $<
- 

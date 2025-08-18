@@ -16,6 +16,10 @@ struct ImuData {
                 float32_t      linear_acceleration_y;
                 float32_t      linear_acceleration_z;
 };
+struct Header {
+                RType( Time )  time_stamp;
+                char*          frame_id;
+};
 struct Quaternion {
                 double64_t     x;
                 double64_t     y;
@@ -28,8 +32,7 @@ struct Vector3 {
                 double64_t     z;
 };
 struct ImuMsg {
-                RType( Time )  time_stamp;
-                char_t*        frame_id;
+                struct Header  header;
                 struct Quaternion orientation;
                 double64_t     orientation_covariance[9];
                 struct Vector3 angular_velocity;
@@ -58,6 +61,15 @@ struct TwistWithCovarianceStamped {
                 uint64_t       time_stamp;
                 char_t*        frame_id;
                 struct TwistWithCovariance twist;
+};
+struct Frame {
+                struct Header  header;
+                uint32_t       id;
+                bool_t         is_rtr;
+                bool_t         is_extended;
+                bool_t         is_error;
+                uint8_t        dlc;
+                uint8_t        data[8];
 };
 
 #define INITIALIZE_TECS() 

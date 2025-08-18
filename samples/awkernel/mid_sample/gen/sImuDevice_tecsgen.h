@@ -20,9 +20,7 @@ struct tag_sImuDevice_VDES {
 
 /* signature function table #_SFT_# */
 struct tag_sImuDevice_VMT {
-    void           (*open__T)( const struct tag_sImuDevice_VDES *edp );
-    void           (*read__T)( const struct tag_sImuDevice_VDES *edp, struct ImuData* p_data );
-    void           (*close__T)( const struct tag_sImuDevice_VDES *edp );
+    void           (*read__T)( const struct tag_sImuDevice_VDES *edp, struct Frame msg, struct ImuMsg* imu_msg );
 };
 
 /* signature descriptor #_SDES_# for dynamic join */
@@ -33,8 +31,6 @@ typedef struct { struct tag_sImuDevice_VDES *vdes; } Descriptor( sImuDevice );
 #endif /* TOPPERS_MACRO_ONLY */
 
 /* function id */
-#define	FUNCID_SIMUDEVICE_OPEN                 (1)
-#define	FUNCID_SIMUDEVICE_READ                 (2)
-#define	FUNCID_SIMUDEVICE_CLOSE                (3)
+#define	FUNCID_SIMUDEVICE_READ                 (1)
 
 #endif /* sImuDevice_TECSGEN_H */

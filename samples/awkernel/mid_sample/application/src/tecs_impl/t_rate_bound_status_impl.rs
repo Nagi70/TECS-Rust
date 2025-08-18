@@ -7,6 +7,8 @@ impl SRateMonitor for ERateForTRateBoundStatus<'_>{
 		let mut node = MCSNode::new();
 		let mut lg = self.cell.get_cell_ref(&mut node);
 
+		awkernel_lib::console::print("tick does not work\r\n");
+
 	}
 }
 

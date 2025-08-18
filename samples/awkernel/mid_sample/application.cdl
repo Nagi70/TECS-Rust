@@ -35,7 +35,7 @@ cell tImuDriverbody ImuDriverbody{
 
 cell tDagSinkReactor DummySinkReactor{
     cDagSinkReactorbody = DummyImuCorrector.eDummyImuCorrector;
-    name = PL_EXP("imu_corrector");
+    name = PL_EXP("dummy_imu_corrector");
     subscribeTopicNames = PL_EXP("imu_raw");
 };
 

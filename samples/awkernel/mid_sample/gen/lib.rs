@@ -9,6 +9,8 @@ use awkernel_async_lib::scheduler::SchedulerType;
 use awkernel_lib::delay::wait_microsec;
 use core::time::Duration;
 
+use tecs_struct_def::*;
+
 use tecs_celltype::t_dag_periodic_reactor::*;
 use tecs_signature::s_periodic_reactorbody::*;
 
@@ -24,11 +26,11 @@ pub async fn run() {
 
 	let dag = create_dag();
 
-	dag.register_periodic_reactor::<_, (ImuMsg,)>(
+	dag.register_periodic_reactor::<_, (Frame,)>(
 		"dummy_imu".into(),
-		|| -> (ImuMsg,)> {
-			let mut imu = ImuMsg;
-			DUMMYIMU.c_periodic_reactorbody.main(&mut imu);
+		|| -> (Frame,)> {
+			let mut imu: Frame = Default::default();
+			DUMMYIMU.c_dag_periodic_reactorbody.main(&mut imu);
 			(imu,)
 		},
 		vec![Cow::from("imu")],
@@ -37,11 +39,11 @@ pub async fn run() {
 	)
 	.await;
 
-	dag.register_reactor::<_, (ImuMsg,), (ImuMsg,)>(
+	dag.register_reactor::<_, (ImuMsg,), (Frame,)>(
 		"imu_driver".into(),
-		|(imu,): (ImuMsg,)| -> (ImuMsg,)> {
-			let mut imu_raw = ImuMsg;
-			IMUDRIVER.c_reactorbody.main(&imu,,&mut imu_raw);
+		|(imu,): (Frame,)| -> (ImuMsg,)> {
+			let mut imu_raw: ImuMsg = Default::default();
+			IMUDRIVER.c_dag_reactorbody.main(&imu, &mut imu_raw);
 			(imu_raw,)
 		},
 		vec![Cow::from("imu")],
@@ -51,9 +53,9 @@ pub async fn run() {
 	.await;
 
 	dag.register_sink_reactor::<_, (ImuMsg,)>(
-		"imu_corrector".into(),
+		"dummy_imu_corrector".into(),
 		|(imu_raw,): (ImuMsg,)| {
-			DUMMYIMUCORRECTOR.c_sink_reactorbody.main(&imu_raw,);
+			DUMMYIMUCORRECTOR.c_dag_sink_reactorbody.main(&imu_raw);
 		},
 		vec![Cow::from("imu_raw")],
 		SchedulerType::SchedulerType::FIFO,

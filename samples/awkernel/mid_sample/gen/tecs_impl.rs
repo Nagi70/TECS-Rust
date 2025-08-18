@@ -3,3 +3,8 @@ pub mod t_tamagawa_imu_device_impl;
 pub mod t_imu_driverbody_impl;
 pub mod t_imu_driverbody_impl;
 pub mod t_imu_driver_impl;
+pub mod t_dummy_imu_impl;
+pub mod t_dummy_imu_corrector_impl;
+pub mod t_dummy_imubody_impl;
+pub mod t_dummy_imu_correctorbody_impl;
+pub mod t_dummy_imu_correctorbody_impl;

@@ -7,14 +7,12 @@ import("awkernel_reactor.cdl");
 
 //*** IMUデバイスに関するシグニチャ ***///
 signature sImuDevice {
-    void      open( void );
-    void      read( [out] struct ImuData *p_data );
-    void      close( void );
+    void      read( [in] struct Frame msg, [out] struct ImuMsg *imu_msg);
 };
 
 //*** コールバック用シグニチャ ***//
 signature sImuDriverbody {
-    void    main( [in] struct ImuMsg imu, [out] struct ImuMsg *imu_raw );
+    void    main( [in] struct Frame imu, [out] struct ImuMsg *imu_raw );
 };
 
 //*** IMUセルタイプ ***//

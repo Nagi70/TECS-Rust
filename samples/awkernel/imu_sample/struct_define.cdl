@@ -8,6 +8,11 @@ struct ImuData {
     float32_t    linear_acceleration_z;     /* [m/s^2] */
 };
 
+struct Header {
+    RType("Time") time_stamp;
+    [string(256)] char* frame_id;
+};
+
 struct Quaternion {
     double64_t x;
     double64_t y;
@@ -22,8 +27,7 @@ struct Vector3 {
 };
 
 struct ImuMsg {
-    RType("Time")          time_stamp;                     /* Header.stamp の代替            */
-    char_t*       frame_id;                       /* Header.frame_id の代替          */
+    struct Header header;
 
     struct Quaternion    orientation;                    /* geometry_msgs/Quaternion        */
     double64_t        orientation_covariance[9];
@@ -60,4 +64,14 @@ struct TwistWithCovarianceStamped {
     uint64_t                        time_stamp;  /* Header.stamp [ns]          */
     char_t                        *frame_id;    /* Header.frame_id            */
     struct TwistWithCovariance      twist;      /* Twist + Covariance         */
+};
+
+struct Frame {
+    struct Header header;
+    uint32_t id;
+    bool_t is_rtr;
+    bool_t is_extended;
+    bool_t is_error;
+    uint8_t dlc;
+    uint8_t data[8];
 };

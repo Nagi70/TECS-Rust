@@ -20,7 +20,7 @@ struct tag_sDummyImubody_VDES {
 
 /* signature function table #_SFT_# */
 struct tag_sDummyImubody_VMT {
-    void           (*main__T)( const struct tag_sDummyImubody_VDES *edp, struct ImuMsg* imu );
+    void           (*main__T)( const struct tag_sDummyImubody_VDES *edp, struct Frame* imu );
 };
 
 /* signature descriptor #_SDES_# for dynamic join */

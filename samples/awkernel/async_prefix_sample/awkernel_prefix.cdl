@@ -23,15 +23,15 @@ signature sPeriodicReactorbody {
 };
 
 [active, generate( RustAWKPlugin, "PERIODIC_REACTOR")]
-celltype tPeriodicReactor {
-    call sReactorbody cPeriodicReactorbody;
+celltype tDagPeriodicReactor {
+    call sReactorbody cDagPeriodicReactorbody;
     entry sTask eTask;
     
     attr{
         [omit] Cow name = PL_EXP("task_id");
         [omit] Cow publishTopicNames = PL_EXP("Topic1, Topic2");
         [omit] SchedulerType schedType = PL_EXP("SchedulerType::FIFO");
-        [omit] Duration period = PL_EXP("Duration::from_sec(1)");
+        [omit] RType("Duration") period = PL_EXP("Duration::from_sec(1)");
     };
 };
 //*** ***//
@@ -43,8 +43,8 @@ celltype tPeriodicReactor {
 //};
 
 [active, generate( RustAWKPlugin, "REACTOR")]
-celltype tReactor {
-    call sReactorbody cReactorbody;
+celltype tDagReactor {
+    call sReactorbody cDagReactorbody;
     entry sTask eTask;
     
     attr{
@@ -63,8 +63,8 @@ signature sSinkReactorbody {
 };
 
 [active, generate( RustAWKPlugin, "SINK_REACTOR")]
-celltype tSinkReactor {
-    call sReactorbody cSinkReactorbody;
+celltype tDagSinkReactor {
+    call sReactorbody cDagSinkReactorbody;
     entry sTask eTask;
     
     attr{
@@ -128,8 +128,8 @@ celltype tBev {
 
 
 //*** 周期リアクター向け組上げ ***//
-cell tPeriodicReactor PeriodicReactor {
-    cPeriodicReactorbody = Camerabody.eCamerabody;
+cell tDagPeriodicReactor PeriodicReactor {
+    cDagPeriodicReactorbody = Camerabody.eCamerabody;
     name = PL_EXP("periodic_reactor");
     schedType = PL_EXP("FIFO");
     publishTopicNames = PL_EXP("CameraInfo"); // PL_EXP的なもの、ジェネレータは解釈せず、プラグインのみで解釈する
@@ -146,8 +146,8 @@ cell tCamera Camera {
 //*** ***//
 
 //*** リアクター向け組上げ ***//
-//cell tReactor Reactor {
-//    cReactorbody = Bevbody.eBevbody;
+//cell tDagReactor Reactor {
+//    cDagReactorbody = Bevbody.eBevbody;
 //    name = PL_EXP("reactor");
 //    schedType = PL_EXP("FIFO");
 //    subscribeTopicNames = PL_EXP("CameraInfo");
@@ -163,8 +163,8 @@ cell tBev Bev {
 //*** ***//
 
 //*** シンクリアクター向け組上げ ***//
-cell tSinkReactor SinkReactor {
-    cSinkReactorbody = Bevbody.eBevbody;
+cell tDagSinkReactor SinkReactor {
+    cDagSinkReactorbody = Bevbody.eBevbody;
     name = PL_EXP("sink_reactor");
     schedType = PL_EXP("FIFO");
     relative_deadline = PL_EXP("Duration::from_sec(1)");

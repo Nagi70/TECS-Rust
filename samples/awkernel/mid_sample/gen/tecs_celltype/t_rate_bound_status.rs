@@ -20,7 +20,13 @@ pub struct ERateForTRateBoundStatus<'a>{
 }
 
 pub struct LockGuardForTRateBoundStatus<'a>{
-	pub reference_hz: f64	pub ok_min_hz: f64	pub ok_max_hz: f64	pub warn_min_hz: f64	pub warn_max_hz: f64	pub num_frame_transition: u32	pub var: TECSVarGuard<'a, TRateBoundStatus>,
+	pub reference_hz: &'a f64,
+	pub ok_min_hz: &'a f64,
+	pub ok_max_hz: &'a f64,
+	pub warn_min_hz: &'a f64,
+	pub warn_max_hz: &'a f64,
+	pub num_frame_transition: &'a u32,
+	pub var: TECSVarGuard<'a, TRateBoundStatus>,
 }
 
 static IMUDRIVERDIAG: TRateBoundStatus = TRateBoundStatus {

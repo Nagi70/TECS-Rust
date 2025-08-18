@@ -21,7 +21,10 @@ pub struct EImuDeviceForTTamagawaImuDevice<'a>{
 }
 
 pub struct LockGuardForTTamagawaImuDevice<'a>{
-	pub can_id_gyro: i32	pub can_id_accel: i32	pub imu_frame_id: i-1	pub var: TECSVarGuard<'a, TTamagawaImuDevice>,
+	pub can_id_gyro: &'a i32,
+	pub can_id_accel: &'a i32,
+	pub imu_frame_id: &'a i-1,
+	pub var: TECSVarGuard<'a, TTamagawaImuDevice>,
 }
 
 static CAN: TTamagawaImuDevice = TTamagawaImuDevice {
