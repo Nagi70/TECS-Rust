@@ -280,6 +280,9 @@ type_specifier
     | RTYPE '(' string_literal_list ')' {
             result = RTypeType.new( val[2] )
         }
+    | PLTYPE '(' string_literal_list ')' {
+            result = RTypeType.new( val[2] )
+        }
 
 char_type
     : CHAR_T    { result = IntType.new( -1 ) }
@@ -1602,6 +1605,7 @@ end
 
     'Descriptor'   => :DESCRIPTOR,
     'RType'   => :RTYPE,
+    'PLType'  => :PLTYPE,
   }
 
   # 指定子 '[]' 内でのみ使用できるキーワード
