@@ -93,6 +93,12 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
             return "DagSinkReactor"
         elsif plugin_option.include?("DAG_PERIODIC_REACTOR") then
             return "DagPeriodicReactor"
+        elsif plugin_option.include?("PERIODIC_REACTOR") then
+            return "PeriodicReactor"
+        elsif plugin_option.include?("REACTOR") then
+            return "Reactor"
+        elsif plugin_option.include?("SINK_REACTOR") then
+            return "SinkReactor"
         else
             return "unknown"
         end
@@ -241,7 +247,7 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
             publish_topic_hash.each do |topic_arg_name, (topic_type, topic_name)|
                 reactor_api += "#{topic_type},"
             end
-            reactor_api += ")> {\n"
+            reactor_api += ") {\n"
 
             # TODO: 型に応じて適切な初期化をする必要がある
             # TODO: オリジナルの型に対応させるのは難しいかもしれない
@@ -372,7 +378,7 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
             publish_topic_hash.each do |topic_arg_name, (topic_type, topic_name)|
                 reactor_api += "#{topic_type},"
             end
-            reactor_api += ")> {\n"
+            reactor_api += ") {\n"
 
 
             # TODO: 型に応じて適切な初期化をする必要がある

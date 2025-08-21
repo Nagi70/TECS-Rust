@@ -57,6 +57,8 @@ class RustGenCelltypePlugin < CelltypePlugin
     @@struct_def_generated = false
     @@default_impled_custom_struct_list = Hash.new { |hash, key| hash[key] = [] }
 
+    @@gen_heapless_crate_dependency = false
+
     #celltype::     Celltype        セルタイプ（インスタンス）
     def initialize( celltype, option )
       super
@@ -403,6 +405,8 @@ class RustGenCelltypePlugin < CelltypePlugin
                 else
                     string = 256
                 end
+
+                @@gen_heapless_crate_dependency = true
 
                 str = "heapless::String<#{string}>"
 
@@ -1693,7 +1697,35 @@ class RustGenCelltypePlugin < CelltypePlugin
 
     # Cargo.toml の設定を変更する
     def change_cargo_toml path
-        # ItronrsPlugin で実装
+        # heapless クレートの依存関係を追加する
+        if @@gen_heapless_crate_dependency then
+            insert_text = <<~TOML
+                heapless = "0.9.1"
+            TOML
+
+            lines = File.exist?(path) ? File.readlines(path, chomp: true) : []
+            insert_lines = insert_text.lines.map!(&:chomp)
+
+            # セクション判定用
+            section_header_re = /^\s*\[[^\]]+\]\s*$/
+
+            # [dependencies] の位置を探す
+            deps_idx = lines.index { |l| l.strip == '[dependencies]' }
+
+            if deps_idx
+            # 依存セクションの末尾（次のセクション直前）を探す
+            j = deps_idx + 1
+            j += 1 while j < lines.length && lines[j] !~ section_header_re
+            lines.insert(j, *insert_lines)
+            else
+            # セクションが無ければ末尾に新規作成
+            lines << "" unless lines.empty? || lines.last.strip.empty?
+            lines << "[dependencies]"
+            lines.concat(insert_lines)
+            end
+
+            File.write(path, lines.join("\n"))
+        end
     end
 
     # cargo.toml の設定を生成する

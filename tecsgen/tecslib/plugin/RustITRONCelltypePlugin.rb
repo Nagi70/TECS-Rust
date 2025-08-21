@@ -1429,6 +1429,8 @@ class RustITRONCelltypePlugin < RustGenCelltypePlugin
 
     # Cargo.toml の設定を変更する
     def change_cargo_toml path
+        super(path)
+        
         cargo_toml_path = "#{path}/Cargo.toml"
 
         # TODO: main と lib の指定が混ざっている場合、どちらを選択するかを決める必要がある
