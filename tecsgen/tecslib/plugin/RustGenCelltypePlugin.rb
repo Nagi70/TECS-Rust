@@ -205,18 +205,11 @@ class RustGenCelltypePlugin < CelltypePlugin
     # 正規表現のパターンを用いて，型にライフタイムが必要かチェックする関数
     # 正規表現のパターン以外には対応していない
     def check_lifetime_annotation_for_type str
-        # 正規表現パターンの配列を定義
-        patterns = [
-            /Option_Ref_a_mut__(\w+)__/,
-            /Ref_a__(\w+)__/,
-            # 他にも必要なパターンがあれば追加
-        ]
-
-        # 各正規表現パターンとの一致を確認
-        match_found = patterns.any? { |pattern| str =~ pattern }
-
-        return match_found
-
+        if str.include?("&") then
+            return true
+        else
+            return false
+        end
     end
 
     # セルタイプ構造体にライフタイムアノテーションが必要かどうかを判定する関数
@@ -290,6 +283,8 @@ class RustGenCelltypePlugin < CelltypePlugin
                 end
             }
         end
+
+        
     end
 
     # tecs_celltype.rs と tecs_celltype ディレクトリを生成する
@@ -332,6 +327,8 @@ class RustGenCelltypePlugin < CelltypePlugin
         if File.exist?("#{$gen}/tecs_impl") == false then
             FileUtils.mkdir_p("#{$gen}/tecs_impl")
         end
+
+        @@mod_global_impls_list.uniq!
 
         # tecs_impl.rs を生成する
         tecs_impl_rs = CFile.open("#{$gen}/tecs_impl.rs", "w")
@@ -453,7 +450,7 @@ class RustGenCelltypePlugin < CelltypePlugin
     # オリジナル構造体の定義を tecs_struct_def.rs に生成する
     def gen_tecs_struct_def_rs
         # 構造体が 1 つも収集されていない場合は何もしない
-        return if @@struct_type_list.empty?
+        # return if @@struct_type_list.empty?
 
         # 重複を除去（同じタグ名で比較）
         uniq_list = {}
@@ -472,8 +469,11 @@ class RustGenCelltypePlugin < CelltypePlugin
             rust_name = camel_case(snake_case(st.get_name.to_s.sub(/^_+/, "")))
 
             # derive(Default)を付与するかどうかをチェックする
+            # メッセージ型にはCloneが必須であるため、Cloneを付与する
             if @@default_impled_custom_struct_list[rust_name] == true then
-                file.print("#[derive(Default)]\n")
+                file.print("#[derive(Default, Clone)]\n")
+            else
+                file.print("#[derive(Clone)]\n")
             end
 
             file.print("pub struct #{rust_name} {\n")
@@ -517,9 +517,9 @@ class RustGenCelltypePlugin < CelltypePlugin
             trait_file = CFile.open( "#{$gen}/tecs_signature/#{snake_case(sig_name)}.rs", "w" )
             # gen_use_mutex trait_file
 
-            if @gen_use_struct_def then
-                trait_file.print "use crate::tecs_struct_def::*;\n"
-            end
+            # 必ず tecs_struct_def を use する
+            #TODO: 必要なときにだけ use するようにする
+            trait_file.print "use crate::tecs_struct_def::*;\n"
 
             trait_file.print "pub trait #{camel_case(snake_case(sig_name))} {\n"
 
@@ -616,41 +616,10 @@ class RustGenCelltypePlugin < CelltypePlugin
 
     # main.rs もしくは lib.rs に mod 記述を生成する
     def gen_mod_in_main_lib_rs file, celltype
-
         file.print "mod tecs_celltype;\n"
         file.print "mod tecs_signature;\n"
         file.print "mod tecs_impl;\n"
-
-        # if file_name != nil then
-        #     # File.write("#{$gen}/#{file_name}.rs", "") unless File.exist?("#{$gen}/#{file_name}.rs")
-        #     lib_file = File.read("#{$gen}/#{file_name}.rs")
-        #     last_mod_line = lib_file.rindex(/^mod\s+\w+;/)
-            
-        #     new_mods = ["mod #{snake_case(celltype.get_global_name.to_s)};\n"]
-
-        #     @celltype.get_port_list.each{ |port|
-        #         if port.get_port_type == :ENTRY then
-        #             # lib_file.print "mod #{snake_case(celltype.get_global_name.to_s)}_impl;\n"
-        #             new_mods.push("mod #{snake_case(celltype.get_global_name.to_s)}_impl;\n")
-        #             break
-        #         end
-        #     }
-
-        #     # mod記述の最後に新しいmodを挿入
-        #     if last_mod_line
-        #         insert_position = last_mod_line + lib_file[last_mod_line..].index("\n") + 1
-        #         new_mods.each do |mod|
-        #             next if lib_file.include?(mod)
-        #             lib_file.insert(insert_position, "#{mod}")
-        #             insert_position += "#{mod}".length
-        #         end
-        #     else
-        #         # もしmod記述が見つからなければ、ファイルの末尾に追加
-        #         lib_file << new_mods.join("\n")
-        #     end
-
-        #     File.write("#{$gen}/#{file_name}.rs", lib_file)
-        # end
+        file.print "mod tecs_struct_def;\n"
     end
 
     def gen_mod_in_main_lib_rs_for_signature signature
@@ -679,42 +648,16 @@ class RustGenCelltypePlugin < CelltypePlugin
 
     # セルタイプに受け口がある場合，その受け口につながっているシグニチャなどをクラス変数とインスタンス変数に追加する
     def extract_mod_list
-        # @use_string_list.push("kernel_obj_ref")
-        # セルタイプに受け口がある場合，use 文を生成する
+
+        @@mod_global_celltypes_list.push(snake_case(@celltype.get_global_name.to_s))
+
         @celltype.get_port_list.each{ |port|
             if port.get_port_type == :CALL then
                 @mod_signatures_list.push(snake_case(port.get_signature.get_global_name.to_s))
                 @@mod_global_signatures_list.push(snake_case(port.get_signature.get_global_name.to_s))
                 @celltype.get_cell_list.each{ |cell|
-                    # cellport = cell.get_real_port(port.get_name)
-                    # print "cellport: #{cellport.get_name}\n"
-                    # callee_cellport = cellport.get_real_callee_port
-                    # print "callee_cellport: #{callee_cellport}\n"
-                    # temp_port = port.get_real_callee_port
-                    # print "temp_port: #{temp_port}\n"
-                    # temp = port.get_real_callee_cell
-                    # print "port: #{port.get_name}\n"
-                    # print "temp: #{temp}\n"
-                    # join_list = cell.get_join_list
-                    # print "join_list: #{join_list}\n"
-                    # item = join_list.get_item(port.get_name)
-                    # print "item: #{item}\n"
-                    # port_name = item.get_port_global_name
-                    # print "port_name: #{port_name}\n"
-                    # join_cell_name = item.get_cell_name
-                    # print "join_cell_name: #{join_cell_name}\n"
-                    # join_name = item.get_name
-                    # print "join_name: #{join_name}\n"
-                    # join_cell_global_name = item.get_cell_global_name
-                    # print "join_cell_global_name: #{join_cell_global_name}\n"
-                    # join_celltype = cell.get_join_list.get_item(port.get_name).get_celltype
-                    # print "join_celltype: #{join_celltype.get_global_name}\n"
-                    # print "join_portname: #{cell.get_join_list.get_item(port.get_name).get_port_name}\n"
-                    # join_cell = item.get_cell
-                    # print "join_cell: #{join_cell.get_name}\n"
-                    # @use_string_list.push("#{snake_case(port.get_real_callee_cell.get_celltype.get_global_name.to_s)}")
                     @mod_celltypes_list.push(snake_case(cell.get_join_list.get_item(port.get_name).get_celltype.get_global_name.to_s))
-                    @@mod_global_celltypes_list.push(snake_case(cell.get_join_list.get_item(port.get_name).get_celltype.get_global_name.to_s))
+                    # @@mod_global_celltypes_list.push(snake_case(cell.get_join_list.get_item(port.get_name).get_celltype.get_global_name.to_s))
                 }
             elsif port.get_port_type == :ENTRY then
                 @mod_impls_list.push(snake_case(@celltype.get_global_name.to_s) + "_impl")
@@ -1321,12 +1264,12 @@ class RustGenCelltypePlugin < CelltypePlugin
         # if @celltype.get_var_list.length != 0 then
         #     gen_use_mutex file
         # end
+        
+        # 必ず tecs_struct_def を use する
+        #TODO: 必要なときにだけ use するようにする
+        file.print "use crate::tecs_struct_def::*;\n"
 
-        if @gen_use_struct_def then
-            file.print "use crate::tecs_struct_def::*;\n"
-        end
-
-        file.print "use crate::tecs_signature::#{snake_case(celltype.get_global_name.to_s)}::*;\n"
+        file.print "use crate::tecs_celltype::#{snake_case(celltype.get_global_name.to_s)}::*;\n"
 
         if signature_list.length == 1 then
             file.print "use crate::tecs_signature::#{signature_list[0]}::*;\n"
@@ -1974,7 +1917,7 @@ class RustGenCelltypePlugin < CelltypePlugin
 
 
         print "#{@celltype.get_global_name.to_s}: extract_mod_list\n"
-        # セルタイプに受け口がある場合，use 文を生成する
+        # mod記述を生成するリストを抽出する
         extract_mod_list
 
         # 重複を削除
