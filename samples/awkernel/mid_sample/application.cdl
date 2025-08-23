@@ -29,7 +29,7 @@ cell tImuDriver ImuDriver{
 
 cell tImuDriverbody ImuDriverbody{
     cImuRaw = DummyImuCorrectorbody.eImuRaw;
-    cRate = ImuDriverDiag.eRate;
+    //cRate = ImuDriverDiag.eRate;
     cDev = Can.eImuDevice;
 };
 
@@ -46,19 +46,19 @@ cell tDummyImuCorrector DummyImuCorrector{
 cell tDummyImuCorrectorbody DummyImuCorrectorbody{
 };
 
-cell tRateBoundStatus ImuDriverDiag{
-    reference_hz         = 200.0;
-    ok_min_hz            = 100.0;
-    ok_max_hz            = 10000.0;
-    warn_min_hz          = 50.0;
-    warn_max_hz          = 100000.0;
-    num_frame_transition = 2;
-};
+//cell tRateBoundStatus ImuDriverDiag{
+//    reference_hz         = 200.0;
+//    ok_min_hz            = 100.0;
+//    ok_max_hz            = 10000.0;
+//    warn_min_hz          = 50.0;
+//    warn_max_hz          = 100000.0;
+//    num_frame_transition = 2;
+//};
 
 cell tTamagawaImuDevice Can {
     can_id_gyro  = 0x319;
     can_id_accel = 0x31A;
-    imu_frame_id = PL_EXP("imu");
+    imu_frame_id = PL_EXP("\"imu\"");
 };
 
 

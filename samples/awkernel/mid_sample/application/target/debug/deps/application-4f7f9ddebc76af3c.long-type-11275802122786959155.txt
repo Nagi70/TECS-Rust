@@ -1,0 +1,1 @@
+t_tamagawa_imu_device::EImuDeviceForTTamagawaImuDevice<'static>: s_imu_device::SImuDevice

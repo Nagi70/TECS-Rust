@@ -1,0 +1,2 @@
+t_dummy_imu_correctorbody::EDummyImuCorrectorbodyForTDummyImuCorrectorbody<'static>
+t_dummy_imu_correctorbody::EDummyImuCorrectorbodyForTDummyImuCorrectorbody<'static>: s_dummy_imu_correctorbody::SDummyImuCorrectorbody

@@ -27,7 +27,7 @@ celltype tTamagawaImuDevice {
         int32_t  can_id_gyro;   /* CAN GYRO メッセージ ID (0x319) */
         int32_t  can_id_accel;  /* CAN ACCEL メッセージ ID (0x31A) */
         // int32_t  baudrate;      /* シリアルボーレート (115200) */
-        char_t  *imu_frame_id;  /* IMU frame id "imu" */
+        PLType("&'static str")  imu_frame_id;  /* IMU frame id "imu" */
     };
 
     /* 実行中に変化するデータ */
@@ -56,7 +56,7 @@ celltype tImuDriverbody {
 
     /* 呼び口ポート */
     call sImuDevice   cDev;   /* IMU デバイス制御 */
-    call sRateMonitor cRate;  /* 周波数診断 */
+    //call sRateMonitor cRate;  /* 周波数診断 */
 
     /* 変更されないパラメータ */
     // attr {

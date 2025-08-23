@@ -28,27 +28,27 @@ pub async fn run() {
 
 	dag.register_periodic_reactor::<_, (Frame,)>(
 		"dummy_imu".into(),
-		|| -> (Frame,)> {
+		|| -> (Frame,) {
 			let mut imu: Frame = Default::default();
 			DUMMYIMU.c_dag_periodic_reactorbody.main(&mut imu);
 			(imu,)
 		},
 		vec![Cow::from("imu")],
-		SchedulerType::SchedulerType::FIFO,
-		Duration::from_sec(1),
+		SchedulerType::PrioritizedFIFO(7),
+		Duration::from_secs(1),
 	)
 	.await;
 
-	dag.register_reactor::<_, (ImuMsg,), (Frame,)>(
+	dag.register_reactor::<_, (Frame,), (ImuMsg,)>(
 		"imu_driver".into(),
-		|(imu,): (Frame,)| -> (ImuMsg,)> {
+		|(imu,): (Frame,)| -> (ImuMsg,) {
 			let mut imu_raw: ImuMsg = Default::default();
 			IMUDRIVER.c_dag_reactorbody.main(&imu, &mut imu_raw);
 			(imu_raw,)
 		},
 		vec![Cow::from("imu")],
 		vec![Cow::from("imu_raw")],
-		SchedulerType::SchedulerType::FIFO,
+		SchedulerType::PrioritizedFIFO(7),
 	)
 	.await;
 
@@ -58,8 +58,8 @@ pub async fn run() {
 			DUMMYIMUCORRECTOR.c_dag_sink_reactorbody.main(&imu_raw);
 		},
 		vec![Cow::from("imu_raw")],
-		SchedulerType::SchedulerType::FIFO,
-		Duration::from_sec(1),
+		SchedulerType::PrioritizedFIFO(7),
+		Duration::from_secs(1),
 	)
 	.await;
 

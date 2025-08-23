@@ -2,7 +2,7 @@ use crate::tecs_variable::*;
 pub struct TTamagawaImuDevice{
 	can_id_gyro: i32,
 	can_id_accel: i32,
-	imu_frame_id: i-1,
+	imu_frame_id: str,
 	variable: &'a TECSVariable<TTamagawaImuDevice>,
 }
 
@@ -23,14 +23,14 @@ pub struct EImuDeviceForTTamagawaImuDevice<'a>{
 pub struct LockGuardForTTamagawaImuDevice<'a>{
 	pub can_id_gyro: &'a i32,
 	pub can_id_accel: &'a i32,
-	pub imu_frame_id: &'a i-1,
+	pub imu_frame_id: &'a str,
 	pub var: TECSVarGuard<'a, TTamagawaImuDevice>,
 }
 
 static CAN: TTamagawaImuDevice = TTamagawaImuDevice {
 	can_id_gyro: 0x319,
 	can_id_accel: 0x31A,
-	imu_frame_id: imu,
+	imu_frame_id: "imu",
 	variable: &CANVAR,
 };
 

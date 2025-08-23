@@ -8,6 +8,8 @@ impl SImuDevice for EImuDeviceForTTamagawaImuDevice<'_>{
 		let mut lg = self.cell.get_cell_ref(&mut node);
 
 		if(msg->id == lg.can_id_gyro) {
+			imu_msg.header.frame_id = heapless::String::from_str(lg.imu_frame_id).unwrap();
+			imu_msg.header.stamp = awkernel_lib::time::Time::now();
 			lg.var.counter = msg->data[1] + (msg->data[0] << 8);
 			lg.var.angular_velocity_x_raw = msg->data[3] + (msg->data[2] << 8);
 			lg.var.angular_velocity_y_raw = msg->data[5] + (msg->data[4] << 8);
