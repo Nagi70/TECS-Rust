@@ -669,6 +669,12 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
     def gen_rust_entryport_structure_initialize file, celltype, cell
         celltype.get_port_list.each{ |port|
             if port.get_port_type == :ENTRY then
+
+                # 空のシグニチャの場合は、初期化を生成しない
+                if port.get_signature.get_function_head_array.length == 0 then
+                    next
+                end
+
                 # 受け口構造体の初期化を生成
                 # 一つの受け口構造体がもつセルは１つ
                 file.print "pub static #{port.get_name.to_s.upcase}FOR#{cell.get_global_name.to_s.upcase}: #{camel_case(snake_case(port.get_name.to_s))}For#{get_rust_celltype_name(celltype)} = #{camel_case(snake_case(port.get_name.to_s))}For#{get_rust_celltype_name(celltype)} {\n"

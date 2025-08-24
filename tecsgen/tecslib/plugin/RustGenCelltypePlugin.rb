@@ -510,6 +510,11 @@ class RustGenCelltypePlugin < CelltypePlugin
             sig = port.get_signature
             sig_name = sig.get_global_name.to_s
 
+            # シグニチャに関数がない場合は、トレイトファイルを生成しない
+            if sig.get_function_head_array.length == 0 then
+                next
+            end
+
             puts "#{@celltype.get_global_name.to_s}: get_diff_between_gen_and_src"
             get_diff_between_gen_and_src "#{snake_case(sig_name)}.rs", "signature"
 
@@ -652,9 +657,18 @@ class RustGenCelltypePlugin < CelltypePlugin
         @@mod_global_celltypes_list.push(snake_case(@celltype.get_global_name.to_s))
 
         @celltype.get_port_list.each{ |port|
-            if port.get_port_type == :CALL then
-                @mod_signatures_list.push(snake_case(port.get_signature.get_global_name.to_s))
+
+            # シグニチャに関数がない場合は、mod 記述を生成しない    
+            if port.get_signature.get_function_head_array.length != 0 then
                 @@mod_global_signatures_list.push(snake_case(port.get_signature.get_global_name.to_s))
+            end
+
+            if port.get_port_type == :CALL then
+                # シグニチャに関数がない場合は、mod 記述を生成しない
+                if port.get_signature.get_function_head_array.length != 0 then
+                    @mod_signatures_list.push(snake_case(port.get_signature.get_global_name.to_s))
+                end
+                # @@mod_global_signatures_list.push(snake_case(port.get_signature.get_global_name.to_s))
                 @celltype.get_cell_list.each{ |cell|
                     @mod_celltypes_list.push(snake_case(cell.get_join_list.get_item(port.get_name).get_celltype.get_global_name.to_s))
                     # @@mod_global_celltypes_list.push(snake_case(cell.get_join_list.get_item(port.get_name).get_celltype.get_global_name.to_s))
@@ -662,7 +676,7 @@ class RustGenCelltypePlugin < CelltypePlugin
             elsif port.get_port_type == :ENTRY then
                 @mod_impls_list.push(snake_case(@celltype.get_global_name.to_s) + "_impl")
                 @@mod_global_impls_list.push(snake_case(@celltype.get_global_name.to_s) + "_impl")
-                @@mod_global_signatures_list.push(snake_case(port.get_signature.get_global_name.to_s))
+                # @@mod_global_signatures_list.push(snake_case(port.get_signature.get_global_name.to_s))
             end
         }
     end
@@ -931,6 +945,12 @@ class RustGenCelltypePlugin < CelltypePlugin
     def gen_rust_entry_structure file, celltype, callport_list
         celltype.get_port_list.each{ |port|
             if port.get_port_type == :ENTRY then
+
+                # 空のシグニチャの場合は、初期化を生成しない
+                if port.get_signature.get_function_head_array.length == 0 then
+                    next
+                end
+
                 # 受け口構造体の定義を生成
                 file.print"pub struct #{camel_case(snake_case(port.get_name.to_s))}For#{get_rust_celltype_name(celltype)}"
                 file.print "<'a>"
@@ -964,6 +984,12 @@ class RustGenCelltypePlugin < CelltypePlugin
     def gen_rust_entryport_structure_initialize file, celltype, cell
         celltype.get_port_list.each{ |port|
             if port.get_port_type == :ENTRY then
+
+                # 空のシグニチャの場合は、初期化を生成しない
+                if port.get_signature.get_function_head_array.length == 0 then
+                    next
+                end
+
                 # 受け口構造体の初期化を生成
                 # 一つの受け口構造体がもつセルは１つ
                 file.print "#[link_section = \".rodata\"]\n"
@@ -980,6 +1006,11 @@ class RustGenCelltypePlugin < CelltypePlugin
         celltype.get_port_list.each{ |port|
             if port.get_port_type == :ENTRY then
                 sig = port.get_signature
+
+                # 空のシグニチャの場合は、impl を生成しない
+                if sig.get_function_head_array.length == 0 then
+                    next
+                end
 
                 file.print "impl #{camel_case(snake_case(port.get_signature.get_global_name.to_s))} for #{camel_case(snake_case(port.get_name.to_s))}For#{get_rust_celltype_name(celltype)}"
                 file.print "<'_>"

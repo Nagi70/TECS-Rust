@@ -1331,6 +1331,11 @@ class RustITRONCelltypePlugin < RustGenCelltypePlugin
             if port.get_port_type == :ENTRY then
                 sig = port.get_signature
 
+                # 空のシグニチャの場合は、初期化を生成しない
+                if sig.get_function_head_array.length == 0 then
+                    next
+                end
+
                 file.print "impl #{camel_case(snake_case(port.get_signature.get_global_name.to_s))} for #{camel_case(snake_case(port.get_name.to_s))}For#{get_rust_celltype_name(celltype)}"
                 file.print "<'_>"
                 file.print "{\n\n"
