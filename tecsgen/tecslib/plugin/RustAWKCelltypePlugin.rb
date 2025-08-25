@@ -596,7 +596,7 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
         end
 
         file.print "use crate::tecs_variable::*;\n"
-        file.print "use core::cell::UnsafeCell;\n"
+        # file.print "use core::cell::UnsafeCell;\n"
 
     end
 
@@ -963,10 +963,10 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
             file.print "static #{cell.get_global_name.to_s.upcase}VAR: TECSVariable<#{get_rust_celltype_name(cell.get_celltype)}Var> = TECSVariable::"
 
             # セルに排他制御が必要かどうか
-            if check_exclusive_control_for_cell(cell) == "mutex" then
-                file.print "Mutexed(Mutex::new(\n"
+            if check_exclusive_control_for_cell(cell) == true then
+                file.print "Mutexed(awkernel_lib::sync::mutex::Mutex::new(\n"
             else
-                file.print "Raw(TECSSyncVar { unsafe_var: UnsafeCell::new(\n"
+                file.print "Raw(TECSSyncVar { unsafe_var: core::cell::UnsafeCell::new(\n"
             end
 
             file.print "\t#{get_rust_celltype_name(cell.get_celltype)}Var {\n"
@@ -990,7 +990,7 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
                 end
             }
 
-            if check_exclusive_control_for_cell(cell) == "mutex" then
+            if check_exclusive_control_for_cell(cell) == true then
                 file.print "\t}\n"
                 file.print "));\n"
             else
