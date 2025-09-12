@@ -37,6 +37,7 @@
 #   $Id: CelltypePlugin.rb 2952 2018-05-07 10:19:07Z okuma-top $
 #++
 
+require 'set'
 require_tecsgen_lib "RustGenCelltypePlugin.rb"
 
 #== celltype プラグインの共通の親クラス
@@ -54,6 +55,9 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
     @@use_sink_reactor_gen = false
     @@reactor_api_list = []
     @@non_default_impl_type_list = ["Time"] # defaultの実装がない型のリスト(awkernelのTime型など)
+    @@dag_reactor_body_celltype_list = []
+    @@dag_sink_reactor_body_celltype_list = []
+    @@dag_periodic_reactor_body_celltype_list = []
 
     #celltype::     Celltype        セルタイプ（インスタンス）
     def initialize( celltype, option )
@@ -65,6 +69,25 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
       @plugin_arg_list = {}
       @cell_list =[]
       celltype.set_impl_lang :Rust
+
+      plugin_option = @plugin_arg_str.split(",").map(&:strip)
+
+      if plugin_option.include?("DAG_REACTOR_BODY") then
+        @@dag_reactor_body_celltype_list.push(@celltype)
+        puts "#{@celltype.get_global_name}: gen_dag_reactor_celltype start"
+        gen_dag_reactor_celltype(@celltype)
+        puts "#{@celltype.get_global_name}: gen_dag_reactor_celltype end"
+      elsif plugin_option.include?("DAG_SINK_REACTOR_BODY") then
+        @@dag_sink_reactor_body_celltype_list.push(@celltype)
+        puts "#{@celltype.get_global_name}: gen_dag_sink_reactor_celltype start"
+        gen_dag_sink_reactor_celltype(@celltype)
+        puts "#{@celltype.get_global_name}: gen_dag_sink_reactor_celltype end"
+      elsif plugin_option.include?("DAG_PERIODIC_REACTOR_BODY") then
+        @@dag_periodic_reactor_body_celltype_list.push(@celltype)
+        puts "#{@celltype.get_global_name}: gen_dag_periodic_reactor_celltype start"
+        gen_dag_periodic_reactor_celltype(@celltype)
+        puts "#{@celltype.get_global_name}: gen_dag_periodic_reactor_celltype end"
+    end
     end
   
     #=== 新しいセル
@@ -83,155 +106,66 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
       # 複数のプラグインの post_code が一つのファイルに含まれるため、以下のような見出しをつけること
       file.print "/* '#{self.class.name}' post code */\n"
 
-      if @plugin_arg_str.include?("DAG_REACTOR_BODY") then
-        gen_dag_reactor_post_code file
-      elsif @plugin_arg_str.include?("DAG_SINK_REACTOR_BODY") then
-      elsif @plugin_arg_str.include?("DAG_PERIODIC_REACTOR_BODY") then
+      puts "gen_post_code start"
+
+      @@dag_reactor_body_celltype_list.each do |celltype|
+        puts "#{celltype.get_global_name}: DAG_REACTOR_BODY"
+        celltype.get_cell_list.each do |cell|
+            puts "#{celltype.get_global_name}: #{cell.get_global_name}"
+        end
+        gen_dag_reactor_post_code(file, celltype)
       end
+
+      @@dag_sink_reactor_body_celltype_list.each do |celltype|
+        puts "#{celltype.get_global_name}: DAG_SINK_REACTOR_BODY"
+        celltype.get_cell_list.each do |cell|
+            puts "#{celltype.get_global_name}: #{cell.get_global_name}"
+        end
+        gen_dag_sink_reactor_post_code(file, celltype)
+      end
+
+      @@dag_periodic_reactor_body_celltype_list.each do |celltype|
+        puts "#{celltype.get_global_name}: DAG_PERIODIC_REACTOR_BODY"
+        celltype.get_cell_list.each do |cell|
+            puts "#{celltype.get_global_name}: #{cell.get_global_name}"
+        end
+        gen_dag_periodic_reactor_post_code(file, celltype)
+      end
+
     end
 
-    def gen_dag_reactor_post_code file
+    def gen_dag_reactor_celltype celltype
 
-        e_reactor = get_awkernel_callback_entryport_for_celltype @celltype
+        file = CFile.open( "#{$gen}/#{celltype.get_global_name}_dag_reactor.cdl", "w" )
 
-        reactor_name = nil
-        subscribe_topic_names = nil
-        publish_topic_names = nil
-        sched_type = nil
+        e_reactor = get_awkernel_callback_entryport_for_celltype(celltype)
 
         # 指定する属性が定義されているかを確認する
         # 定義されていても omit が指定されていない場合はエラーにする
-        @celltype.get_attribute_list.each{ |attr|
-            case attr.get_name
-            when :reactorName
-                if attr.is_omit? then
-                    puts "error: #{attr.get_global_name.to_s} is not omit. Please specify [omit]."
-                    exit 1
-                end
-                reactor_name = attr
-            when :subscribeTopicNames
-                if attr.is_omit? then
-                    puts "error: #{attr.get_global_name.to_s} is not omit. Please specify [omit]."
-                    exit 1
-                end
-                subscribe_topic_names = attr
-            when :publishTopicNames
-                if attr.is_omit? then
-                    puts "error: #{attr.get_global_name.to_s} is not omit. Please specify [omit]."
-                    exit 1
-                end
-                publish_topic_names = attr
-            when :schedType
-                if attr.is_omit? then
-                    puts "error: #{attr.get_global_name.to_s} is not omit. Please specify [omit]."
-                    exit 1
-                end
-                sched_type = attr
-            end
-        }
-
-        # 指定される属性が定義されていない場合はエラーにする
-        if reactor_name == nil then
-            puts "error: #{@celltype.get_global_name.to_s} has not defined reactorName. Please define it with [omit] and initialize it with PL_EXP()."
-            exit 1
-        end
-        if subscribe_topic_names == nil then
-            puts "error: #{@celltype.get_global_name.to_s} has not defined subscribeTopicNames. Please define it with [omit] and initialize it with PL_EXP()."
-            exit 1
-        end
-        if publish_topic_names == nil then
-            puts "error: #{@celltype.get_global_name.to_s} has not defined publishTopicNames. Please define it with [omit] and initialize it with PL_EXP()."
-            exit 1
-        end
-        if sched_type == nil then
-            puts "error: #{@celltype.get_global_name.to_s} has not defined schedType. Please define it with [omit] and initialize it with PL_EXP()."
-            exit 1
-        end
-
-        publish_topic_name_list = publish_topic_names.get_initializer.to_s.split(",").map(&:strip)
-        subscribe_topic_name_list = subscribe_topic_names.get_initializer.to_s.split(",").map(&:strip)
-
+        reactor_name = get_reactor_attribute(celltype, :reactorName)
+        subscribe_topic_names = get_reactor_attribute(celltype, :subscribeTopicNames)
+        publish_topic_names = get_reactor_attribute(celltype, :publishTopicNames)
+        sched_type = get_reactor_attribute(celltype, :schedType)
+        
         # key: トピック名, value: トピックの型
-        publish_topic_type_hash = {}
-        subscribe_topic_type_hash = {}
+        publish_topic_type_hash = get_topic_type_hash_from_attr(publish_topic_names)
+        subscribe_topic_type_hash = get_topic_type_hash_from_attr(subscribe_topic_names)
 
-        # ハッシュを初期化する
-        publish_topic_name_list.each do |topic_name|
-          publish_topic_type_hash[topic_name] = nil
-        end
-        subscribe_topic_name_list.each do |topic_name|
-          subscribe_topic_type_hash[topic_name] = nil
-        end
-
-        # Pub/Sub 用の口が定義されているかを確認する
-        @celltype.get_port_list.each do |port|
-          if port.get_port_type == :CALL then
-            # パブリッシュ用呼び口が定義されているかを確認する (呼び口名は "c+トピック名" を想定している)
-            if publish_topic_name_list.include?(port.get_name.to_s.slice(1..-1)) then
-              # omit が指定されていない場合はエラーにする
-              if port.is_omit? then
-                puts "error: #{port.get_global_name.to_s} is not omit. Please specify [omit]."
-                exit 1
-              end
-              # トピックの型を取得し、ハッシュに追加する
-              publish_topic_type_hash[port.get_name.to_s.slice(1..-1)] = get_topic_type(port)
-              # 適切にパブリッシュ用呼び口が定義されていた場合は、トピック名リストから削除する
-              publish_topic_name_list.delete(port.get_name.to_s.slice(1..-1))
-            end
-          elsif port.get_port_type == :ENTRY then
-            # サブスクライブ用呼び口が定義されているかを確認する (受け口名は "e+トピック名" を想定している)
-            if subscribe_topic_name_list.include?(port.get_name.to_s.slice(1..-1)) then
-              # トピックの型を取得し、ハッシュに追加する
-              subscribe_topic_type_hash[port.get_name.to_s.slice(1..-1)] = get_topic_type(port)
-              # 適切にサブスクライブ用呼び口が定義されていた場合は、トピック名リストから削除する
-              subscribe_topic_name_list.delete(port.get_name.to_s.slice(1..-1))
-            end
-          end
-        end
-
-        # トピック名リストに残っている場合、パブリッシュ用呼び口の定義が不足しているためエラーにする
-        if publish_topic_name_list.size != 0 then
-          publish_topic_name_list.each do |topic_name|
-            puts "error: #{@celltype.get_global_name.to_s} has not defined call port that publish topic #{topic_name}. Please define it with [omit]."
-            exit 1
-          end
-        end
-
-        # トピック名リストに残っている場合、サブスクライブ用呼び口の定義が不足しているためエラーにする
-        if subscribe_topic_name_list.size != 0 then
-          subscribe_topic_name_list.each do |topic_name|
-            puts "error: #{@celltype.get_global_name.to_s} has not defined entry port that subscribe topic #{topic_name}. Please define it with [omit]."
-            exit 1
-          end
-        end
+        # トピック用の口があるかを確認する
+        check_topic_port_exist(celltype, publish_topic_type_hash, :CALL)
+        check_topic_port_exist(celltype, subscribe_topic_type_hash, :ENTRY)
 
         cb_sig = e_reactor.get_signature
         publish_topic_arg, subscribe_topic_arg = get_topic_list_from_callback_signature(cb_sig)
 
         # Pub/Sub 用の口の定義とコールバックシグニチャの定義の整合性を確認する
         # 現在は、属性で定義されたトピック名の順序とコールバックシグニチャの引数の順序が同じであることを想定している
-        check_topic_type_diff(publish_topic_hash, publish_topic_arg)
-        check_topic_type_diff(subscribe_topic_hash, subscribe_topic_arg)
-
-        
-        @celltype.get_cell_list.each do |cell|
-            topic_names = publish_topic_type_hash.keys
-            topic_names.each do |topic|
-                c_publish = "c" + topic
-                # TODO: get_rhs_cell2 の使い方があっているか分からない
-                subscribe_cell = cell.get_join_list.get_item(c_publish.to_sym).get_rhs_cell2
-                subscribe_topic_names = subscribe_cell.get_celltype.get_attribute_list.find { |a| a.get_name == :subscribeTopicNames }
-                st_ini = subscribe_topic_names.get_initializer.to_s.split(",").map(&:strip)
-                if !st_ini.include?(topic) then
-                    puts "error: #{topic} that #{cell.get_global_name.to_s} publish does not be included in subscribeTopicNames in #{subscribe_cell.get_global_name.to_s}"
-                    exit 1
-                end
-            end
-        end
+        check_topic_type_diff(celltype, publish_topic_type_hash, publish_topic_arg)
+        check_topic_type_diff(celltype, subscribe_topic_type_hash, subscribe_topic_arg)
 
         file.print "
-            [generate(RustAWKPlugin, \"DAG_REACTOR\")]\n
-            celltype #{@celltype.get_global_name.to_s}DagReactor {\n
+            [active, generate(RustAWKPlugin, \"DAG_REACTOR\")]\n
+            celltype #{celltype.get_global_name.to_s}DagReactor {\n
             \tcall #{cb_sig.get_global_name.to_s} cDagReactor;\n
             \tattr {\n
             \t\t[omit] PLType(\"Cow\") name = PL_EXP(\"#{reactor_name.get_initializer.to_s}\");\n
@@ -241,80 +175,242 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
             \t};\n
             };\n\n
         "
+    end
 
-        @celltype.get_cell_list.each do |cell|
+    def self.gen_dag_reactor_post_code file, celltype
+        
+        # パブリッシュ用呼び口が、正しいサブスクライバ受け口に結合されているかを確認する
+        validate_publisher_topics_in_subscriber(celltype)
+
+        # cell定義の生成
+        celltype.get_cell_list.each do |cell|
             file.print"
-                cell #{@celltype.get_global_name.to_s}DagReactor #{cell.get_global_name.to_s}DagReactor {\n
+                cell #{celltype.get_global_name.to_s}DagReactor #{cell.get_global_name.to_s}DagReactor {\n
                 \tcDagReactor = #{cell.get_global_name.to_s}.eReactor;\n
                 };\n\n
             "
         end
     end
 
-    def check_topic_type_diff attr_topic_hash, arg_topic_hash
+    def gen_dag_sink_reactor_celltype celltype
+
+        file = CFile.open( "#{$gen}/#{celltype.get_global_name}_dag_sink_reactor.cdl", "w" )
+
+        e_reactor = get_awkernel_callback_entryport_for_celltype(celltype)
+
+        # 指定する属性が定義されているかを確認する
+        reactor_name = get_reactor_attribute(celltype, :reactorName)
+        subscribe_topic_names = get_reactor_attribute(celltype, :subscribeTopicNames)
+        sched_type = get_reactor_attribute(celltype, :schedType)
+        relative_deadline = get_reactor_attribute(celltype, :relativeDeadline)
+
+        # パブリッシュトピック属性が定義されていないことを確認し、定義されていた場合エラー
+        publish_topic_names = celltype.get_attribute_list.find { |a| a.get_name == :publishTopicNames}
+        if !publish_topic_names == nil then
+            puts "error: #{celltype.get_global_name} has defined publishTopicNames. Don't define it."
+            exit(1)
+        end
+        
+        # key: トピック名, value: トピックの型
+        subscribe_topic_type_hash = get_topic_type_hash_from_attr(subscribe_topic_names)
+
+        # トピック用の口があるかを確認する
+        check_topic_port_exist(celltype, subscribe_topic_type_hash, :ENTRY)
+
+        cb_sig = e_reactor.get_signature
+        publish_topic_arg, subscribe_topic_arg = get_topic_list_from_callback_signature(cb_sig)
+
+        if publish_topic_arg.any? then
+            puts "error: The function in #{cb_sig.get_global_name} has [out] arguments. Don't define it."
+            exit(1)
+        end
+
+        file.print "
+            [active, generate(RustAWKPlugin, \"DAG_SINK_REACTOR\")]\n
+            celltype #{celltype.get_global_name.to_s}DagSinkReactor {\n
+            \tcall #{cb_sig.get_global_name.to_s} cDagSinkReactor;\n
+            \tattr {\n
+            \t\t[omit] PLType(\"Cow\") name = PL_EXP(\"#{reactor_name.get_initializer.to_s}\");\n
+            \t\t[omit] PLType(\"SchedulerType\") schedType = PL_EXP(\"#{sched_type.get_initializer.to_s}\");\n
+            \t\t[omit] PLType(\"Cow\") subscribeTopicNames = PL_EXP(\"#{subscribe_topic_names.get_initializer.to_s}\");\n
+            \t\t[omit] PLType(\"Cow\") relativeDeadline = PL_EXP(\"#{relative_deadline.get_initializer.to_s}\");\n
+            \t};\n
+            };\n\n
+        "
+    end
+
+    def self.gen_dag_sink_reactor_post_code file, celltype
+
+        celltype.get_cell_list.each do |cell|
+            file.print"
+                cell #{celltype.get_global_name.to_s}DagSinkReactor #{cell.get_global_name.to_s}DagSinkReactor {\n
+                \cDagSinkReactor = #{cell.get_global_name.to_s}.eReactor;\n
+                };\n\n
+            "
+        end
+    end
+
+    def gen_dag_periodic_reactor_celltype celltype
+
+        file = CFile.open( "#{$gen}/#{celltype.get_global_name}_dag_periodic_reactor.cdl", "w" )
+
+        e_reactor = get_awkernel_callback_entryport_for_celltype(celltype)
+
+        # 指定する属性が定義されているかを確認する
+        reactor_name = get_reactor_attribute(celltype, :reactorName)
+        publish_topic_names = get_reactor_attribute(celltype, :publishTopicNames)
+        sched_type = get_reactor_attribute(celltype, :schedType)
+        period = get_reactor_attribute(celltype, :period)
+
+        # サブスクライブトピック属性が定義されていないことを確認し、定義されていた場合エラー
+        subscribe_topic_names = celltype.get_attribute_list.find { |a| a.get_name == :subscribeTopicNames}
+        if !subscribe_topic_names == nil then
+            puts "error: #{celltype.get_global_name} has defined subscribeTopicNames. Don't define it."
+            exit(1)
+        end
+        
+        # key: トピック名, value: トピックの型
+        publish_topic_type_hash = get_topic_type_hash_from_attr(publish_topic_names)
+
+        # トピック用の口があるかを確認する
+        check_topic_port_exist(celltype, publish_topic_type_hash, :CALL)
+
+        cb_sig = e_reactor.get_signature
+        publish_topic_arg, subscribe_topic_arg = get_topic_list_from_callback_signature(cb_sig)
+
+        if subscribe_topic_arg.any? then
+            puts "error: The function in #{cb_sig.get_global_name} has [in] arguments. Don't define it."
+            exit(1)
+        end
+
+        # Pub/Sub 用の口の定義とコールバックシグニチャの定義の整合性を確認する
+        # 現在は、属性で定義されたトピック名の順序とコールバックシグニチャの引数の順序が同じであることを想定している
+        check_topic_type_diff(celltype, publish_topic_type_hash, publish_topic_arg)
+
+        file.print "
+            [active, generate(RustAWKPlugin, \"DAG_PERIODIC_REACTOR\")]\n
+            celltype #{celltype.get_global_name.to_s}DagPeriodicReactor {\n
+            \tcall #{cb_sig.get_global_name.to_s} cDagPeriodicReactor;\n
+            \tattr {\n
+            \t\t[omit] PLType(\"Cow\") name = PL_EXP(\"#{reactor_name.get_initializer.to_s}\");\n
+            \t\t[omit] PLType(\"SchedulerType\") schedType = PL_EXP(\"#{sched_type.get_initializer.to_s}\");\n
+            \t\t[omit] PLType(\"Cow\") publishTopicNames = PL_EXP(\"#{publish_topic_names.get_initializer.to_s}\");\n
+            \t\t[omit] PLType(\"Cow\") period = PL_EXP(\"#{period.get_initializer.to_s}\");\n
+            \t};\n
+            };\n\n
+        "
+    end
+
+    def self.gen_dag_periodic_reactor_post_code file, celltype
+
+        # パブリッシュ用呼び口が、正しいサブスクライバ受け口に結合されているかを確認する
+        validate_publisher_topics_in_subscriber(celltype)
+
+        celltype.get_cell_list.each do |cell|
+            file.print"
+                cell #{celltype.get_global_name.to_s}DagPeriodicReactor #{cell.get_global_name.to_s}DagPeriodicReactor {\n
+                \cDagPeriodicReactor = #{cell.get_global_name.to_s}.eReactor;\n
+                };\n\n
+            "
+        end
+    end
+
+    def self.validate_publisher_topics_in_subscriber celltype
+
+        publish_topic_names = celltype.get_attribute_list.find { |a| a.get_name == :publishTopicNames }
+        publish_topic_name_list = publish_topic_names.get_initializer.to_s.split(",").map(&:strip)
+
+        celltype.get_cell_list.each do |cell|
+            publish_topic_name_list.each do |p_topic|
+            c_publish = "c#{p_topic}"
+               # TODO: get_rhs_cell2 の使い方があっているか分からない
+            subscribe_cell = cell.get_join_list.get_item(c_publish.to_sym).get_rhs_cell2
+            subscribe_topic_names = subscribe_cell.get_celltype.get_attribute_list.find { |a| a.get_name == :subscribeTopicNames }
+            subscribe_topic_name_list = subscribe_topic_names.get_initializer.to_s.split(",").map(&:strip)
+            
+            unless subscribe_topic_name_list.include?(p_topic)
+                puts "error: #{p_topic} that #{cell.get_global_name.to_s} publish does not be included in subscribeTopicNames in #{subscribe_cell.get_global_name.to_s}"
+                exit 1
+            end
+          end
+        end
+    end
+
+    # topic属性の初期値と同じ順番でキーを作成したハッシュを取得する
+    def get_topic_type_hash_from_attr attr
+        initializer = attr.get_initializer.to_s.split(",").map(&:strip)
+        topic_type_hash = {}
+        initializer.each do |topic_name|
+            topic_type_hash[topic_name] = nil
+        end
+        return topic_type_hash
+    end
+
+    def check_topic_port_exist(celltype, topic_hash, port_type)
+        remaining = Set.new(topic_hash.keys)
+        
+        # Pub/Sub 用の口が定義されているかを確認する
+        celltype.get_port_list.each do |port|
+          next unless port.get_port_type == port_type
+          
+          # トピック用の口が定義されているかを確認する (呼び口名は "c+トピック名"、受け口名は "e+トピック名"を想定している)
+          topic_name = port.get_name.to_s.slice(1..-1)
+          next unless topic_hash.key?(topic_name)
+          
+          # omit が指定されていない場合はエラーにする
+          if port_type == :CALL && !port.is_omit?
+            puts "error: #{port.get_global_name.to_s} is not omit. Please specify [omit]."
+            exit(1)
+          end
+          
+          # トピックの型を取得し、ハッシュに追加する
+          topic_hash[topic_name] = get_topic_type(port)
+           # 適切にパブリッシュ用呼び口が定義されていた場合は、remaining から削除する
+          remaining.delete(topic_name)
+        end
+        
+        # 不足チェック
+        # remaining にトピックが残っている場合、トピック用の口の定義が不足しているためエラーにする
+        unless remaining.empty?
+          remaining.each do |topic_name|
+            port_label = port_type == :CALL ? "call port that publish topic" : "entry port that subscribe topic"
+            prefix = port_type == :CALL ? "c" : "e"
+            puts "error: #{celltype.get_global_name.to_s} has not defined #{port_label} #{topic_name}. Please define #{prefix}#{topic_name} with [omit]."
+            exit 1
+          end
+        end
+    end
+
+    def check_topic_type_diff celltype, attr_topic_hash, arg_topic_hash
         v1 = attr_topic_hash.values
         v2 = arg_topic_hash.values
 
         if v1.length != v2.length
-            puts "error: length of topicTypeNames in #{@celltype.get_global_name.to_s} and length of argments in #{cb_sig.get_global_name.to_s} mismatch"
+            puts "error: length of topicTypeNames in #{celltype.get_global_name.to_s} and length of argments in #{cb_sig.get_global_name.to_s} mismatch"
             exit 1
         end
 
         (0...v1.length).each do |i|
             unless v1[i] == v2[i]
-                puts "error: topicTypeNames in #{@celltype.get_global_name.to_s} and argments in #{cb_sig.get_global_name.to_s} mismatch"
+                puts "error: topicTypeNames in #{celltype.get_global_name.to_s} and argments in #{cb_sig.get_global_name.to_s} mismatch"
                 exit 1
             end
         end
     end
 
-    def gen_dag_sink_reactor_post_code file
-        e_reactor = get_awkernel_callback_entryport_for_celltype @celltype
-
-        reactor_name = nil
-        subscribe_topic_names = nil
-        publish_topic_names = nil
-        sched_type = nil
-        relative_deadline = nil
-
-        @celltype.get_attribute_list.each{ |attr|
-            case attr.get_name
-            when :reactorName
-                reactor_name = attr
-            when :subscribeTopicNames
-                subscribe_topic_names = attr
-            when :publishTopicNames
-                publish_topic_names = attr
-            when :schedType
-                sched_type = attr
-            when :relative_deadline
-                relative_deadline = attr
-            end
-        }
-
-    end
-
-    def gen_dag_periodic_reactor_post_code file
-        e_reactor = get_awkernel_callback_entryport_for_celltype @celltype
-
-        reactor_name = nil
-        publish_topic_names = nil
-        sched_type = nil
-        period = nil
-
-        @celltype.get_attribute_list.each{ |attr|
-            case attr.get_name
-            when :name
-                reactor_name = attr
-            when :publishTopicNames
-                publish_topic_names = attr
-            when :schedType
-                sched_type = attr
-            when :period
-                period = attr
-            end
-        }
-
+    # リアクター生成のために、指定されたシンボルの属性が定義されているかをチェックする
+    # もし定義されていなかった場合はエラー、[omit]になっていなかった場合もエラー
+    def get_reactor_attribute celltype, sym
+        attr = celltype.get_attribute_list.find { |a| a.get_name == sym}
+        if attr == nil then
+            puts "error: #{celltype.get_global_name} has not defined #{sym.to_s}. Please define it with [omit] and initialize it with PL_EXP()."
+            exit(1)
+        end
+        if !attr.is_omit? then
+            puts "error: #{attr.get_global_name} is not omit. Please specify [omit]."
+            exit(1)
+        end
+        return attr
     end
 
     # セルタイプに eReactor という名前の受け口があるかどうかを確認する
@@ -334,24 +430,24 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
     def get_topic_type port
         signature = port.get_signature
         func_array = signature.get_function_head_array
-        if func_array.size == 0 then
+        if func_array.length == 0 then
           puts "error: #{signature.get_global_name.to_s} has no function head"
           exit 1
-        elsif func_array.size > 1 then
+        elsif func_array.length > 1 then
           puts "warning: #{signature.get_global_name.to_s} has multiple function heads. Use the first one this time."
         end
   
         first_func = func_array.first
         param_list = first_func.get_paramlist
-        if param_list.size == 0 then
+        if param_list.get_items.length == 0 then
           puts "error: #{signature.get_global_name.to_s} has no argument. Please define a topic argument in the signature."
           exit 1
-        elsif param_list.size > 1 then
+        elsif param_list.get_items.length > 1 then
           puts "warning: #{signature.get_global_name.to_s} has multiple arguments. Use the first one this time."
         end
   
         first_param = param_list.get_items.first
-        return c_type_to_rust_type(first_param.get_type.get_type_str)
+        return c_type_to_rust_type(first_param.get_type)
     end
 
     def get_topic_list_from_callback_signature signature
