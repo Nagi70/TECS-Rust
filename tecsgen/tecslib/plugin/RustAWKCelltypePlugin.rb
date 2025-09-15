@@ -164,7 +164,7 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
         file.print <<~CDL
           [active, generate(RustAWKPlugin, "DAG_REACTOR")]
           celltype #{celltype.get_global_name}DagReactor {
-            call #{cb_sig.get_global_name} cDagReactor;
+            [async] call #{cb_sig.get_global_name} cDagReactor;
             attr {
               [omit] PLType("Cow") name = PL_EXP("#{reactor_name.get_initializer}");
               [omit] PLType("SchedulerType") schedType = PL_EXP("#{sched_type.get_initializer}");
@@ -236,7 +236,7 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
         file.print <<~CDL
         [active, generate(RustAWKPlugin, "DAG_SINK_REACTOR")]
         celltype #{celltype.get_global_name}DagSinkReactor {
-          call #{cb_sig.get_global_name} cDagSinkReactor;
+          [async] call #{cb_sig.get_global_name} cDagSinkReactor;
           attr {
             [omit] PLType("Cow") name = PL_EXP("#{reactor_name.get_initializer}");
             [omit] PLType("SchedulerType") schedType = PL_EXP("#{sched_type.get_initializer}");
@@ -304,7 +304,7 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
         file.print <<~CDL
           [active, generate(RustAWKPlugin, "DAG_PERIODIC_REACTOR")]
           celltype #{celltype.get_global_name}DagPeriodicReactor {
-            call #{cb_sig.get_global_name} cDagPeriodicReactor;
+            [async] call #{cb_sig.get_global_name} cDagPeriodicReactor;
             attr {
               [omit] PLType("Cow") name = PL_EXP("#{reactor_name.get_initializer}");
               [omit] PLType("SchedulerType") schedType = PL_EXP("#{sched_type.get_initializer}");
@@ -583,51 +583,16 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
 
         celltype.get_cell_list.each do |cell|
 
-            # tDagPeriodicReactor のセルの cDagPeriodicReactor に接続されているセルに対して探索を開始する
-            body_join = cell.get_join_list.get_item("cDagPeriodicReactorbody".to_sym)
-            next unless body_join                    # 接続が無ければスキップ
-            start_cell = body_join.get_rhs_cell2     # 接続先セルを取得
+            # 生成されるリアクターセルタイプの呼び口を取得する
+            c_dag_periodic_reactor = celltype.get_port_list.find { |p| p.get_port_type == :CALL && p.get_name.to_s == "cDagPeriodicReactor" }
 
-            # [async] 指定のある呼び口を幅優先的に探索
-            found = find_async_callport(start_cell)
-            # next unless found                        # 見つからなければスキップ
-            if found == nil then
-                puts "error: Can't find async callport in #{cell.get_global_name.to_s}"
-                exit 1
-            end
-
-            target_cell, async_callport = found
-
-            publish_topic_hash, subscribe_topic_hash = get_topic_list(async_callport)
+            publish_topic_hash, subscribe_topic_hash = get_topic_list_from_callback_signature(c_dag_periodic_reactor.get_signature)
             
-            publish_topic_name_list = cell.get_attr_initializer("publishTopicNames".to_sym).to_s.split(",").map(&:strip)
-
-            # 周期リアクターは、サブスクライブできないため、それを検査する
-            if subscribe_topic_hash.size != 0 then
-                puts "error: tDagPeriodicReactor can't subscribe topic, #{cell.get_global_name.to_s} has subscribe topic"
-                exit 1
-            end
-
-            # ── publish の処理
-            # 現在は、CDLのtDagPeriodicReactorの属性で定義されたpublishTopicNamesと、シグニチャプラグインのオプションで定義された[out]引数を、前から順番に対応づける
-            # TODO: publish_topic_type_hash と publish_topic_name_list の整合性をシグニチャプラグインのオプションで確認する
-            if publish_topic_hash.size == publish_topic_name_list.size
-                # 要素数が一致していれば、インデックスで対応づけ
-                publish_topic_hash.keys.each_with_index do |arg_name, idx|
-                    topic_type, _old_name = publish_topic_hash[arg_name]
-                    # 同じインデックスの表示名をセット
-                    publish_topic_hash[arg_name] = [topic_type, publish_topic_name_list[idx]]
-                end
-            else
-                puts "error: Number of publish topic names in tDagPeriodicReactor is not equal to the number of publish topic argements in signature #{async_callport.get_signature.get_global_name.to_s} connected"
-                exit 1
-            end
-
-            reactor_api = "use tecs_signature::#{snake_case(async_callport.get_signature.get_global_name.to_s)}::*;\n\n"
+            reactor_api = "use tecs_signature::#{snake_case(c_dag_periodic_reactor.get_signature.get_global_name.to_s)}::*;\n\n"
 
             # TODO: プラグインのオプションから、返り値の型を特定する
             reactor_api += "\tdag.register_periodic_reactor::<_, ("
-            publish_topic_hash.each do |topic_arg_name, (topic_type, topic_name)|
+            publish_topic_hash.values.each do |topic_type|
                 reactor_api += "#{topic_type},"
             end
             reactor_api += ")>(\n"
@@ -636,19 +601,19 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
             
             # TODO: プラグインのオプションから、返り値の型を特定する
             reactor_api += "\t\t|| -> ("
-            publish_topic_hash.each do |topic_arg_name, (topic_type, topic_name)|
+            publish_topic_hash.values.each do |topic_type|
                 reactor_api += "#{topic_type},"
             end
             reactor_api += ") {\n"
 
             # TODO: 型に応じて適切な初期化をする必要がある
             # TODO: オリジナルの型に対応させるのは難しいかもしれない
-            publish_topic_hash.each do |topic_arg_name, (topic_type, topic_name)|
+            publish_topic_hash.each do |topic_arg_name, (topic_type)|
                 reactor_api += "\t\t\tlet mut #{topic_arg_name}: #{topic_type} = Default::default();\n"
             end
 
-            reactor_api += "\t\t\ttecs_celltype::#{snake_case(target_cell.get_celltype.get_global_name.to_s)}::#{target_cell.get_global_name.to_s.upcase}.#{snake_case(async_callport.get_name.to_s)}.main("
-            async_callport.get_signature.get_function_head_array.each do |func_head|
+            reactor_api += "\t\t\ttecs_celltype::#{snake_case(celltype.get_global_name.to_s)}::#{cell.get_global_name.to_s.upcase}.#{snake_case(c_dag_periodic_reactor.get_name.to_s)}.#{c_dag_periodic_reactor.get_signature.get_function_head_array.first.get_name}("
+            c_dag_periodic_reactor.get_signature.get_function_head_array.each do |func_head|
                 func_head.get_paramlist.get_items.each do |param|
                     case param.get_direction
                     when :OUT
@@ -661,19 +626,14 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
             reactor_api += ");\n"
 
             reactor_api += "\t\t\t("
-            publish_topic_hash.each do |topic_arg_name, (topic_type, topic_name)|
+            publish_topic_hash.keys.each do |topic_arg_name|
                 reactor_api += "#{topic_arg_name},"
             end
             reactor_api += ")\n"
 
             reactor_api += "\t\t},\n"
 
-            reactor_api += "\t\tvec!["
-            publish_topic_hash.each do |topic_arg_name, (topic_type, topic_name)|
-                reactor_api += "Cow::from(\"#{topic_name}\")"
-                reactor_api += "," unless topic_arg_name == publish_topic_hash.keys.last
-            end
-            reactor_api += "],\n"
+            reactor_api += "\t\tvec![Cow::from(\"#{cell.get_attr_initializer("publishTopicNames".to_sym).to_s}\")],\n"
 
             # TODO: sched_type 属性の初期値を明確にする必要がある。現在は、スケジューラ名 (FIFOなど)のみを想定している
             reactor_api += "\t\t#{cell.get_attr_initializer("schedType".to_sym).to_s},\n"
@@ -693,62 +653,20 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
 
         celltype.get_cell_list.each do |cell|
 
-            # tDagReactor のセルの cReactor に接続されているセルに対して探索を開始する
-            body_join = cell.get_join_list.get_item("cDagReactorbody".to_sym)
-            next unless body_join                    # 接続が無ければスキップ
-            start_cell = body_join.get_rhs_cell2     # 接続先セルを取得
+            # 生成されるリアクターセルタイプの呼び口を取得する
+            c_dag_reactor = celltype.get_port_list.find { |p| p.get_port_type == :CALL && p.get_name.to_s == "cDagReactor" }
 
-            # [async] 指定のある呼び口を幅優先的に探索
-            found = find_async_callport(start_cell)
-            # next unless found                        # 見つからなければスキップ
-            if found == nil then
-                puts "error: Can't find async callport in #{cell.get_global_name.to_s}"
-                exit 1
-            end
-            target_cell, async_callport = found
+            publish_topic_hash, subscribe_topic_hash = get_topic_list_from_callback_signature(c_dag_reactor.get_signature)
 
-            publish_topic_hash, subscribe_topic_hash = get_topic_list(async_callport)
-
-            publish_topic_name_list = cell.get_attr_initializer("publishTopicNames".to_sym).to_s.split(",").map(&:strip)
-            subscribe_topic_name_list = cell.get_attr_initializer("subscribeTopicNames".to_sym).to_s.split(",").map(&:strip)
-
-            # ── publish の処理
-            # 現在は、CDLのtDagReactorの属性で定義されたpublishTopicNamesと、シグニチャプラグインのオプションで定義された[out]引数を、前から順番に対応づける
-            # TODO: publish_topic_type_hash と publish_topic_name_list の整合性をシグニチャプラグインのオプションで確認する
-            if publish_topic_hash.size == publish_topic_name_list.size
-                # 要素数が一致していれば、インデックスで対応づけ
-                publish_topic_hash.keys.each_with_index do |arg_name, idx|
-                    topic_type, _old_name = publish_topic_hash[arg_name]
-                    # 同じインデックスの表示名をセット
-                    publish_topic_hash[arg_name] = [topic_type, publish_topic_name_list[idx]]
-                end
-            else
-                puts "error: Number of publish topic names in tDagReactor is not equal to the number of publish topic argements in signature #{async_callport.get_signature.get_global_name.to_s} connected"
-                exit 1
-            end
-
-            # ── subscribe の処理
-            # 現在は、CDLのtDagReactorの属性で定義されたsubscribeTopicNamesと、シグニチャプラグインのオプションで定義された[in]引数を、前から順番に対応づける
-            # TODO: subscribe_topic_type_hash と subscribe_topic_name_list の整合性をシグニチャプラグインのオプションで確認する
-            if subscribe_topic_hash.size == subscribe_topic_name_list.size
-                subscribe_topic_hash.keys.each_with_index do |arg_name, idx|
-                    topic_type, _old_name = subscribe_topic_hash[arg_name]
-                    subscribe_topic_hash[arg_name] = [topic_type, subscribe_topic_name_list[idx]]
-                end
-            else
-                puts "error: Number of subscribe topic names in tDagReactor is not equal to the number of subscribe topic argements in signature #{async_callport.get_signature.get_global_name.to_s} connected"
-                exit 1
-            end
-
-            reactor_api = "use tecs_signature::#{snake_case(async_callport.get_signature.get_global_name.to_s)}::*;\n\n"
+            reactor_api = "use tecs_signature::#{snake_case(c_dag_reactor.get_signature.get_global_name.to_s)}::*;\n\n"
 
             # TODO: プラグインのオプションから、返り値の型を特定する
             reactor_api += "\tdag.register_reactor::<_, ("
-            subscribe_topic_hash.each do |topic_arg_name, (topic_type, topic_name)|
+            subscribe_topic_hash.values.each do |topic_type|
                 reactor_api += "#{topic_type},"
             end
             reactor_api += "), ("
-            publish_topic_hash.each do |topic_arg_name, (topic_type, topic_name)|
+            publish_topic_hash.values.each do |topic_type|
                 reactor_api += "#{topic_type},"
             end
             reactor_api += ")>(\n"
@@ -759,30 +677,29 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
             # f 引数を生成する
             # TODO: プラグインのオプションから、返り値の型を特定する
             reactor_api += "\t\t|("
-            subscribe_topic_hash.each do |topic_arg_name, (topic_type, topic_name)|
+            subscribe_topic_hash.keys.each do |topic_arg_name|
                 reactor_api += "#{topic_arg_name},"
             end
             reactor_api += "): "
             reactor_api += "("
-            subscribe_topic_hash.each do |topic_arg_name, (topic_type, topic_name)|
+            subscribe_topic_hash.values.each do |topic_type|
                 reactor_api += "#{topic_type},"
             end
             reactor_api += ")"
             reactor_api += "| -> ("
-            publish_topic_hash.each do |topic_arg_name, (topic_type, topic_name)|
+            publish_topic_hash.values.each do |topic_type|
                 reactor_api += "#{topic_type},"
             end
             reactor_api += ") {\n"
 
-
             # TODO: 型に応じて適切な初期化をする必要がある
             # TODO: オリジナルの型に対応させるのは難しいかもしれない
-            publish_topic_hash.each do |topic_arg_name, (topic_type, topic_name)|
+            publish_topic_hash.each do |topic_arg_name, (topic_type)|
                 reactor_api += "\t\t\tlet mut #{topic_arg_name}: #{topic_type} = Default::default();\n"
             end
 
-            reactor_api += "\t\t\ttecs_celltype::#{snake_case(target_cell.get_celltype.get_global_name.to_s)}::#{target_cell.get_global_name.to_s.upcase}.#{snake_case(async_callport.get_name.to_s)}.main("
-            async_callport.get_signature.get_function_head_array.each do |func_head|
+            reactor_api += "\t\t\ttecs_celltype::#{snake_case(celltype.get_global_name.to_s)}::#{cell.get_global_name.to_s.upcase}.#{snake_case(c_dag_reactor.get_name.to_s)}.#{c_dag_reactor.get_signature.get_function_head_array.first.get_name}("
+            c_dag_reactor.get_signature.get_function_head_array.each do |func_head|
                 func_head.get_paramlist.get_items.each do |param|
                     case param.get_direction
                     when :IN
@@ -797,7 +714,7 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
             reactor_api += ");\n"
 
             reactor_api += "\t\t\t("
-            publish_topic_hash.each do |topic_arg_name, (topic_type, topic_name)|
+            publish_topic_hash.keys.each do |topic_arg_name|
                 reactor_api += "#{topic_arg_name},"
             end
             reactor_api += ")\n"
@@ -805,20 +722,10 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
             reactor_api += "\t\t},\n"
 
             # subscribeTopicNames 引数を生成する
-            reactor_api += "\t\tvec!["
-            subscribe_topic_hash.each do |topic_arg_name, (topic_type, topic_name)|
-                reactor_api += "Cow::from(\"#{topic_name}\")"
-                reactor_api += "," unless topic_arg_name == subscribe_topic_hash.keys.last
-            end
-            reactor_api += "],\n"
+            reactor_api += "\t\tvec![Cow::from(\"#{cell.get_attr_initializer("subscribeTopicNames".to_sym).to_s}\")],\n"
 
             # publishTopicNames 引数を生成する
-            reactor_api += "\t\tvec!["
-            publish_topic_hash.each do |topic_arg_name, (topic_type, topic_name)|
-                reactor_api += "Cow::from(\"#{topic_name}\")"
-                reactor_api += "," unless topic_arg_name == publish_topic_hash.keys.last
-            end
-            reactor_api += "],\n"
+            reactor_api += "\t\tvec![Cow::from(\"#{cell.get_attr_initializer("publishTopicNames".to_sym).to_s}\")],\n"
 
             # TODO: sched_type 属性の初期値を明確にする必要がある。現在は、スケジューラ名 (FIFOなど)のみを想定している
             reactor_api += "\t\t#{cell.get_attr_initializer("schedType".to_sym).to_s},\n"
@@ -836,47 +743,16 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
 
         celltype.get_cell_list.each do |cell|
 
-            # tDagSinkReactor のセルの cDagSinkReactor に接続されているセルに対して探索を開始する
-            body_join = cell.get_join_list.get_item("cDagSinkReactorbody".to_sym)
-            next unless body_join                    # 接続が無ければスキップ
-            start_cell = body_join.get_rhs_cell2     # 接続先セルを取得
+            # 生成されるリアクターセルタイプの呼び口を取得する
+            c_dag_sink_reactor = celltype.get_port_list.find { |p| p.get_port_type == :CALL && p.get_name.to_s == "cDagSinkReactor" }
 
-            # [async] 指定のある呼び口を幅優先的に探索
-            found = find_async_callport(start_cell)
-            # next unless found                        # 見つからなければスキップ
-            if found == nil then
-                puts "error: Can't find async callport in #{cell.get_global_name.to_s}"
-                exit 1
-            end
-            target_cell, async_callport = found
+            publish_topic_hash, subscribe_topic_hash = get_topic_list_from_callback_signature(c_dag_sink_reactor.get_signature)
 
-            publish_topic_hash, subscribe_topic_hash = get_topic_list(async_callport)
-
-            subscribe_topic_name_list = cell.get_attr_initializer("subscribeTopicNames".to_sym).to_s.split(",").map(&:strip)
-
-            if publish_topic_hash.size != 0 then
-                puts "error: tDagSinkReactor can't publish topic, #{cell.get_global_name.to_s} has publish topic"
-                exit 1
-            end
-
-            # ── subscribe の処理
-            # 現在は、CDLのtDagReactorの属性で定義されたsubscribeTopicNamesと、シグニチャプラグインのオプションで定義された[in]引数を、前から順番に対応づける
-            # TODO: subscribe_topic_type_hash と subscribe_topic_name_list の整合性をシグニチャプラグインのオプションで確認する
-            if subscribe_topic_hash.size == subscribe_topic_name_list.size
-                subscribe_topic_hash.keys.each_with_index do |arg_name, idx|
-                    topic_type, _old_name = subscribe_topic_hash[arg_name]
-                    subscribe_topic_hash[arg_name] = [topic_type, subscribe_topic_name_list[idx]]
-                end
-            else
-                puts "error: Number of subscribe topic names in tDagReactor is not equal to the number of subscribe topic argements in signature #{async_callport.get_signature.get_global_name.to_s} connected"
-                exit 1
-            end
-
-            reactor_api = "use tecs_signature::#{snake_case(async_callport.get_signature.get_global_name.to_s)}::*;\n\n"
+            reactor_api = "use tecs_signature::#{snake_case(c_dag_sink_reactor.get_signature.get_global_name.to_s)}::*;\n\n"
 
             # TODO: プラグインのオプションから、返り値の型を特定する
             reactor_api += "\tdag.register_sink_reactor::<_, ("
-            subscribe_topic_hash.each do |topic_arg_name, (topic_type, topic_name)|
+            subscribe_topic_hash.values.each do |topic_type|
                 reactor_api += "#{topic_type},"
             end
             reactor_api += ")>(\n"
@@ -887,18 +763,18 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
             # f 引数を生成する
             # TODO: プラグインのオプションから、返り値の型を特定する
             reactor_api += "\t\t|("
-            subscribe_topic_hash.each do |topic_arg_name, (topic_type, topic_name)|
+            subscribe_topic_hash.keys.each do |topic_arg_name|
                 reactor_api += "#{topic_arg_name},"
             end
             reactor_api += "): "
             reactor_api += "("
-            subscribe_topic_hash.each do |topic_arg_name, (topic_type, topic_name)|
+            subscribe_topic_hash.values.each do |topic_type|
                 reactor_api += "#{topic_type},"
             end
             reactor_api += ")| {\n"
 
-            reactor_api += "\t\t\ttecs_celltype::#{snake_case(target_cell.get_celltype.get_global_name.to_s)}::#{target_cell.get_global_name.to_s.upcase}.#{snake_case(async_callport.get_name.to_s)}.main("
-            async_callport.get_signature.get_function_head_array.each do |func_head|
+            reactor_api += "\t\t\ttecs_celltype::#{snake_case(celltype.get_global_name.to_s)}::#{cell.get_global_name.to_s.upcase}.#{snake_case(c_dag_sink_reactor.get_name.to_s)}.#{c_dag_sink_reactor.get_signature.get_function_head_array.first.get_name}("
+            c_dag_sink_reactor.get_signature.get_function_head_array.each do |func_head|
                 func_head.get_paramlist.get_items.each do |param|
                     case param.get_direction
                     when :IN
@@ -913,16 +789,11 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
             reactor_api += "\t\t},\n"
 
             # subscribeTopicNames 引数を生成する
-            reactor_api += "\t\tvec!["
-            subscribe_topic_hash.each do |topic_arg_name, (topic_type, topic_name)|
-                reactor_api += "Cow::from(\"#{topic_name}\")"
-                reactor_api += "," unless topic_arg_name == subscribe_topic_hash.keys.last
-            end
-            reactor_api += "],\n"
+            reactor_api += "\t\tvec![Cow::from(\"#{cell.get_attr_initializer("subscribeTopicNames".to_sym).to_s}\")],\n"
 
             # TODO: sched_type 属性の初期値を明確にする必要がある。現在は、スケジューラ名 (FIFOなど)のみを想定している
             reactor_api += "\t\t#{cell.get_attr_initializer("schedType".to_sym).to_s},\n"
-            reactor_api += "\t\t#{cell.get_attr_initializer("relative_deadline".to_sym).to_s},\n"
+            reactor_api += "\t\t#{cell.get_attr_initializer("relativeDeadline".to_sym).to_s},\n"
             reactor_api += "\t)\n"
             reactor_api += "\t.await;"
 
