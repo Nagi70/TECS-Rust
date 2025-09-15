@@ -74,19 +74,19 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
 
       if plugin_option.include?("DAG_REACTOR_BODY") then
         @@dag_reactor_body_celltype_list.push(@celltype)
-        puts "#{@celltype.get_global_name}: gen_dag_reactor_celltype start"
+        # puts "#{@celltype.get_global_name}: gen_dag_reactor_celltype start"
         gen_dag_reactor_celltype(@celltype)
-        puts "#{@celltype.get_global_name}: gen_dag_reactor_celltype end"
+        # puts "#{@celltype.get_global_name}: gen_dag_reactor_celltype end"
       elsif plugin_option.include?("DAG_SINK_REACTOR_BODY") then
         @@dag_sink_reactor_body_celltype_list.push(@celltype)
-        puts "#{@celltype.get_global_name}: gen_dag_sink_reactor_celltype start"
+        # puts "#{@celltype.get_global_name}: gen_dag_sink_reactor_celltype start"
         gen_dag_sink_reactor_celltype(@celltype)
-        puts "#{@celltype.get_global_name}: gen_dag_sink_reactor_celltype end"
+        # puts "#{@celltype.get_global_name}: gen_dag_sink_reactor_celltype end"
       elsif plugin_option.include?("DAG_PERIODIC_REACTOR_BODY") then
         @@dag_periodic_reactor_body_celltype_list.push(@celltype)
-        puts "#{@celltype.get_global_name}: gen_dag_periodic_reactor_celltype start"
+        # puts "#{@celltype.get_global_name}: gen_dag_periodic_reactor_celltype start"
         gen_dag_periodic_reactor_celltype(@celltype)
-        puts "#{@celltype.get_global_name}: gen_dag_periodic_reactor_celltype end"
+        # puts "#{@celltype.get_global_name}: gen_dag_periodic_reactor_celltype end"
     end
     end
   
@@ -105,8 +105,6 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
     def self.gen_post_code( file )
       # 複数のプラグインの post_code が一つのファイルに含まれるため、以下のような見出しをつけること
       file.print "/* '#{self.class.name}' post code */\n"
-
-      puts "gen_post_code start"
 
       @@dag_reactor_body_celltype_list.each do |celltype|
         puts "#{celltype.get_global_name}: DAG_REACTOR_BODY"
@@ -160,21 +158,24 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
 
         # Pub/Sub 用の口の定義とコールバックシグニチャの定義の整合性を確認する
         # 現在は、属性で定義されたトピック名の順序とコールバックシグニチャの引数の順序が同じであることを想定している
-        check_topic_type_diff(celltype, publish_topic_type_hash, publish_topic_arg)
-        check_topic_type_diff(celltype, subscribe_topic_type_hash, subscribe_topic_arg)
+        check_topic_type_diff(celltype, cb_sig, publish_topic_type_hash, publish_topic_arg)
+        check_topic_type_diff(celltype, cb_sig, subscribe_topic_type_hash, subscribe_topic_arg)
 
-        file.print "
-            [active, generate(RustAWKPlugin, \"DAG_REACTOR\")]\n
-            celltype #{celltype.get_global_name.to_s}DagReactor {\n
-            \tcall #{cb_sig.get_global_name.to_s} cDagReactor;\n
-            \tattr {\n
-            \t\t[omit] PLType(\"Cow\") name = PL_EXP(\"#{reactor_name.get_initializer.to_s}\");\n
-            \t\t[omit] PLType(\"SchedulerType\") schedType = PL_EXP(\"#{sched_type.get_initializer.to_s}\");\n
-            \t\t[omit] PLType(\"Cow\") publishTopicNames = PL_EXP(\"#{publish_topic_names.get_initializer.to_s}\");\n
-            \t\t[omit] PLType(\"Cow\") subscribeTopicNames = PL_EXP(\"#{subscribe_topic_names.get_initializer.to_s}\");\n
-            \t};\n
-            };\n\n
-        "
+        file.print <<~CDL
+          [active, generate(RustAWKPlugin, "DAG_REACTOR")]
+          celltype #{celltype.get_global_name}DagReactor {
+            call #{cb_sig.get_global_name} cDagReactor;
+            attr {
+              [omit] PLType("Cow") name = PL_EXP("#{reactor_name.get_initializer}");
+              [omit] PLType("SchedulerType") schedType = PL_EXP("#{sched_type.get_initializer}");
+              [omit] PLType("Cow") publishTopicNames = PL_EXP("#{publish_topic_names.get_initializer}");
+              [omit] PLType("Cow") subscribeTopicNames = PL_EXP("#{subscribe_topic_names.get_initializer}");
+            };
+          };
+
+        CDL
+
+        file.close
     end
 
     def self.gen_dag_reactor_post_code file, celltype
@@ -182,13 +183,16 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
         # パブリッシュ用呼び口が、正しいサブスクライバ受け口に結合されているかを確認する
         validate_publisher_topics_in_subscriber(celltype)
 
+        file.print "import(\"#{$gen}/#{celltype.get_global_name}_dag_reactor.cdl\");\n\n"
+
         # cell定義の生成
         celltype.get_cell_list.each do |cell|
-            file.print"
-                cell #{celltype.get_global_name.to_s}DagReactor #{cell.get_global_name.to_s}DagReactor {\n
-                \tcDagReactor = #{cell.get_global_name.to_s}.eReactor;\n
-                };\n\n
-            "
+            file.print <<~CDL
+              cell #{celltype.get_global_name}DagReactor #{cell.get_global_name}DagReactor {
+                cDagReactor = #{cell.get_global_name}.eReactor;
+              };
+
+            CDL
         end
     end
 
@@ -225,28 +229,38 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
             exit(1)
         end
 
-        file.print "
-            [active, generate(RustAWKPlugin, \"DAG_SINK_REACTOR\")]\n
-            celltype #{celltype.get_global_name.to_s}DagSinkReactor {\n
-            \tcall #{cb_sig.get_global_name.to_s} cDagSinkReactor;\n
-            \tattr {\n
-            \t\t[omit] PLType(\"Cow\") name = PL_EXP(\"#{reactor_name.get_initializer.to_s}\");\n
-            \t\t[omit] PLType(\"SchedulerType\") schedType = PL_EXP(\"#{sched_type.get_initializer.to_s}\");\n
-            \t\t[omit] PLType(\"Cow\") subscribeTopicNames = PL_EXP(\"#{subscribe_topic_names.get_initializer.to_s}\");\n
-            \t\t[omit] PLType(\"Cow\") relativeDeadline = PL_EXP(\"#{relative_deadline.get_initializer.to_s}\");\n
-            \t};\n
-            };\n\n
-        "
+        # Sub 用の口の定義とコールバックシグニチャの定義の整合性を確認する
+        # 現在は、属性で定義されたトピック名の順序とコールバックシグニチャの引数の順序が同じであることを想定している
+        check_topic_type_diff(celltype, cb_sig, subscribe_topic_type_hash, subscribe_topic_arg)
+
+        file.print <<~CDL
+        [active, generate(RustAWKPlugin, "DAG_SINK_REACTOR")]
+        celltype #{celltype.get_global_name}DagSinkReactor {
+          call #{cb_sig.get_global_name} cDagSinkReactor;
+          attr {
+            [omit] PLType("Cow") name = PL_EXP("#{reactor_name.get_initializer}");
+            [omit] PLType("SchedulerType") schedType = PL_EXP("#{sched_type.get_initializer}");
+            [omit] PLType("Cow") subscribeTopicNames = PL_EXP("#{subscribe_topic_names.get_initializer}");
+            [omit] PLType("Cow") relativeDeadline = PL_EXP("#{relative_deadline.get_initializer}");
+          };
+        };
+      
+      CDL
+
+      file.close
     end
 
     def self.gen_dag_sink_reactor_post_code file, celltype
 
+        file.print "import(\"#{$gen}/#{celltype.get_global_name}_dag_sink_reactor.cdl\");\n\n"
+
         celltype.get_cell_list.each do |cell|
-            file.print"
-                cell #{celltype.get_global_name.to_s}DagSinkReactor #{cell.get_global_name.to_s}DagSinkReactor {\n
-                \cDagSinkReactor = #{cell.get_global_name.to_s}.eReactor;\n
-                };\n\n
-            "
+            file.print <<~CDL
+              cell #{celltype.get_global_name}DagSinkReactor #{cell.get_global_name}DagSinkReactor {
+                cDagSinkReactor = #{cell.get_global_name}.eReactor;
+              };
+
+            CDL
         end
     end
 
@@ -283,22 +297,25 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
             exit(1)
         end
 
-        # Pub/Sub 用の口の定義とコールバックシグニチャの定義の整合性を確認する
+        # Pub 用の口の定義とコールバックシグニチャの定義の整合性を確認する
         # 現在は、属性で定義されたトピック名の順序とコールバックシグニチャの引数の順序が同じであることを想定している
-        check_topic_type_diff(celltype, publish_topic_type_hash, publish_topic_arg)
+        check_topic_type_diff(celltype, cb_sig, publish_topic_type_hash, publish_topic_arg)
 
-        file.print "
-            [active, generate(RustAWKPlugin, \"DAG_PERIODIC_REACTOR\")]\n
-            celltype #{celltype.get_global_name.to_s}DagPeriodicReactor {\n
-            \tcall #{cb_sig.get_global_name.to_s} cDagPeriodicReactor;\n
-            \tattr {\n
-            \t\t[omit] PLType(\"Cow\") name = PL_EXP(\"#{reactor_name.get_initializer.to_s}\");\n
-            \t\t[omit] PLType(\"SchedulerType\") schedType = PL_EXP(\"#{sched_type.get_initializer.to_s}\");\n
-            \t\t[omit] PLType(\"Cow\") publishTopicNames = PL_EXP(\"#{publish_topic_names.get_initializer.to_s}\");\n
-            \t\t[omit] PLType(\"Cow\") period = PL_EXP(\"#{period.get_initializer.to_s}\");\n
-            \t};\n
-            };\n\n
-        "
+        file.print <<~CDL
+          [active, generate(RustAWKPlugin, "DAG_PERIODIC_REACTOR")]
+          celltype #{celltype.get_global_name}DagPeriodicReactor {
+            call #{cb_sig.get_global_name} cDagPeriodicReactor;
+            attr {
+              [omit] PLType("Cow") name = PL_EXP("#{reactor_name.get_initializer}");
+              [omit] PLType("SchedulerType") schedType = PL_EXP("#{sched_type.get_initializer}");
+              [omit] PLType("Cow") publishTopicNames = PL_EXP("#{publish_topic_names.get_initializer}");
+              [omit] PLType("Cow") period = PL_EXP("#{period.get_initializer}");
+            };
+          };
+
+        CDL
+
+        file.close
     end
 
     def self.gen_dag_periodic_reactor_post_code file, celltype
@@ -306,12 +323,15 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
         # パブリッシュ用呼び口が、正しいサブスクライバ受け口に結合されているかを確認する
         validate_publisher_topics_in_subscriber(celltype)
 
+        file.print "import(\"#{$gen}/#{celltype.get_global_name}_dag_periodic_reactor.cdl\");\n\n"
+
         celltype.get_cell_list.each do |cell|
-            file.print"
-                cell #{celltype.get_global_name.to_s}DagPeriodicReactor #{cell.get_global_name.to_s}DagPeriodicReactor {\n
-                \cDagPeriodicReactor = #{cell.get_global_name.to_s}.eReactor;\n
-                };\n\n
-            "
+            file.print <<~CDL
+              cell #{celltype.get_global_name}DagPeriodicReactor #{cell.get_global_name}DagPeriodicReactor {
+                cDagPeriodicReactor = #{cell.get_global_name}.eReactor;
+              };
+
+            CDL
         end
     end
 
@@ -381,18 +401,18 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
         end
     end
 
-    def check_topic_type_diff celltype, attr_topic_hash, arg_topic_hash
+    def check_topic_type_diff celltype, callback_signature, attr_topic_hash, arg_topic_hash
         v1 = attr_topic_hash.values
         v2 = arg_topic_hash.values
 
         if v1.length != v2.length
-            puts "error: length of topicTypeNames in #{celltype.get_global_name.to_s} and length of argments in #{cb_sig.get_global_name.to_s} mismatch"
+            puts "error: length of topicTypeNames in #{celltype.get_global_name.to_s} and length of argments in #{callback_signature.get_global_name.to_s} mismatch"
             exit 1
         end
 
         (0...v1.length).each do |i|
             unless v1[i] == v2[i]
-                puts "error: topicTypeNames in #{celltype.get_global_name.to_s} and argments in #{cb_sig.get_global_name.to_s} mismatch"
+                puts "error: The type of the #{i + 1}-th topic in #{celltype.get_global_name.to_s}'s topicTypeNames does not match the type of the #{i + 1}-th argument in #{callback_signature.get_global_name.to_s}. Please define the topics in topicTypeNames and the arguments in #{callback_signature.get_global_name.to_s} in the same order."
                 exit 1
             end
         end
@@ -470,9 +490,9 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
             func_head.get_paramlist.get_items.each do |param|
                 case param.get_direction
                 when :IN
-                    subscribe_topic_hash[param.get_name.to_s] = [ c_type_to_rust_type(param.get_type), nil]
+                    subscribe_topic_hash[param.get_name.to_s] = c_type_to_rust_type(param.get_type)
                 when :OUT
-                    publish_topic_hash[param.get_name.to_s] = [ c_type_to_rust_type(param.get_type), nil]
+                    publish_topic_hash[param.get_name.to_s] = c_type_to_rust_type(param.get_type)
                 end
             end
         end
