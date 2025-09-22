@@ -54,10 +54,13 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
     @@use_reactor_gen = false
     @@use_sink_reactor_gen = false
     @@reactor_api_list = []
-    @@non_default_impl_type_list = ["Time"] # defaultの実装がない型のリスト(awkernelのTime型など)
+    @@non_default_impl_type_list = ["awkernel_lib::time::Time"] # defaultの実装がない型のリスト(awkernelのTime型など)
     @@dag_reactor_body_celltype_list = []
     @@dag_sink_reactor_body_celltype_list = []
     @@dag_periodic_reactor_body_celltype_list = []
+    @@reactor_body_celltype_list = []
+    @@sink_reactor_body_celltype_list = []
+    @@periodic_reactor_body_celltype_list = []
 
     #celltype::     Celltype        セルタイプ（インスタンス）
     def initialize( celltype, option )
@@ -74,20 +77,23 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
 
       if plugin_option.include?("DAG_REACTOR_BODY") then
         @@dag_reactor_body_celltype_list.push(@celltype)
-        # puts "#{@celltype.get_global_name}: gen_dag_reactor_celltype start"
         gen_dag_reactor_celltype(@celltype)
-        # puts "#{@celltype.get_global_name}: gen_dag_reactor_celltype end"
+      elsif plugin_option.include?("REACTOR_BODY") then
+        @@reactor_body_celltype_list.push(@celltype)
+        gen_dag_reactor_celltype(@celltype, false)
       elsif plugin_option.include?("DAG_SINK_REACTOR_BODY") then
         @@dag_sink_reactor_body_celltype_list.push(@celltype)
-        # puts "#{@celltype.get_global_name}: gen_dag_sink_reactor_celltype start"
         gen_dag_sink_reactor_celltype(@celltype)
-        # puts "#{@celltype.get_global_name}: gen_dag_sink_reactor_celltype end"
+      elsif plugin_option.include?("SINK_REACTOR_BODY") then
+        @@sink_reactor_body_celltype_list.push(@celltype)
+        gen_dag_sink_reactor_celltype(@celltype, false)
       elsif plugin_option.include?("DAG_PERIODIC_REACTOR_BODY") then
         @@dag_periodic_reactor_body_celltype_list.push(@celltype)
-        # puts "#{@celltype.get_global_name}: gen_dag_periodic_reactor_celltype start"
         gen_dag_periodic_reactor_celltype(@celltype)
-        # puts "#{@celltype.get_global_name}: gen_dag_periodic_reactor_celltype end"
-    end
+      elsif plugin_option.include?("PERIODIC_REACTOR_BODY") then
+        @@periodic_reactor_body_celltype_list.push(@celltype)
+        gen_periodic_reactor_body_celltype(@celltype, false)
+      end
     end
   
     #=== 新しいセル
@@ -107,34 +113,43 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
       file.print "/* '#{self.class.name}' post code */\n"
 
       @@dag_reactor_body_celltype_list.each do |celltype|
-        puts "#{celltype.get_global_name}: DAG_REACTOR_BODY"
-        celltype.get_cell_list.each do |cell|
-            puts "#{celltype.get_global_name}: #{cell.get_global_name}"
-        end
         gen_dag_reactor_post_code(file, celltype)
       end
 
+      @@reactor_body_celltype_list.each do |celltype|
+        gen_dag_reactor_post_code(file, celltype, false)
+      end
+
       @@dag_sink_reactor_body_celltype_list.each do |celltype|
-        puts "#{celltype.get_global_name}: DAG_SINK_REACTOR_BODY"
-        celltype.get_cell_list.each do |cell|
-            puts "#{celltype.get_global_name}: #{cell.get_global_name}"
-        end
         gen_dag_sink_reactor_post_code(file, celltype)
       end
 
+      @@sink_reactor_body_celltype_list.each do |celltype|
+        gen_dag_sink_reactor_post_code(file, celltype, false)
+      end
+
       @@dag_periodic_reactor_body_celltype_list.each do |celltype|
-        puts "#{celltype.get_global_name}: DAG_PERIODIC_REACTOR_BODY"
-        celltype.get_cell_list.each do |cell|
-            puts "#{celltype.get_global_name}: #{cell.get_global_name}"
-        end
         gen_dag_periodic_reactor_post_code(file, celltype)
+      end
+
+      @@periodic_reactor_body_celltype_list.each do |celltype|
+        gen_dag_periodic_reactor_post_code(file, celltype, false)
       end
 
     end
 
-    def gen_dag_reactor_celltype celltype
+    def gen_dag_reactor_celltype celltype, in_dag=true
 
-        file = CFile.open( "#{$gen}/#{celltype.get_global_name}_dag_reactor.cdl", "w" )
+        option = "DAG_REACTOR"
+        file_suffix = "dag_reactor"
+        suffix = "DagReactor"
+        if !in_dag then
+            option = "REACTOR"
+            file_suffix = "reactor"
+            suffix = "Reactor"
+        end
+
+        file = CFile.open( "#{$gen}/#{celltype.get_global_name}_#{file_suffix}.cdl", "w" )
 
         e_reactor = get_awkernel_callback_entryport_for_celltype(celltype)
 
@@ -162,9 +177,9 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
         check_topic_type_diff(celltype, cb_sig, subscribe_topic_type_hash, subscribe_topic_arg)
 
         file.print <<~CDL
-          [active, generate(RustAWKPlugin, "DAG_REACTOR")]
-          celltype #{celltype.get_global_name}DagReactor {
-            [async] call #{cb_sig.get_global_name} cDagReactor;
+          [active, generate(RustAWKPlugin, "#{option}")]
+          celltype #{celltype.get_global_name}#{suffix} {
+            [async] call #{cb_sig.get_global_name} c#{suffix};
             attr {
               [omit] PLType("Cow") name = PL_EXP("#{reactor_name.get_initializer}");
               [omit] PLType("SchedulerType") schedType = PL_EXP("#{sched_type.get_initializer}");
@@ -178,27 +193,43 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
         file.close
     end
 
-    def self.gen_dag_reactor_post_code file, celltype
+    def self.gen_dag_reactor_post_code file, celltype, in_dag=true
         
         # パブリッシュ用呼び口が、正しいサブスクライバ受け口に結合されているかを確認する
         validate_publisher_topics_in_subscriber(celltype)
 
-        file.print "import(\"#{$gen}/#{celltype.get_global_name}_dag_reactor.cdl\");\n\n"
+        file_suffix = "dag_reactor"
+        suffix = "DagReactor"
+        if !in_dag then
+            file_suffix = "reactor"
+            suffix = "Reactor"
+        end
+
+        file.print "import(\"#{$gen}/#{celltype.get_global_name}_#{file_suffix}.cdl\");\n\n"
 
         # cell定義の生成
         celltype.get_cell_list.each do |cell|
             file.print <<~CDL
-              cell #{celltype.get_global_name}DagReactor #{cell.get_global_name}DagReactor {
-                cDagReactor = #{cell.get_global_name}.eReactor;
+              cell #{celltype.get_global_name}#{suffix} #{cell.get_global_name}#{suffix} {
+                c#{suffix} = #{cell.get_global_name}.eReactor;
               };
 
             CDL
         end
     end
 
-    def gen_dag_sink_reactor_celltype celltype
+    def gen_dag_sink_reactor_celltype celltype, in_dag=true
 
-        file = CFile.open( "#{$gen}/#{celltype.get_global_name}_dag_sink_reactor.cdl", "w" )
+        option = "DAG_SINK_REACTOR"
+        file_suffix = "dag_sink_reactor"
+        suffix = "DagSinkReactor"
+        if !in_dag then
+            option = "SINK_REACTOR"
+            file_suffix = "sink_reactor"
+            suffix = "SinkReactor"
+        end
+
+        file = CFile.open( "#{$gen}/#{celltype.get_global_name}_#{file_suffix}.cdl", "w" )
 
         e_reactor = get_awkernel_callback_entryport_for_celltype(celltype)
 
@@ -234,9 +265,9 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
         check_topic_type_diff(celltype, cb_sig, subscribe_topic_type_hash, subscribe_topic_arg)
 
         file.print <<~CDL
-        [active, generate(RustAWKPlugin, "DAG_SINK_REACTOR")]
-        celltype #{celltype.get_global_name}DagSinkReactor {
-          [async] call #{cb_sig.get_global_name} cDagSinkReactor;
+        [active, generate(RustAWKPlugin, "#{option}")]
+        celltype #{celltype.get_global_name}#{suffix} {
+          [async] call #{cb_sig.get_global_name} c#{suffix};
           attr {
             [omit] PLType("Cow") name = PL_EXP("#{reactor_name.get_initializer}");
             [omit] PLType("SchedulerType") schedType = PL_EXP("#{sched_type.get_initializer}");
@@ -250,23 +281,39 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
       file.close
     end
 
-    def self.gen_dag_sink_reactor_post_code file, celltype
+    def self.gen_dag_sink_reactor_post_code file, celltype, in_dag=true
 
-        file.print "import(\"#{$gen}/#{celltype.get_global_name}_dag_sink_reactor.cdl\");\n\n"
+        file_suffix = "dag_sink_reactor"
+        suffix = "DagSinkReactor"
+        if !in_dag then
+            file_suffix = "sink_reactor"
+            suffix = "SinkReactor"
+        end
+
+        file.print "import(\"#{$gen}/#{celltype.get_global_name}_#{file_suffix}.cdl\");\n\n"
 
         celltype.get_cell_list.each do |cell|
             file.print <<~CDL
-              cell #{celltype.get_global_name}DagSinkReactor #{cell.get_global_name}DagSinkReactor {
-                cDagSinkReactor = #{cell.get_global_name}.eReactor;
+              cell #{celltype.get_global_name}#{suffix} #{cell.get_global_name}#{suffix} {
+                c#{suffix} = #{cell.get_global_name}.eReactor;
               };
 
             CDL
         end
     end
 
-    def gen_dag_periodic_reactor_celltype celltype
+    def gen_dag_periodic_reactor_celltype celltype, in_dag=true
+        
+        option = "DAG_PERIODIC_REACTOR"
+        file_suffix = "dag_periodic_reactor"
+        suffix = "DagPeriodicReactor"
+        if !in_dag then
+            option = "PERIODIC_REACTOR"
+            file_suffix = "periodic_reactor"
+            suffix = "PeriodicReactor"
+        end
 
-        file = CFile.open( "#{$gen}/#{celltype.get_global_name}_dag_periodic_reactor.cdl", "w" )
+        file = CFile.open( "#{$gen}/#{celltype.get_global_name}_#{file_suffix}.cdl", "w" )
 
         e_reactor = get_awkernel_callback_entryport_for_celltype(celltype)
 
@@ -302,9 +349,9 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
         check_topic_type_diff(celltype, cb_sig, publish_topic_type_hash, publish_topic_arg)
 
         file.print <<~CDL
-          [active, generate(RustAWKPlugin, "DAG_PERIODIC_REACTOR")]
-          celltype #{celltype.get_global_name}DagPeriodicReactor {
-            [async] call #{cb_sig.get_global_name} cDagPeriodicReactor;
+          [active, generate(RustAWKPlugin, "#{option}")]
+          celltype #{celltype.get_global_name}#{suffix} {
+            [async] call #{cb_sig.get_global_name} c#{suffix};
             attr {
               [omit] PLType("Cow") name = PL_EXP("#{reactor_name.get_initializer}");
               [omit] PLType("SchedulerType") schedType = PL_EXP("#{sched_type.get_initializer}");
@@ -318,17 +365,24 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
         file.close
     end
 
-    def self.gen_dag_periodic_reactor_post_code file, celltype
+    def self.gen_dag_periodic_reactor_post_code file, celltype, in_dag=true
 
         # パブリッシュ用呼び口が、正しいサブスクライバ受け口に結合されているかを確認する
         validate_publisher_topics_in_subscriber(celltype)
 
-        file.print "import(\"#{$gen}/#{celltype.get_global_name}_dag_periodic_reactor.cdl\");\n\n"
+        file_suffix = "dag_periodic_reactor"
+        suffix = "DagPeriodicReactor"
+        if !in_dag then
+            file_suffix = "periodic_reactor"
+            suffix = "PeriodicReactor"
+        end
+
+        file.print "import(\"#{$gen}/#{celltype.get_global_name}_#{file_suffix}.cdl\");\n\n"
 
         celltype.get_cell_list.each do |cell|
             file.print <<~CDL
-              cell #{celltype.get_global_name}DagPeriodicReactor #{cell.get_global_name}DagPeriodicReactor {
-                cDagPeriodicReactor = #{cell.get_global_name}.eReactor;
+              cell #{celltype.get_global_name}#{suffix} #{cell.get_global_name}#{suffix} {
+                c#{suffix} = #{cell.get_global_name}.eReactor;
               };
 
             CDL
@@ -530,10 +584,16 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
         case get_reactor_type
         when "DagReactor"
             add_dag_reactor_api file, celltype
+        when "Reactor"
+            add_dag_reactor_api file, celltype, false
         when "DagSinkReactor"
             add_dag_sink_reactor_api file, celltype
+        when "SinkReactor"
+            add_dag_sink_reactor_api file, celltype, false
         when "DagPeriodicReactor"
             add_dag_periodic_reactor_api file, celltype
+        when "PeriodicReactor"
+            add_dag_periodic_reactor_api file, celltype, false
         end
 
         return if @@use_periodic_reactor_gen == false && 
@@ -551,19 +611,19 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
         file.print "use tecs_struct_def::*;\n\n"
 
         if @@use_periodic_reactor_gen then
-            file.print "use tecs_celltype::t_dag_periodic_reactor::*;\n"
+            # file.print "use tecs_celltype::t_dag_periodic_reactor::*;\n"
             # file.print "use tecs_signature::s_periodic_reactorbody::*;\n\n"
         end
         if @@use_reactor_gen then
-            file.print "use tecs_celltype::t_dag_reactor::*;\n"
+            # file.print "use tecs_celltype::t_dag_reactor::*;\n"
             # file.print "use tecs_signature::s_reactorbody::*;\n\n"
         end
         if @@use_sink_reactor_gen then
-            file.print "use tecs_celltype::t_dag_sink_reactor::*;\n"
+            # file.print "use tecs_celltype::t_dag_sink_reactor::*;\n"
             # file.print "use tecs_signature::s_sink_reactorbody::*;\n\n"
         end
 
-        file.print "use tecs_signature::s_reactorbody::*;\n\n"
+        # file.print "use tecs_signature::s_reactorbody::*;\n\n"
 
         file.print "pub async fn run() {\n\n"
         file.print "\twait_microsec(1000000);\n\n"
@@ -578,20 +638,27 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
         file.print "}\n"
     end
 
-    def add_dag_periodic_reactor_api file, celltype
+    def add_dag_periodic_reactor_api file, celltype, in_dag=true
         @@use_periodic_reactor_gen = true
+
+        suffix = "DagPeriodicReactor"
+        api = "dag.register_periodic_reactor"
+        if !in_dag then
+            suffix = "PeriodicReactor"
+            api = "spawn_periodic_reactor"
+        end
 
         celltype.get_cell_list.each do |cell|
 
             # 生成されるリアクターセルタイプの呼び口を取得する
-            c_dag_periodic_reactor = celltype.get_port_list.find { |p| p.get_port_type == :CALL && p.get_name.to_s == "cDagPeriodicReactor" }
+            c_dag_periodic_reactor = celltype.get_port_list.find { |p| p.get_port_type == :CALL && p.get_name.to_s == "c#{suffix}" }
 
             publish_topic_hash, subscribe_topic_hash = get_topic_list_from_callback_signature(c_dag_periodic_reactor.get_signature)
             
-            reactor_api = "use tecs_signature::#{snake_case(c_dag_periodic_reactor.get_signature.get_global_name.to_s)}::*;\n\n"
+            reactor_api = "\tuse tecs_signature::#{snake_case(c_dag_periodic_reactor.get_signature.get_global_name.to_s)}::*;\n\n"
 
             # TODO: プラグインのオプションから、返り値の型を特定する
-            reactor_api += "\tdag.register_periodic_reactor::<_, ("
+            reactor_api += "\t#{api}::<_, ("
             publish_topic_hash.values.each do |topic_type|
                 reactor_api += "#{topic_type},"
             end
@@ -648,20 +715,27 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
         @@reactor_api_list.uniq!
     end
 
-    def add_dag_reactor_api file, celltype
+    def add_dag_reactor_api file, celltype, in_dag=true
         @@use_reactor_gen = true
+
+        suffix = "DagReactor"
+        api = "dag.register_reactor"
+        if !in_dag then
+            suffix = "Reactor"
+            api = "spawn_reactor"
+        end
 
         celltype.get_cell_list.each do |cell|
 
             # 生成されるリアクターセルタイプの呼び口を取得する
-            c_dag_reactor = celltype.get_port_list.find { |p| p.get_port_type == :CALL && p.get_name.to_s == "cDagReactor" }
+            c_dag_reactor = celltype.get_port_list.find { |p| p.get_port_type == :CALL && p.get_name.to_s == "c#{suffix}" }
 
             publish_topic_hash, subscribe_topic_hash = get_topic_list_from_callback_signature(c_dag_reactor.get_signature)
 
-            reactor_api = "use tecs_signature::#{snake_case(c_dag_reactor.get_signature.get_global_name.to_s)}::*;\n\n"
+            reactor_api = "\tuse tecs_signature::#{snake_case(c_dag_reactor.get_signature.get_global_name.to_s)}::*;\n\n"
 
             # TODO: プラグインのオプションから、返り値の型を特定する
-            reactor_api += "\tdag.register_reactor::<_, ("
+            reactor_api += "\t#{api}::<_, ("
             subscribe_topic_hash.values.each do |topic_type|
                 reactor_api += "#{topic_type},"
             end
@@ -738,20 +812,27 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
         @@reactor_api_list.uniq!
     end
 
-    def add_dag_sink_reactor_api file, celltype
+    def add_dag_sink_reactor_api file, celltype, in_dag=true
         @@use_sink_reactor_gen = true
+
+        suffix = "DagSinkReactor"
+        api = "dag.register_sink_reactor"
+        if !in_dag then
+            suffix = "SinkReactor"
+            api = "spawn_sink_reactor"
+        end
 
         celltype.get_cell_list.each do |cell|
 
             # 生成されるリアクターセルタイプの呼び口を取得する
-            c_dag_sink_reactor = celltype.get_port_list.find { |p| p.get_port_type == :CALL && p.get_name.to_s == "cDagSinkReactor" }
+            c_dag_sink_reactor = celltype.get_port_list.find { |p| p.get_port_type == :CALL && p.get_name.to_s == "c#{suffix}" }
 
             publish_topic_hash, subscribe_topic_hash = get_topic_list_from_callback_signature(c_dag_sink_reactor.get_signature)
 
-            reactor_api = "use tecs_signature::#{snake_case(c_dag_sink_reactor.get_signature.get_global_name.to_s)}::*;\n\n"
+            reactor_api = "\tuse tecs_signature::#{snake_case(c_dag_sink_reactor.get_signature.get_global_name.to_s)}::*;\n\n"
 
             # TODO: プラグインのオプションから、返り値の型を特定する
-            reactor_api += "\tdag.register_sink_reactor::<_, ("
+            reactor_api += "\t#{api}::<_, ("
             subscribe_topic_hash.values.each do |topic_type|
                 reactor_api += "#{topic_type},"
             end
@@ -1039,8 +1120,8 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
             if @@non_default_impl_type_list.include?(c_type_to_rust_type(m.get_type)) then
                 # defaultの実装がない型の場合は、特別な値を生成する
                 case c_type_to_rust_type(m.get_type)
-                    when "Time"
-                        file.print("\t\t\t#{m.get_name}: Time::zero(),\n")
+                    when "awkernel_lib::time::Time"
+                        file.print("\t\t\t#{m.get_name}: awkernel_lib::time::Time::zero(),\n")
                     else
                         file.print("\t\t\t#{m.get_name}: Default::default(),\n")
                 end
