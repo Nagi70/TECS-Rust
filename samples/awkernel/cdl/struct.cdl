@@ -1,0 +1,49 @@
+struct Header {
+    PLType("awkernel_lib::time::Time") time_stamp;
+    [string(256)] char* frame_id;
+};
+
+struct Frame {
+    struct Header header;
+    uint32_t id;
+    bool_t is_rtr;
+    bool_t is_extended;
+    bool_t is_error;
+    uint8_t dlc;
+    uint8_t data[8];
+};
+
+struct ImuMsg {
+    struct Header header;
+
+    PLType("nalgebra::Quaternion<f64>")    orientation;                    /* geometry_msgs/Quaternion        */
+    PLType("nalgebra::Matrix3<f64>")       orientation_covariance;
+
+    PLType("nalgebra::Vector3<f64>")       angular_velocity;               /* geometry_msgs/Vector3           */
+    PLType("nalgebra::Matrix3<f64>")       angular_velocity_covariance;
+
+    PLType("nalgebra::Vector3<f64>")       linear_acceleration;            /* geometry_msgs/Vector3           */
+    PLType("nalgebra::Matrix3<f64>")       linear_acceleration_covariance;
+};
+
+struct Twist {
+    PLType("nalgebra::Vector3<f64>") linear;
+    PLType("nalgebra::Vector3<f64>") angular;
+};
+
+struct TwistWithCovariance {
+    struct Twist twist;           /* Twist 本体                           */
+    PLType("nalgebra::Matrix6<f64>")       covariance;  /* 6x6 行列を 1 次元に展開               */
+};
+
+struct TwistWithCovarianceStamped {
+    struct Header header;
+    struct TwistWithCovariance      twist;      /* Twist + Covariance         */
+};
+
+struct VelocityReport {
+    struct Header header;
+    float32_t longitudinal_velocity;
+    float32_t lateral_velocity;
+    float32_t heading_rate;
+};

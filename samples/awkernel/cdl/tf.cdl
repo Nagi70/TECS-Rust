@@ -1,0 +1,12 @@
+signature sTf {
+	PLType("nalgebra::Matrix3<f64>") transformCovariance([in] PLType("nalgebra::Matrix3<f64>") cov);
+	void transformVector3([out] PLType("nalgebra::Vector3<f64>")* vec);
+};
+
+celltype tTf {
+    entry sTf eTf;
+    attr {
+        // tf の値 (imu->base)
+        PLType("nalgebra::Quaternion<f64>") transform = PL_EXP("nalgebra::Quaternion::default()");
+    };
+};

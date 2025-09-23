@@ -1,0 +1,57 @@
+import("struct.cdl");
+import("publish_signature.cdl");
+
+//*** IMUデバイスに関するシグニチャ ***///
+signature sImuDevice {
+    void      read( [in] struct Frame msg, [out] struct ImuMsg *imu_msg);
+};
+
+//*** コールバック用シグニチャ ***//
+signature sImuDriverbody {
+    void    main( [in] struct Frame imu, [out] struct ImuMsg *imu_raw );
+};
+
+//*** IMUセルタイプ ***//
+[generate( RustAWKPlugin, "")]
+celltype tTamagawaImuDevice {
+    /* エントリポート */
+    entry sImuDevice eImuDevice;
+
+    /* 変更されないパラメータ */
+    attr {
+        uint32_t  can_id_gyro;   /* CAN GYRO メッセージ ID (0x319) */
+        uint32_t  can_id_accel;  /* CAN ACCEL メッセージ ID (0x31A) */
+        PLType("&'static str")  imu_frame_id = PL_EXP("\"imu\"");  /* IMU frame id "imu" */
+    };
+
+    /* 実行中に変化するデータ */
+    var {
+        uint16_t counter = 0;
+        int16_t  angular_velocity_x_raw = 0;
+        int16_t  angular_velocity_y_raw = 0;
+        int16_t  angular_velocity_z_raw = 0;
+        int16_t  acceleration_x_raw = 0;
+        int16_t  acceleration_y_raw = 0;
+        int16_t  acceleration_z_raw = 0;
+    };
+};
+
+//*** IMUノードルーチンセルタイプ ***//
+[generate( RustAWKPlugin, "REACTOR_BODY")]
+celltype tImuDriverbody {
+    entry sImuDriverbody eReactor;
+
+    [omit] call sImuRaw cImuRaw;
+    entry sImu eImu;
+
+    /* 呼び口ポート */
+    call sImuDevice   cDev;   /* IMU デバイス制御 */
+
+    attr{
+	    [omit] PLType("Cow") reactorName  = PL_EXP("ImuDriver");
+	    [omit] PLType("SchedulerType") schedType = PL_EXP("SchedulerType::FIFO");
+	      
+        [omit] PLType("Cow") subscribeTopicNames = PL_EXP("Imu");
+        [omit] PLType("Cow") publishTopicNames = PL_EXP("ImuRaw");
+    };
+};

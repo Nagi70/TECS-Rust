@@ -1,0 +1,36 @@
+import("struct.cdl");
+import("publish_signature.cdl");
+
+signature sGyroOdometer {
+    void main(
+        [in] struct TwistWithCovariance vehicle_twist,
+        [in] struct ImuMsg imu,
+        [out] struct TwistWithCovarianceStamped* twist_with_covariance
+    );
+};
+
+// メインルーチンのセルタイプ定義
+[generate(RustAWKPlugin, "DAG_REACTOR_BODY")]  // プラグインの適用
+celltype tGyroOdometerBody {
+
+    [omit] sTwistWithCovariance call cTwistWithCovarianceG;
+
+    entry sTwistWithCovariance eTwistWithCovarianceV;
+    entry sImuData eImuData;
+
+    entry sGyroOdometer eReactor;
+
+    // TF用呼び口
+    call sTf cTf;
+
+    // 属性定義 (パラメータ)
+    attr {
+        PLType("&'static str") output_frame  = PL_EXP("\"base_link\"");
+
+        // プラグインに指定するオプションがDAG_REACTOR_BODYの場合は、reactorName、schedType、subscribeTopicNames、publishTopicNamesの属性が必須
+        [omit] PLType("Cow") reactorName  = PL_EXP("GyroOdometer");
+        [omit] PLType("SchedulerType") schedType = PL_EXP("SchedulerType::FIFO");
+        [omit] PLType("Cow") subscribeTopicNames = PL_EXP("TwistWithCovarianceV, ImuData");
+        [omit] PLType("Cow") publishTopicNames = PL_EXP("TwistWithCovarianceG");
+    };
+};

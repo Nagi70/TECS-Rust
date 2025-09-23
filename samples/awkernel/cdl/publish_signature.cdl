@@ -1,0 +1,21 @@
+import("struct.cdl");
+
+signature sImu {
+	void send([in] struct ImuMsg imu);
+};
+
+signature sImuRaw {
+	void send([in] struct ImuMsg imu_raw);
+};
+
+signature sImuData {
+	void send([in] struct ImuMsg imu_data);
+};
+
+signature sVelocityStatus {
+    void send([in] struct VelocityReport velocity_status);
+};
+
+signature sTwistWithCovariance {
+    void send([in] struct TwistWithCovarianceS twist_with_covariance);
+};

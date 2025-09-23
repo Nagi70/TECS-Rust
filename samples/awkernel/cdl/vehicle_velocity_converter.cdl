@@ -1,0 +1,29 @@
+import("struct.cdl");
+import("publish_signature.cdl");
+
+signature sVehicleVelocityConverter {
+    void main([in] struct VelocityReport velocity_status, [out] struct TwistWithCovariance* twist_with_covariance);
+};
+
+[generate(RustAWKPlugin, "REACTOR_BODY")]  // プラグインの適用
+celltype tVehicleVelocityConverterBody {
+
+    [omit] sTwistWithCovariance call cTwistWithCovarianceV;
+    entry sVelocityStatus eVelocityStatus;
+
+    entry sVehicleVelocityConverter eReactor;
+
+    // 属性定義 (パラメータ)
+    attr {
+        PLType("&'static str") output_frame  = PL_EXP("\"base_link\"");
+        double64_t velocity_stddev_xx = 0.0;
+        double64_t angular_velocity_stddev_zz = 0.0;
+        double64_t speed_scale_factor = 1.0;
+
+        // プラグインに指定するオプションがDAG_REACTOR_BODYの場合は、reactorName、schedType、subscribeTopicNames、publishTopicNamesの属性が必須
+        [omit] PLType("Cow") reactorName  = PL_EXP("VehicleVelocityConverter");
+        [omit] PLType("SchedulerType") schedType = PL_EXP("SchedulerType::FIFO");
+        [omit] PLType("Cow") subscribeTopicNames = PL_EXP("VelocityStatus");
+        [omit] PLType("Cow") publishTopicNames = PL_EXP("TwistWithCovarianceV");
+    };
+};

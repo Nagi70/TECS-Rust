@@ -1,0 +1,65 @@
+import("struct.cdl");
+import("publish_signature.cdl");
+
+signature sEkfLocalizer {
+    // EKFの更新処理。入力(サブスクライブ)と出力(パブリッシュ)を引数で定義
+    void main( [in] struct TwistWithCovariance twist );
+};
+
+signature sTwistWithCovarianceSet {
+    void push( [in] struct TwistWithCovarianceStamped twist );
+};
+
+signature sTwistWithCovarianceGet {
+    struct TwistWithCovarianceStamped pop( void );
+    struct TwistWithCovarianceStamped popIncrementAge( void );
+};
+
+[generate(RustAWKPlugin, "SINK_REACTOR_BODY")]
+celltype tEkfLocalizerBody {
+
+    call sTwistWithCovarianceSet cTwistWithCovarianceQueue;
+
+    // サブスクライブ用受け口
+    entry sTwistWithCovariance  eTwistWithCovarianceG;
+
+    // リアクター本体の受け口 (awkernelのルール)
+    entry sEkfLocalizer eReactor;
+
+    // ----- 属性定義 (不変パラメータ) -----
+    attr {
+        // --- awkernel リアクター用属性 ---
+        [omit] PLType("Cow") reactorName = PL_EXP("EkfLocalizer");
+        [omit] PLType("SchedulerType") schedType = PL_EXP("SchedulerType::FIFO");
+        [omit] PLType("Cow") subscribeTopicNames = PL_EXP("TwistWithCovarianceG");
+        [omit] RType("Duration") relativeDeadline = PL_EXP("Duration::from_secs(1)");
+    };
+};
+
+[generate(RustAWKPlugin, "")]
+celltype tTwistWithCovarianceAgedObjectQueue {
+    entry sTwistWithCovarianceSet eSet;
+    entry sTwistWithCovarianceGet eGet;
+
+    attr {
+        // キュー内のオブジェクトが生存できる最大のage
+        int32_t max_age = 10; // デフォルト値
+        // 配列のサイズを属性として定義しておくと便利
+        int32_t capacity = 10;
+    };
+
+    var {
+        // オブジェクトを保持する固定長配列
+        [size_is(capacity)]
+        struct TwistWithCovarianceStamped* objects = PL_EXP("Default::default()"); // capacityと同じサイズ
+
+        // ageを保持する固定長配列
+        [size_is(capacity)]
+        int32_t* ages = PL_EXP("Default::default()"); // capacityと同じサイズ
+
+        // リングバッファを管理するための追加の変数
+        int32_t head = 0;     // 次にデータを取り出す位置（先頭）
+        int32_t tail = 0;     // 次にデータを書き込む位置（末尾）
+        int32_t count = 0;    // 現在の要素数
+    };
+};
