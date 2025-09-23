@@ -41,5 +41,8 @@
     { "template": "()", "default": true },
     { "template": "PhantomData<T>", "default": true, "generics": ["T"] },
     { "template": "Wrapping<T>", "default": true, "generics": ["T"], "requires": ["T: Default"] },
-    { "template": "heapless::String<N>", "default": true, "generics": ["N"] }
+    { "template": "heapless::String<N>", "default": true, "generics": ["N"] },
+    { "template": "nalgebra::Matrix3<T>", "default": true, "generics": ["T"], "requires": ["T: Default"] },
+    { "template": "nalgebra::Vector3<T>", "default": true, "generics": ["T"], "requires": ["T: Default"] },
+    { "template": "nalgebra::Quaternion<T>", "default": true, "generics": ["T"], "requires": ["T: Default"] }
 ]
