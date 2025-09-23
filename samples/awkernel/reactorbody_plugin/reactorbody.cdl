@@ -1,0 +1,72 @@
+import("struct_define.cdl");
+
+signature sImu {
+	void send([in] struct ImuMsg imu);
+};
+
+signature sImuRaw {
+	void send([in] struct ImuMsg imu_raw);
+};
+
+signature sDummyImubody {
+		void main([out] struct ImuMsg* imu);
+};
+
+signature sImudriverbody {
+		void main([in] struct ImuMsg imu, [out] struct ImuMsg* imu_raw);
+};
+
+signature sDummyImuCorrectorbody {
+		void main([in] struct ImuMsg imu_raw);
+};
+
+[generate( RustAWKPlugin, "DAG_PERIODIC_REACTOR_BODY")]
+celltype tDummyImubody{
+    [omit] call sImu cImu;                /* imu トピック送信ポート */
+    
+    entry sDummyImubody eReactor;
+    
+	  attr{
+	    [omit] PLType("Cow") reactorName  = PL_EXP("DummyImu");
+	    [omit] PLType("SchedulerType") schedType = PL_EXP("SchedulerType::FIFO");
+	    [omit] PLType("Duration") period = PL_EXP("Duration::from_millis(50)");
+	      
+        [omit] PLType("Cow") publishTopicNames = PL_EXP("Imu");
+	  };
+	  
+    var {
+        int32_t i = 0;
+    };
+};
+
+[generate( RustAWKPlugin, "DAG_REACTOR_BODY")]
+celltype tImuDriverbody {
+    [omit] call sImuRaw cImuRaw;          /* imu_raw トピック送信ポート */
+    entry sImu eImu;                      /* imu トピック受信ポート */
+    
+    entry sImudriverbody eReactor;
+    
+    /* ユーザがリアクターAPIに必要な情報を属性として用意し、初期値として与える */
+	  attr{
+	    [omit] PLType("Cow") reactorName  = PL_EXP("ImuDriver");
+	    [omit] PLType("SchedulerType") schedType = PL_EXP("SchedulerType::FIFO");
+	      
+        [omit] PLType("Cow") subscribeTopicNames = PL_EXP("Imu");
+        [omit] PLType("Cow") publishTopicNames = PL_EXP("ImuRaw");
+	  };
+};
+
+[generate( RustAWKPlugin, "DAG_SINK_REACTOR_BODY")]
+celltype tDummyImuCorrectorbody{
+    entry sImuRaw eImuRaw;                               /* imu_raw トピック受信ポート */
+    
+    entry sDummyImuCorrectorbody eReactor;
+    
+	  attr{
+	    [omit] PLType("Cow") reactorName  = PL_EXP("DummyImuCorrector");
+	    [omit] PLType("SchedulerType") schedType = PL_EXP("SchedulerType::FIFO");
+	    [omit] PLType("Duration") relativeDeadline = PL_EXP("Duration::from_secs(1)");
+	      
+        [omit] PLType("Cow") subscribeTopicNames = PL_EXP("ImuRaw");
+	  };
+};

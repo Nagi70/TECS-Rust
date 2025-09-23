@@ -1,0 +1,12 @@
+import("reactorbody.cdl");
+
+cell tDummyImubody DummyImubody{
+    cImu = ImuDriverbody.eImu;
+};
+
+cell tImuDriverbody ImuDriverbody{
+    cImuRaw = DummyImuCorrectorbody.eImuRaw;
+};
+
+cell tDummyImuCorrectorbody DummyImuCorrectorbody{
+};

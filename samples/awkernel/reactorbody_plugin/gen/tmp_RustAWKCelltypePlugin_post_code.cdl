@@ -1,0 +1,19 @@
+/* 'Class' post code */
+import("gen/tImuDriverbody_dag_reactor.cdl");
+
+cell tImuDriverbodyDagReactor ImuDriverbodyDagReactor {
+  cDagReactor = ImuDriverbody.eReactor;
+};
+
+import("gen/tDummyImuCorrectorbody_dag_sink_reactor.cdl");
+
+cell tDummyImuCorrectorbodyDagSinkReactor DummyImuCorrectorbodyDagSinkReactor {
+  cDagSinkReactor = DummyImuCorrectorbody.eReactor;
+};
+
+import("gen/tDummyImubody_dag_periodic_reactor.cdl");
+
+cell tDummyImubodyDagPeriodicReactor DummyImubodyDagPeriodicReactor {
+  cDagPeriodicReactor = DummyImubody.eReactor;
+};
+

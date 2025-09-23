@@ -1,0 +1,11 @@
+[active, generate(RustAWKPlugin, "DAG_SINK_REACTOR")]
+celltype tDummyImuCorrectorbodyDagSinkReactor {
+  [async] call sDummyImuCorrectorbody cDagSinkReactor;
+  attr {
+    [omit] PLType("Cow") name = PL_EXP("DummyImuCorrector");
+    [omit] PLType("SchedulerType") schedType = PL_EXP("SchedulerType::FIFO");
+    [omit] PLType("Cow") subscribeTopicNames = PL_EXP("ImuRaw");
+    [omit] PLType("Cow") relativeDeadline = PL_EXP("Duration::from_secs(1)");
+  };
+};
+
