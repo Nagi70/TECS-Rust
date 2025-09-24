@@ -37,6 +37,10 @@
 #   $Id: CelltypePlugin.rb 2952 2018-05-07 10:19:07Z okuma-top $
 #++
 
+class Cell
+    # 足したい関数を実装できる
+end
+
 #== celltype プラグインの共通の親クラス
 class RustGenCelltypePlugin < CelltypePlugin
     CLASS_NAME_SUFFIX = ""
@@ -283,8 +287,6 @@ class RustGenCelltypePlugin < CelltypePlugin
                 end
             }
         end
-
-        
     end
 
     # tecs_celltype.rs と tecs_celltype ディレクトリを生成する
@@ -1090,7 +1092,6 @@ class RustGenCelltypePlugin < CelltypePlugin
                 }
 
                 file.print "}\n\n"
-
             else
             end
         }
