@@ -3,6 +3,7 @@ signature sTf {
 	void transformVector3([out] PLType("nalgebra::Vector3<f64>")* vec);
 };
 
+[generate(RustAWKPlugin, "")]
 celltype tTf {
     entry sTf eTf;
     attr {

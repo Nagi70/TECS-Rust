@@ -3,19 +3,19 @@ import("publish_signature.cdl");
 
 signature sGyroOdometer {
     void main(
-        [in] struct TwistWithCovariance vehicle_twist,
+        [in] struct TwistWithCovarianceStamped vehicle_twist,
         [in] struct ImuMsg imu,
         [out] struct TwistWithCovarianceStamped* twist_with_covariance
     );
 };
 
 // メインルーチンのセルタイプ定義
-[generate(RustAWKPlugin, "DAG_REACTOR_BODY")]  // プラグインの適用
-celltype tGyroOdometerBody {
+[generate(RustAWKPlugin, "REACTOR_BODY")]  // プラグインの適用
+celltype tGyroOdometer {
 
-    [omit] sTwistWithCovariance call cTwistWithCovarianceG;
+    [omit] call sTwistWithCovarianceStamped cTwistWithCovarianceG;
 
-    entry sTwistWithCovariance eTwistWithCovarianceV;
+    entry sTwistWithCovarianceStamped eTwistWithCovarianceV;
     entry sImuData eImuData;
 
     entry sGyroOdometer eReactor;

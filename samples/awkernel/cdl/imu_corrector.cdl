@@ -5,14 +5,14 @@ import("tf.cdl");
 signature sImuCorrector {
 	// 引数にトピックデータを持つ関数を1つ定義する
 	// サブスクライブするトピックは[in]、パブリッシュするトピックは[out]で定義する
-	void main([in] struct ImuMsg imu_raw, [out] struct ImuMsg imu_data);
+	void main([in] struct ImuMsg imu_raw, [out] struct ImuMsg* imu_data);
 };
 
 // メインルーチンのセルタイプ定義
 [generate(RustAWKPlugin, "REACTOR_BODY")]  // プラグインの適用
-celltype tImuCorrectorbody {
+celltype tImuCorrector {
 
-    [omit] sImuData call cImuData;  // パブリッシュ用呼び口 (必ずomitにする, c+"トピック名"にする)
+    [omit] call sImuData cImuData;  // パブリッシュ用呼び口 (必ずomitにする, c+"トピック名"にする)
     entry sImuRaw eImuRaw;  // サブスクライブ用受け口 (e+"トピック名"にする)
     
     entry sImuCorrector eReactor;  //eReactorという名前の受け口を必ず1つ定義する
@@ -22,13 +22,13 @@ celltype tImuCorrectorbody {
     // 属性定義 (パラメータ)
     attr {
         PLType("&'static str") output_frame  = PL_EXP("\"base_link\"");
-        double angular_velocity_offset_x = 0.0;
-        double angular_velocity_offset_y = 0.0;
-        double angular_velocity_offset_z = 0.0;
-        double angular_velocity_stddev_xx = 0.03;
-        double angular_velocity_stddev_yy = 0.03;
-        double angular_velocity_stddev_zz = 0.03;
-        double accel_stddev = 10000.0;
+        double64_t angular_velocity_offset_x = 0.0;
+        double64_t angular_velocity_offset_y = 0.0;
+        double64_t angular_velocity_offset_z = 0.0;
+        double64_t angular_velocity_stddev_xx = 0.03;
+        double64_t angular_velocity_stddev_yy = 0.03;
+        double64_t angular_velocity_stddev_zz = 0.03;
+        double64_t accel_stddev = 10000.0;
         
         // プラグインに指定するオプションがDAG_REACTOR_BODYの場合は、reactorName、schedType、subscribeTopicNames、publishTopicNamesの属性が必須
 	    [omit] PLType("Cow") reactorName  = PL_EXP("ImuCorrector");

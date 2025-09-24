@@ -1,15 +1,19 @@
 import("struct.cdl");
 import("publish_signature.cdl");
 
+signature sDummyPeriodicReactorInMrm {
+    void main( [out] struct Frame* imu, [out] struct VelocityReport* velocity_status);
+};
+
 [generate( RustAWKPlugin, "PERIODIC_REACTOR_BODY")]
 celltype tDummyPeriodicReactorInMrm{
 
     [omit] call sImu cImu;
     [omit] call sVelocityStatus cVelocityStatus;
-    entry sReactorbody eReactor;
+    entry sDummyPeriodicReactorInMrm eReactor;
 
     attr{
-	    [omit] PLType("Cow") reactorName  = PL_EXP("tDummyPeriodicReactorInMrm");
+	    [omit] PLType("Cow") reactorName  = PL_EXP("DummyPeriodicReactorInMrm");
 	    [omit] PLType("SchedulerType") schedType = PL_EXP("SchedulerType::FIFO");
 	    [omit] PLType("Duration") period = PL_EXP("Duration::from_millis(50)");
         [omit] PLType("Cow") publishTopicNames = PL_EXP("Imu, VelocityStatus");

@@ -2,13 +2,13 @@ import("struct.cdl");
 import("publish_signature.cdl");
 
 signature sVehicleVelocityConverter {
-    void main([in] struct VelocityReport velocity_status, [out] struct TwistWithCovariance* twist_with_covariance);
+    void main([in] struct VelocityReport velocity_status, [out] struct TwistWithCovarianceStamped* twist_with_covariance);
 };
 
 [generate(RustAWKPlugin, "REACTOR_BODY")]  // プラグインの適用
-celltype tVehicleVelocityConverterBody {
+celltype tVehicleVelocityConverter {
 
-    [omit] sTwistWithCovariance call cTwistWithCovarianceV;
+    [omit] call sTwistWithCovarianceStamped cTwistWithCovarianceV;
     entry sVelocityStatus eVelocityStatus;
 
     entry sVehicleVelocityConverter eReactor;

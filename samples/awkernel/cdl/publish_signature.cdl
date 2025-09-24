@@ -1,7 +1,7 @@
 import("struct.cdl");
 
 signature sImu {
-	void send([in] struct ImuMsg imu);
+	void send([in] struct Frame imu);
 };
 
 signature sImuRaw {
@@ -17,5 +17,9 @@ signature sVelocityStatus {
 };
 
 signature sTwistWithCovariance {
-    void send([in] struct TwistWithCovarianceS twist_with_covariance);
+    void send([in] struct TwistWithCovariance twist_with_covariance);
+};
+
+signature sTwistWithCovarianceStamped {
+    void send([in] struct TwistWithCovarianceStamped twist_with_covariance);
 };

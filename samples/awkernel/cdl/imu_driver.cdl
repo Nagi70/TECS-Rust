@@ -7,7 +7,7 @@ signature sImuDevice {
 };
 
 //*** コールバック用シグニチャ ***//
-signature sImuDriverbody {
+signature sImuDriver {
     void    main( [in] struct Frame imu, [out] struct ImuMsg *imu_raw );
 };
 
@@ -38,8 +38,8 @@ celltype tTamagawaImuDevice {
 
 //*** IMUノードルーチンセルタイプ ***//
 [generate( RustAWKPlugin, "REACTOR_BODY")]
-celltype tImuDriverbody {
-    entry sImuDriverbody eReactor;
+celltype tImuDriver {
+    entry sImuDriver eReactor;
 
     [omit] call sImuRaw cImuRaw;
     entry sImu eImu;
