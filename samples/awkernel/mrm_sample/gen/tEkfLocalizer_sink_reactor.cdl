@@ -1,0 +1,11 @@
+[active, generate(RustAWKPlugin, "SINK_REACTOR")]
+celltype tEkfLocalizerSinkReactor {
+  [async] call sEkfLocalizer cSinkReactor;
+  attr {
+    [omit] PLType("Cow") name = PL_EXP("EkfLocalizer");
+    [omit] PLType("SchedulerType") schedType = PL_EXP("SchedulerType::FIFO");
+    [omit] PLType("Cow") subscribeTopicNames = PL_EXP("TwistWithCovarianceG");
+    [omit] PLType("Cow") relativeDeadline = PL_EXP("Duration::from_secs(1)");
+  };
+};
+

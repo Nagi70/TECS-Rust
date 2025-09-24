@@ -1,0 +1,54 @@
+import("dummy_periodic_reactor_in_mrm.cdl");
+import("publish_signature.cdl");
+import("imu_driver.cdl");
+import("imu_corrector.cdl");
+import("vehicle_velocity_converter.cdl");
+import("gyro_odometer.cdl");
+import("ekf_localizer.cdl");
+
+cell tDummyPeriodicReactorInMrm DummyHardware {
+    cImu = ImuDriver.eImu;
+    cVelocityStatus = VehicleVelocityConverter.eVelocityStatus;
+};
+
+cell tImuDriver ImuDriver {
+    cImuRaw = ImuCorrector.eImuRaw;
+    cDev = TamagawaCan.eImuDevice;
+};
+
+cell tTamagawaImuDevice TamagawaCan {
+    can_id_gyro  = 0x319;
+    can_id_accel = 0x31A;
+};
+
+cell tImuCorrector ImuCorrector {
+    cImuData = GyroOdometer.eImuData;
+    cTf = ImuCorrectorTf.eTf;
+};
+
+cell tTf ImuCorrectorTf {
+    transform = PL_EXP("nalgebra::Quaternion::new(1.0, 2.0, 1.0, 2.0)");
+};
+
+cell tVehicleVelocityConverter VehicleVelocityConverter {
+    cTwistWithCovarianceV = GyroOdometer.eTwistWithCovarianceV;
+};
+
+cell tGyroOdometer GyroOdometer {
+    cTwistWithCovarianceG = EkfLocalizer.eTwistWithCovarianceG;
+    cTf = GyroOdometerTf.eTf;
+};
+
+cell tTf GyroOdometerTf {
+    transform = PL_EXP("nalgebra::Quaternion::new(2.0, 1.0, 2.0, 1.0)");
+};
+
+cell tEkfLocalizer EkfLocalizer {
+    cTwistWithCovarianceQueue = TwistWithCovarianceQueue.eSet;
+};
+
+cell tTwistWithCovarianceAgedObjectQueue TwistWithCovarianceQueue {
+};
+
+
+

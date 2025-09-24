@@ -1,0 +1,37 @@
+/* 'Class' post code */
+import("gen/tImuDriver_reactor.cdl");
+
+cell tImuDriverReactor ImuDriverReactor {
+  cReactor = ImuDriver.eReactor;
+};
+
+import("gen/tImuCorrector_reactor.cdl");
+
+cell tImuCorrectorReactor ImuCorrectorReactor {
+  cReactor = ImuCorrector.eReactor;
+};
+
+import("gen/tVehicleVelocityConverter_reactor.cdl");
+
+cell tVehicleVelocityConverterReactor VehicleVelocityConverterReactor {
+  cReactor = VehicleVelocityConverter.eReactor;
+};
+
+import("gen/tGyroOdometer_reactor.cdl");
+
+cell tGyroOdometerReactor GyroOdometerReactor {
+  cReactor = GyroOdometer.eReactor;
+};
+
+import("gen/tEkfLocalizer_sink_reactor.cdl");
+
+cell tEkfLocalizerSinkReactor EkfLocalizerSinkReactor {
+  cSinkReactor = EkfLocalizer.eReactor;
+};
+
+import("gen/tDummyPeriodicReactorInMrm_periodic_reactor.cdl");
+
+cell tDummyPeriodicReactorInMrmPeriodicReactor DummyHardwarePeriodicReactor {
+  cPeriodicReactor = DummyHardware.eReactor;
+};
+

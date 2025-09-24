@@ -1,0 +1,11 @@
+[active, generate(RustAWKPlugin, "PERIODIC_REACTOR")]
+celltype tDummyPeriodicReactorInMrmPeriodicReactor {
+  [async] call sDummyPeriodicReactorInMrm cPeriodicReactor;
+  attr {
+    [omit] PLType("Cow") name = PL_EXP("DummyPeriodicReactorInMrm");
+    [omit] PLType("SchedulerType") schedType = PL_EXP("SchedulerType::FIFO");
+    [omit] PLType("Cow") publishTopicNames = PL_EXP("Imu, VelocityStatus");
+    [omit] PLType("Cow") period = PL_EXP("Duration::from_millis(50)");
+  };
+};
+

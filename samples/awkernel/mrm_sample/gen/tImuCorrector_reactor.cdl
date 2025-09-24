@@ -1,0 +1,11 @@
+[active, generate(RustAWKPlugin, "REACTOR")]
+celltype tImuCorrectorReactor {
+  [async] call sImuCorrector cReactor;
+  attr {
+    [omit] PLType("Cow") name = PL_EXP("ImuCorrector");
+    [omit] PLType("SchedulerType") schedType = PL_EXP("SchedulerType::FIFO");
+    [omit] PLType("Cow") publishTopicNames = PL_EXP("ImuData");
+    [omit] PLType("Cow") subscribeTopicNames = PL_EXP("ImuRaw");
+  };
+};
+

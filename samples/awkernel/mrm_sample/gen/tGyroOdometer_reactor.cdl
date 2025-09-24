@@ -1,0 +1,11 @@
+[active, generate(RustAWKPlugin, "REACTOR")]
+celltype tGyroOdometerReactor {
+  [async] call sGyroOdometer cReactor;
+  attr {
+    [omit] PLType("Cow") name = PL_EXP("GyroOdometer");
+    [omit] PLType("SchedulerType") schedType = PL_EXP("SchedulerType::FIFO");
+    [omit] PLType("Cow") publishTopicNames = PL_EXP("TwistWithCovarianceG");
+    [omit] PLType("Cow") subscribeTopicNames = PL_EXP("TwistWithCovarianceV, ImuData");
+  };
+};
+
