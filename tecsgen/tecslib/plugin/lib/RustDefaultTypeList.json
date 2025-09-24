@@ -42,7 +42,9 @@
     { "template": "PhantomData<T>", "default": true, "generics": ["T"] },
     { "template": "Wrapping<T>", "default": true, "generics": ["T"], "requires": ["T: Default"] },
     { "template": "heapless::String<N>", "default": true, "generics": ["N"] },
+    { "template": "heapless::Queue<T, N>", "default": true, "generics": ["T","N"], "requires": ["T: Default"] },
     { "template": "nalgebra::Matrix3<T>", "default": true, "generics": ["T"], "requires": ["T: Default"] },
+    { "template": "nalgebra::Matrix6<T>", "default": true, "generics": ["T"], "requires": ["T: Default"] },
     { "template": "nalgebra::Vector3<T>", "default": true, "generics": ["T"], "requires": ["T: Default"] },
     { "template": "nalgebra::Quaternion<T>", "default": true, "generics": ["T"], "requires": ["T: Default"] }
 ]
