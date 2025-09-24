@@ -1,0 +1,66 @@
+import("template_reactor.cdl");
+import("struct_define.cdl");
+
+cell tTemplateDagPeriodicReactor DummyImu {
+    cDagPeriodicReactorbody = DummyImubody.eTemplateDummyImubody;
+    name = PL_EXP("dummy_imu");
+    publishTopicNames = PL_EXP("ImuMsg");
+    period = PL_EXP("Duration::from_millis(50)");
+};
+
+cell tTemplateDagReactor ImuDriver {
+    cDagReactorbody = ImuDriverbody.eTemplateImuDriverbody;
+    name = PL_EXP("imu_driver");
+    publishTopicNames = PL_EXP("ImuMsg");
+    subscribeTopicNames = PL_EXP("ImuMsg");
+};
+
+cell tTemplateDagSinkReactor DummyImuCorrector {
+    cDagSinkReactorbody = DummyImuCorrectorbody.eTemplateDummyImuCorrectorbody;
+    name = PL_EXP("dummy_imu_corrector");
+    subscribeTopicNames = PL_EXP("ImuMsg");
+};
+
+signature sImu {
+	void send([in] struct ImuMsg imu);
+};
+
+signature sImuRaw {
+	void send([in] struct ImuMsg imu_raw);
+};
+
+[generate( RustAWKPlugin, "")]
+celltype tDummyImubody{
+    [omit] call sImu cImu;                       /* imu トピック送信ポート */
+    entry sReactorbody eTemplateDummyImubody;    /* テンプレリアクター用受け口 */
+    entry sDummyImubody eDummyImubody;           /* 生成後リアクター用受け口 */
+    var {
+        int32_t i = 0;
+    };
+};
+
+[generate( RustAWKPlugin, "")]
+celltype tImuDriverbody {
+    [omit] call sImuRaw cImuRaw;                /* imu_raw トピック送信ポート */
+    entry sReactorbody eTemplateImuDriverbody;  /* テンプレリアクター用受け口 */
+    entry sImuDriverbody eImuDriverbody;        /* 生成後リアクター用受け口 */
+    entry sImu eImu;                            /* imu トピック受信ポート */
+};
+
+[generate( RustAWKPlugin, "")]
+celltype tDummyImuCorrectorbody{
+    entry sImuRaw eImuRaw;
+    entry sReactorbody eTemplateDummyImuCorrectorbody;   /* テンプレリアクター用受け口 */
+    entry sDummyImuCorrectorbody eDummyImuCorrectorbody; /* 生成後リアクター用受け口 */
+};
+
+cell tDummyImubody DummyImubody{
+    cImu = ImuDriverbody.eImu;
+};
+
+cell tImuDriverbody ImuDriverbody{
+    cImuRaw = DummyImuCorrectorbody.eImuRaw;
+};
+
+cell tDummyImuCorrectorbody DummyImuCorrectorbody{
+};

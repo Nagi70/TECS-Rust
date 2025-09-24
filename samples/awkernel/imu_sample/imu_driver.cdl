@@ -24,8 +24,8 @@ celltype tTamagawaImuDevice {
     /* 変更されないパラメータ */
     attr {
         // char_t  *port;          /* デバイスパス (Serial) */
-        int32_t  can_id_gyro;   /* CAN GYRO メッセージ ID (0x319) */
-        int32_t  can_id_accel;  /* CAN ACCEL メッセージ ID (0x31A) */
+        uint32_t  can_id_gyro;   /* CAN GYRO メッセージ ID (0x319) */
+        uint32_t  can_id_accel;  /* CAN ACCEL メッセージ ID (0x31A) */
         // int32_t  baudrate;      /* シリアルボーレート (115200) */
         PLType("&'static str")  imu_frame_id;  /* IMU frame id "imu" */
     };

@@ -6,6 +6,7 @@ cell tDagPeriodicReactor DummyPeriodicReactor{
     cDagPeriodicReactorbody = DummyImu.eDummyImu;
     name = PL_EXP("dummy_imu");
     publishTopicNames = PL_EXP("imu");
+    period = PL_EXP("Duration::from_millis(50)");
 };
 
 cell tDummyImu DummyImu{

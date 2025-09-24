@@ -1,0 +1,47 @@
+//*** リアクター共通の空シグニチャ ***//
+signature sReactorbody {
+};
+
+[generate( AWKReactorPlugin, "DAG_PERIODIC_REACTOR")]
+celltype tTemplateDagPeriodicReactor {
+    [omit] call sReactorbody cDagPeriodicReactorbody;
+    
+    attr{
+        [omit] PLType("Cow") name = PL_EXP("task_id");
+        
+        [omit] PLType("Cow") publishTopicNames = PL_EXP("Topic3, Topic4");
+        
+        [omit] PLType("SchedulerType") schedType = PL_EXP("SchedulerType::FIFO");
+
+        [omit] PLType("Duration") period = PL_EXP("Duration::from_secs(1)");
+    };
+};
+
+[generate( AWKReactorPlugin, "DAG_REACTOR")]
+celltype tTemplateDagReactor {
+    [omit] call sReactorbody cDagReactorbody;
+    
+    attr{
+        [omit] PLType("Cow") name = PL_EXP("task_id");
+        
+        [omit] PLType("Cow") subscribeTopicNames = PL_EXP("Topic1, Topic2");
+        [omit] PLType("Cow") publishTopicNames = PL_EXP("Topic3, Topic4");
+        
+        [omit] PLType("SchedulerType") schedType = PL_EXP("SchedulerType::FIFO");
+    };
+};
+
+[generate( AWKReactorPlugin, "DAG_SINK_REACTOR")]
+celltype tTemplateDagSinkReactor {
+    [omit] call sReactorbody cDagSinkReactorbody;
+    
+    attr{
+        [omit] PLType("Cow") name = PL_EXP("task_id");
+        
+        [omit] PLType("Cow") subscribeTopicNames = PL_EXP("Topic1, Topic2");
+        
+        [omit] PLType("SchedulerType") schedType = PL_EXP("SchedulerType::FIFO");
+
+        [omit] PLType("Duration") relativeDeadline = PL_EXP("Duration::from_secs(1)");
+    };
+};

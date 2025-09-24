@@ -1,5 +1,5 @@
 struct ImuData {
-    RType("Time")     time_stamp;                /* [us] */
+    PLType("awkernel_lib::time::Time")     time_stamp;                /* [us] */
     float32_t    angular_velocity_x;        /* [rad/s] */
     float32_t    angular_velocity_y;        /* [rad/s] */
     float32_t    angular_velocity_z;        /* [rad/s] */
@@ -9,7 +9,7 @@ struct ImuData {
 };
 
 struct Header {
-    RType("Time") time_stamp;
+    PLType("awkernel_lib::time::Time") time_stamp;
     [string(256)] char* frame_id;
 };
 
