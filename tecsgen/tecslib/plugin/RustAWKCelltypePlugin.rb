@@ -92,7 +92,7 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
         gen_dag_periodic_reactor_celltype(@celltype)
       elsif plugin_option.include?("PERIODIC_REACTOR_BODY") then
         @@periodic_reactor_body_celltype_list.push(@celltype)
-        gen_periodic_reactor_body_celltype(@celltype, false)
+        gen_dag_periodic_reactor_celltype(@celltype, false)
       end
     end
   
