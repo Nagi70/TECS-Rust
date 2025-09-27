@@ -33,4 +33,8 @@ celltype tGyroOdometer {
         [omit] PLType("Cow") subscribeTopicNames = PL_EXP("TwistWithCovarianceV, ImuData");
         [omit] PLType("Cow") publishTopicNames = PL_EXP("TwistWithCovarianceG");
     };
+
+    var {
+        PLType("nalgebra::Matrix3<f64>") imu_covariance = PL_EXP("Default::default");
+    };
 };
