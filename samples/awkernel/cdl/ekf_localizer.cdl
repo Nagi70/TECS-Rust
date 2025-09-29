@@ -7,12 +7,12 @@ signature sEkfLocalizer {
 };
 
 signature sTwistWithCovarianceSet {
-    PLType("Result<TwistWithCovarianceStamped>") push( [in] struct TwistWithCovarianceStamped twist );
+    PLType("Result<(), ()>") push( [in] struct TwistWithCovarianceStamped twist );
 };
 
 signature sTwistWithCovarianceGet {
-    PLType("Result<TwistWithCovarianceStamped>") pop( void );
-    PLType("Result<TwistWithCovarianceStamped>") popIncrementAge( void );
+    PLType("Option<TwistWithCovarianceStamped>") pop( void );
+    PLType("Option<TwistWithCovarianceStamped>") popIncrementAge( void );
 };
 
 [generate(RustAWKPlugin, "SINK_REACTOR_BODY")]
@@ -28,6 +28,9 @@ celltype tEkfLocalizer {
 
     // ----- 属性定義 (不変パラメータ) -----
     attr {
+
+        double64_t threshold_observable_velocity_mps = 0.0;
+
         // --- awkernel リアクター用属性 ---
         [omit] PLType("Cow") reactorName = PL_EXP("EkfLocalizer");
         [omit] PLType("SchedulerType") schedType = PL_EXP("SchedulerType::FIFO");
@@ -62,6 +65,6 @@ celltype tTwistWithCovarianceAgedObjectQueue {
         //int32_t tail = 0;     // 次にデータを書き込む位置（末尾）
         //int32_t count = 0;    // 現在の要素数
 
-        PLType("heapless::Queue<(TwistWithCovarianceStamped, i32), 32>") queue = PL_EXP("Default::default()");
+        PLType("heapless::Queue<(TwistWithCovarianceStamped, i32), 128>") queue = PL_EXP("Default::default()");
     };
 };

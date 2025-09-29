@@ -4,7 +4,7 @@ use crate::tecs_signature::{s_twist_with_covariance_set::*, s_twist_with_covaria
 use awkernel_lib::sync::mutex::MCSNode;
 impl STwistWithCovarianceSet for ESetForTTwistWithCovarianceAgedObjectQueue<'_>{
 
-	fn push(&'static self, twist: &TwistWithCovarianceStamped) -> Result<TwistWithCovarianceStamped>{
+	fn push(&'static self, twist: &TwistWithCovarianceStamped) -> Result<(), ()>{
 		let mut node = MCSNode::new();
 		let mut lg = self.cell.get_cell_ref(&mut node);
 
@@ -13,12 +13,12 @@ impl STwistWithCovarianceSet for ESetForTTwistWithCovarianceAgedObjectQueue<'_>{
 
 impl STwistWithCovarianceGet for EGetForTTwistWithCovarianceAgedObjectQueue<'_>{
 
-	fn pop(&'static self) -> Result<TwistWithCovarianceStamped>{
+	fn pop(&'static self) -> Option<TwistWithCovarianceStamped>{
 		let mut node = MCSNode::new();
 		let mut lg = self.cell.get_cell_ref(&mut node);
 
 	}
-	fn pop_increment_age(&'static self) -> Result<TwistWithCovarianceStamped>{
+	fn pop_increment_age(&'static self) -> Option<TwistWithCovarianceStamped>{
 		let mut node = MCSNode::new();
 		let mut lg = self.cell.get_cell_ref(&mut node);
 

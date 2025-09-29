@@ -5,7 +5,7 @@ pub struct TTwistWithCovarianceAgedObjectQueue<'a>{
 }
 
 pub struct TTwistWithCovarianceAgedObjectQueueVar{
-	pub queue: heapless::Queue<(TwistWithCovarianceStamped, i32), 32>,
+	pub queue: heapless::Queue<(TwistWithCovarianceStamped, i32), 128>,
 }
 
 pub struct ESetForTTwistWithCovarianceAgedObjectQueue<'a>{

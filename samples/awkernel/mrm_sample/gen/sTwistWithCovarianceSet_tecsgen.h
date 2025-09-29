@@ -20,7 +20,7 @@ struct tag_sTwistWithCovarianceSet_VDES {
 
 /* signature function table #_SFT_# */
 struct tag_sTwistWithCovarianceSet_VMT {
-    RType( Result<TwistWithCovarianceStamped> ) (*push__T)( const struct tag_sTwistWithCovarianceSet_VDES *edp, struct TwistWithCovarianceStamped twist );
+    RType( Result<(), ()> ) (*push__T)( const struct tag_sTwistWithCovarianceSet_VDES *edp, struct TwistWithCovarianceStamped twist );
 };
 
 /* signature descriptor #_SDES_# for dynamic join */

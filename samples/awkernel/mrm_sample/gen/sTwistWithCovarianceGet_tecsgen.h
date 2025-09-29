@@ -20,8 +20,8 @@ struct tag_sTwistWithCovarianceGet_VDES {
 
 /* signature function table #_SFT_# */
 struct tag_sTwistWithCovarianceGet_VMT {
-    RType( Result<TwistWithCovarianceStamped> ) (*pop__T)( const struct tag_sTwistWithCovarianceGet_VDES *edp );
-    RType( Result<TwistWithCovarianceStamped> ) (*popIncrementAge__T)( const struct tag_sTwistWithCovarianceGet_VDES *edp );
+    RType( Option<TwistWithCovarianceStamped> ) (*pop__T)( const struct tag_sTwistWithCovarianceGet_VDES *edp );
+    RType( Option<TwistWithCovarianceStamped> ) (*popIncrementAge__T)( const struct tag_sTwistWithCovarianceGet_VDES *edp );
 };
 
 /* signature descriptor #_SDES_# for dynamic join */

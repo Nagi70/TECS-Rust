@@ -6,6 +6,7 @@ where
 	T: STwistWithCovarianceSet,
 {
 	c_twist_with_covariance_queue: &'a T,
+	threshold_observable_velocity_mps: f64,
 }
 
 pub struct ETwistWithCovarianceGForTEkfLocalizer<'a>{
@@ -21,10 +22,12 @@ where
 	T: STwistWithCovarianceSet,
 {
 	pub c_twist_with_covariance_queue: &'a T,
+	pub threshold_observable_velocity_mps: &'a f64,
 }
 
 static EKFLOCALIZER: TEkfLocalizer<ESetForTTwistWithCovarianceAgedObjectQueue> = TEkfLocalizer {
 	c_twist_with_covariance_queue: &ESETFORTWISTWITHCOVARIANCEQUEUE,
+	threshold_observable_velocity_mps: 0.0,
 };
 
 pub static ETWISTWITHCOVARIANCEGFOREKFLOCALIZER: ETwistWithCovarianceGForTEkfLocalizer = ETwistWithCovarianceGForTEkfLocalizer {
@@ -40,6 +43,7 @@ impl<'a, T: STwistWithCovarianceSet> TEkfLocalizer<'a, T> {
 	pub fn get_cell_ref(&'a self) -> LockGuardForTEkfLocalizer<'_, T>	{
 		LockGuardForTEkfLocalizer {
 			c_twist_with_covariance_queue: self.c_twist_with_covariance_queue,
+			threshold_observable_velocity_mps: &self.threshold_observable_velocity_mps,
 		}
 	}
 }
