@@ -1,0 +1,48 @@
+signature sTimeDelayKalmanFilter {
+    /* 初期化（拡張列を x0/P0 複製で埋める） */
+    void init(
+        [in] PLType("nalgebra::Vector6<f64>") x,
+        [in] PLType("nalgebra::Matrix6<f64>") p,
+        [in] int32_t  max_delay_step);
+
+    /* 予測（スライド＋最新ブロックの P 伝播） */
+    void predictWithDelay(
+        [in] PLType("nalgebra::Vector6<f64>") x_next,
+        [in] PLType("nalgebra::Matrix6<f64>") a,
+        [in] PLType("nalgebra::Matrix6<f64>") q);
+
+    /* 遅延観測更新（C を delay_step ブロックに配置して update）この中に update を埋め込む */
+    void updateWithDelay(
+        [in] PLType("nalgebra::Vector2<f64>") y,
+        [in] PLType("nalgebra::Matrix2x6<f64>") c,
+        [in] PLType("nalgebra::Matrix2<f64>") r,
+        [in] int32_t  delay_step);
+
+    /* 最新スロットの取り出し（x(0), P(0,0) ブロック） */
+    PLType("nalgebra::Vector6<f64>") getLatestX( void );
+    PLType("nalgebra::Matrix6<f64>") getLatestP( void );
+
+    double64_t getXelement([in] uint32_t i);
+};
+
+/* 遅延を拡張状態で表現する KF */
+[generate( RustAWKPlugin , "")]
+celltype tTimeDelayKalmanFilter {
+    entry sTimeDelayKalmanFilter eKalman;
+
+    /* ビルド時に固定する拡張サイズ（不変）、この二つの値はべた書きでもいいかも */
+    attr {
+        int32_t dim_x = 6;           /* 単一スロットの状態次元 */
+        int32_t max_delay_step = 50;  /* 保持するスロット数（拡張長） */
+        int32_t dim_x_ex = 300;
+        int32_t d_dim_x = 294;
+        int32_t dim_y_twist = 2;
+    };
+
+    /* 変化する値（実行中に更新） */
+    var {
+        /* 拡張状態・拡張共分散（先頭が最新スロット） */
+        PLType("nalgebra::SVector<f64, 300>") x_ex = PL_EXP("Default::default()");
+        PLType("nalgebra::SMatrix<f64, 300, 300>") p_ex = PL_EXP("Default::default()");
+    };
+};

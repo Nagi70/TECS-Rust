@@ -47,6 +47,8 @@ celltype tEkfModule {
 
         int32_t dim_x = 6;
 
+        int32_t dim_y_twist = 2;
+
         /* twistゲート・平滑化 */
         double64_t  twist_gate_dist = 46.1;
         uint32_t twist_smoothing_steps = 2;
