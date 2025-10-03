@@ -68,3 +68,36 @@ celltype tTwistWithCovarianceAgedObjectQueue {
         PLType("heapless::Queue<(TwistWithCovarianceStamped, i32), 128>") queue = PL_EXP("Default::default()");
     };
 };
+
+import("ekf_module.cdl");
+
+signature sEkfLocalizerTimer {
+    // EKFの更新処理。入力(サブスクライブ)と出力(パブリッシュ)を引数で定義
+    void main( [in] struct KinematicState kinematic_state );
+};
+
+[generate( RustAWKPlugin, "PERIODIC_REACTOR_BODY")]
+celltype tEkfLocalizerTimer{
+
+    [omit] call sKinematicState cKinematicState;
+
+    call sEkfModule cEkfModule;
+    call sTwistWithCovarianceGet cQueue;
+
+    attr{
+	    [omit] PLType("Cow") reactorName  = PL_EXP("EkfLocalizerTimer");
+	    [omit] PLType("SchedulerType") schedType = PL_EXP("SchedulerType::FIFO");
+	    [omit] PLType("Duration") period = PL_EXP("Duration::from_millis(50)");
+        [omit] PLType("Cow") publishTopicNames = PL_EXP("KinematicState");
+
+        double64_t ekf_rate = 0.01;
+        uint32_t pose_smoothing_steps = 5;
+        uint32_t twist_smoothing_steps = 5;
+        double64_t threshold_observable_velocity_mps = 0.01;
+    };
+
+    var {
+        double64_t ekf_dt = 0;
+        PLType("awkernel_lib::time::Time") last_predict_time = PL_EXP(Default::default());
+    };
+};

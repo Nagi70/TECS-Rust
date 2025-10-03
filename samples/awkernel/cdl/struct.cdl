@@ -47,3 +47,36 @@ struct VelocityReport {
     float32_t lateral_velocity;
     float32_t heading_rate;
 };
+
+struct Pose {
+    PLType("nalgebra::Vector3<f64>")    point;
+    PLType("nalgebra::Quaternion<f64>")    orientation;
+};
+
+struct PoseWithCovariance {
+    struct Pose    pose;
+    PLType("nalgebra::Matrix6<f64>")    covariance;
+};
+
+struct Accel {
+    PLType("nalgebra::Vector3<f64>") linear;
+    PLType("nalgebra::Vector3<f64>") angular;
+};
+
+struct AccelWithCovariance {
+    struct Accel    accel;
+    PLType("nalgebra::Matrix6<f64>")    covariance;
+};
+
+struct KinematicState {
+    struct Header header;
+    [string(256)] char* child_frame_id;
+    struct PoseWithCovariance pose;
+    struct TwistWithCovariance twist;
+    struct AccelWithCovariance accel;
+};
+
+struct Transform {
+    PLType("nalgebra::Vector3<f64>") translation;
+    PLType("nalgebra::Quaternion<f64>") rotatoin;
+};

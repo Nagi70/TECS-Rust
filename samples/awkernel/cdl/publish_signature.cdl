@@ -23,3 +23,7 @@ signature sTwistWithCovariance {
 signature sTwistWithCovarianceStamped {
     void send([in] struct TwistWithCovarianceStamped twist_with_covariance);
 };
+
+signature sKinematicState {
+    void send([in] struct KinematicState kinematic_state);
+};
