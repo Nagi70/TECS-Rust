@@ -1,0 +1,16 @@
+// create_point は ekf_module に埋め込む
+signature sUtilsGeometry {
+    PLType("nalgebra::Vector3<f64>") getRpy( 
+        [in] PLType("nalgebra::Quaternion<f64>") quat
+    );
+    PLType("nalgebra::Quaternion<f64>") createQuaternionFromRpy( 
+        [in] double64_t roll,
+        [in] double64_t pitch,
+        [in] double64_t yaw
+    );
+};
+
+[generate( RustAWKPlugin, "")]
+celltype tUtilsGeometry {
+    entry sUtilsGeometry eUtils;  
+};

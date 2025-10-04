@@ -1,0 +1,12 @@
+signature sMahalanobis {
+    double64_t mahalanobis2d(
+        [in] PLType("nalgebra::Vector2<f64>") x,
+        [in] PLType("nalgebra::Matrix2x1<f64>") y,
+        [in] PLType("nalgebra::Matrix2<f64>") c
+    );
+};
+
+[generate( RustAWKPlugin, "")]
+celltype tMahalanobis {
+    entry sMahalanobis eMaha;  
+};

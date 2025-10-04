@@ -1,0 +1,10 @@
+// これらの関数は、本来は2次元配列を1次元配列に変換するような処理をしている？ため、使わないかも
+signature sCovariance {
+    PLType("nalgebra::Matrix6<f64>") ekfCovarianceToPoseMessageCovariance( [in] PLType("nalgebra::Matrix6<f64>") p );
+    PLType("nalgebra::Matrix6<f64>") ekfCovarianceToTwistMessageCovariance( [in] PLType("nalgebra::Matrix6<f64>") p );
+};
+
+[generate( RustAWKPlugin, "")]
+celltype tCovariance {
+    entry sCovariance eCov;
+};

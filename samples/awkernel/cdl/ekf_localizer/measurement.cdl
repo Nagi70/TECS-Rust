@@ -1,0 +1,12 @@
+signature sMeasurement {
+    PLType("nalgebra::Matrix2x6<f64>") twistMeasurementMatrix( void );
+    PLType("nalgebra::Matrix2<f64>") twistMeasurementCovariance(
+        [in] PLType("nalgebra::Matrix6<f64>") covairance,
+        [in] uint32_t smoothing_step
+    );
+};
+
+[generate( RustAWKPlugin, "")]
+celltype tMeasurement {
+    entry sMeasurement eMeasure;  
+};
