@@ -31,6 +31,11 @@ struct Twist {
     PLType("nalgebra::Vector3<f64>") angular;
 };
 
+struct TwistStamped {
+    struct Header header;
+    struct Twist twist;
+};
+
 struct TwistWithCovariance {
     struct Twist twist;           /* Twist 本体                           */
     PLType("nalgebra::Matrix6<f64>")       covariance;  /* 6x6 行列を 1 次元に展開               */

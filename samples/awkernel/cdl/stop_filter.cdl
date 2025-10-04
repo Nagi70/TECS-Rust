@@ -1,0 +1,30 @@
+import("struct.cdl");
+import("publish_signature.cdl");
+
+signature sStopFilter {
+    void main([in] struct KinematicState odom_in, [out] struct KinematicState odom_out); 
+};
+
+[generate(RustAWKPlugin, "REACTOR_BODY")]
+celltype tStopFilter {
+    
+    /* トピックI/F（omit 必須） */
+    [omit] call sKinematicState cKinematicStateSf;   /* 出力: フィルタ済み Odometry を publish */
+    entry     sKinematicState  eKinematicState;      /* 入力: 生 Odometry を subscribe */
+    
+    /* リアクターの受け口（必須: eReactor） */
+    entry sStopFilter eReactor;
+    
+    /* 属性（プラグインが要求するリアクター属性は omit 指定） */
+    attr {
+        double vx_threshold = 0.0;  /* linear.x のしきい値 */
+        double wz_threshold = 0.0;  /* angular.z のしきい値 */
+
+        /* REACTOR_BODY で必須のメタ属性 */
+        [omit] PLType("Cow") reactorName          = PL_EXP("StopFilter");
+        [omit] PLType("SchedulerType") schedType  = PL_EXP("SchedulerType::FIFO");
+        /* トピック名は c/e の接尾辞と一致させるのが分かりやすい */
+        [omit] PLType("Cow") subscribeTopicNames  = PL_EXP("KinematicState");
+        [omit] PLType("Cow") publishTopicNames    = PL_EXP("KinematicStateSf");
+    };
+};

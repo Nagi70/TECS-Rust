@@ -79,7 +79,7 @@ signature sEkfLocalizerTimer {
 [generate( RustAWKPlugin, "PERIODIC_REACTOR_BODY")]
 celltype tEkfLocalizerTimer{
 
-    [omit] call sKinematicState cKinematicState;
+    [omit] call sKinematicState cKinematicState[2];
 
     call sEkfModule cEkfModule;
     call sTwistWithCovarianceGet cQueue;

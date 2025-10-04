@@ -1,11 +1,11 @@
 signature sStateTransition {
     double64_t normalizeYaw( [in] double64_t yaw );
     PLType("nalgebra::Vector6<f64>") predictNextState( 
-        [in] PLType("nalgebra::Vector6<f64>") x_curr,
+        [in] PLType("nalgebra::Matrix6x1<f64>") x_curr,
         [in] double64_t dt
     );
     PLType("nalgebra::Matrix6<f64>") createStateTransitionMatrix( 
-        [in] PLType("nalgebra::Vector6<f64>") x_curr,
+        [in] PLType("nalgebra::Matrix6x1<f64>") x_curr,
         [in] double64_t dt
     );
     PLType("nalgebra::Matrix6<f64>") processNoiseCovariance( 

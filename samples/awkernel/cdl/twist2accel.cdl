@@ -1,0 +1,59 @@
+import("struct.cdl");
+import("publish_signature.cdl");
+
+
+// Main reactor signature: converts TwistStamped to AccelWithCovarianceStamped
+signature sTwist2Accel {
+    void main([in] struct KinematicState twist, [out] struct AccelWithCovarianceStamped accel);
+};
+
+
+// Lowpass filter signature (1D) operating on a scalar value
+signature sLowpass1d {
+    void filter([in] double64_t value, [out] double64_t filtered);
+};
+
+// ------------------------------
+// Celltype definitions
+// ------------------------------
+// 1D low-pass filter component corresponding to signal_processing::LowpassFilter1d
+celltype tLowpassFilter1D {
+    entry sLowpass1d eFilter;
+    attr {
+        double64_t gain = 0.9; // accel_lowpass_gain parameter
+    };
+    var {
+        PLType("Option<f64>") x = PL_EXP("Default::default()");
+    };
+};
+
+[generate(RustAWKPlugin, "REACTOR_BODY")]
+celltype tTwist2Accel {
+    // Topic interfaces
+    [omit] call sAccel cAccel;       // publisher (omit)
+    entry sKinematicState eKinematicState;        
+
+    // Reactor entry for plugin
+    entry sTwist2Accel eReactor;        // required eReactor
+
+    call sLowpass1d cFilterAlx;
+    call sLowpass1d cFilterAly;
+    call sLowpass1d cFilterAlz;
+    call sLowpass1d cFilterAax;
+    call sLowpass1d cFilterAay;
+    call sLowpass1d cFilterAaz;
+
+    // Attributes (parameters and plugin-required)
+    attr {
+        // Plugin attributes for REACTOR_BODY
+        [omit] PLType("Cow") reactorName  = PL_EXP("Twist2Accel");
+        [omit] PLType("SchedulerType") schedType = PL_EXP("SchedulerType::FIFO");
+        [omit] PLType("Cow") subscribeTopicNames = PL_EXP("KinematicState");
+        [omit] PLType("Cow") publishTopicNames   = PL_EXP("Accel");
+    };
+
+    var {
+        // Previous twist for finite difference; None before first message
+        struct TwistStamped prev_twist = PL_EXP("Default::default()");
+    };
+};

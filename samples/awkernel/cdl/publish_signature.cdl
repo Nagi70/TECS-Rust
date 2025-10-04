@@ -27,3 +27,7 @@ signature sTwistWithCovarianceStamped {
 signature sKinematicState {
     void send([in] struct KinematicState kinematic_state);
 };
+
+signature sAccelWithCovariance {
+    void send([in] struct AccelWithCovariance accel_with_covariance);
+};

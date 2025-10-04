@@ -12,14 +12,14 @@ signature sTimeDelayKalmanFilter {
         [in] PLType("nalgebra::Matrix6<f64>") q);
 
     /* 遅延観測更新（C を delay_step ブロックに配置して update）この中に update を埋め込む */
-    PLType("Result<(), KalmanFilterError>")void updateWithDelay(
+    PLType("Result<(), KalmanFilterError>") updateWithDelay(
         [in] PLType("nalgebra::Vector2<f64>") y,
         [in] PLType("nalgebra::Matrix2x6<f64>") c,
         [in] PLType("nalgebra::Matrix2<f64>") r,
         [in] int32_t  delay_step);
 
     /* 最新スロットの取り出し（x(0), P(0,0) ブロック） */
-    PLType("nalgebra::Vector6<f64>") getLatestX( void );
+    PLType("nalgebra::Matrix6x1<f64>") getLatestX( void );
     PLType("nalgebra::Matrix6<f64>") getLatestP( void );
 
     double64_t getXelement([in] uint32_t i);
