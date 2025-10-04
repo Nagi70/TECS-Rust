@@ -398,13 +398,33 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
             publish_topic_name_list.each do |p_topic|
             c_publish = "c#{p_topic}"
                # TODO: get_rhs_cell2 の使い方があっているか分からない
-            subscribe_cell = cell.get_join_list.get_item(c_publish.to_sym).get_rhs_cell2
-            subscribe_topic_names = subscribe_cell.get_celltype.get_attribute_list.find { |a| a.get_name == :subscribeTopicNames }
-            subscribe_topic_name_list = subscribe_topic_names.get_initializer.to_s.split(",").map(&:strip)
-            
-            unless subscribe_topic_name_list.include?(p_topic)
-                puts "error: #{p_topic} that #{cell.get_global_name.to_s} publish does not be included in subscribeTopicNames in #{subscribe_cell.get_global_name.to_s}"
+            join = cell.get_join_list.get_item(c_publish.to_sym)
+            # 呼び口が配列の場合、インデックス指定がない場合はエラーにする
+            # 1対多のPub/Sub関係を表現するために、呼び口が配列かどうかを確認する
+            case join.get_subscript
+            when nil    ## 呼び口が配列ではない場合
+                subscribe_cell = join.get_rhs_cell2
+                subscribe_topic_names = subscribe_cell.get_celltype.get_attribute_list.find { |a| a.get_name == :subscribeTopicNames }
+                subscribe_topic_name_list = subscribe_topic_names.get_initializer.to_s.split(",").map(&:strip)
+                
+                unless subscribe_topic_name_list.include?(p_topic)
+                    puts "error: #{p_topic} that #{cell.get_global_name.to_s} publish does not be included in subscribeTopicNames in #{subscribe_cell.get_global_name.to_s}"
+                    exit 1
+                end
+            when -1     ## 呼び口が配列で、インデックス指定がない場合
+                puts "error: #{cell.get_global_name.to_s}'s #{c_publish} is array. Please specify index."
                 exit 1
+            else        ## 呼び口が配列で、インデックス指定がある場合
+                join.get_array_member2.each do |j|
+                    subscribe_cell = j.get_rhs_cell2
+                    subscribe_topic_names = subscribe_cell.get_celltype.get_attribute_list.find { |a| a.get_name == :subscribeTopicNames }
+                    subscribe_topic_name_list = subscribe_topic_names.get_initializer.to_s.split(",").map(&:strip)
+                    
+                    unless subscribe_topic_name_list.include?(p_topic)
+                        puts "error: #{p_topic} that #{cell.get_global_name.to_s} publish does not be included in subscribeTopicNames in #{subscribe_cell.get_global_name.to_s}"
+                        exit 1
+                    end
+                end
             end
           end
         end
