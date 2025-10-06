@@ -2,7 +2,7 @@ import("struct.cdl");
 import("publish_signature.cdl");
 
 signature sStopFilter {
-    void main([in] struct KinematicState odom_in, [out] struct KinematicState odom_out); 
+    void main([in] struct KinematicState odom_in, [out] struct KinematicState* odom_out); 
 };
 
 [generate(RustAWKPlugin, "REACTOR_BODY")]
@@ -17,8 +17,8 @@ celltype tStopFilter {
     
     /* 属性（プラグインが要求するリアクター属性は omit 指定） */
     attr {
-        double vx_threshold = 0.0;  /* linear.x のしきい値 */
-        double wz_threshold = 0.0;  /* angular.z のしきい値 */
+        double64_t vx_threshold = 0.0;  /* linear.x のしきい値 */
+        double64_t wz_threshold = 0.0;  /* angular.z のしきい値 */
 
         /* REACTOR_BODY で必須のメタ属性 */
         [omit] PLType("Cow") reactorName          = PL_EXP("StopFilter");

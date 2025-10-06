@@ -73,6 +73,11 @@ struct AccelWithCovariance {
     PLType("nalgebra::Matrix6<f64>")    covariance;
 };
 
+struct AccelWithCovarianceStamped {
+    struct Header header;
+    struct AccelWithCovariance      accel;      /* Twist + Covariance         */
+};
+
 struct KinematicState {
     struct Header header;
     [string(256)] char* child_frame_id;

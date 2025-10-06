@@ -12,5 +12,5 @@ signature sUtilsGeometry {
 
 [generate( RustAWKPlugin, "")]
 celltype tUtilsGeometry {
-    entry sUtilsGeometry eUtils;  
+    entry sUtilsGeometry eUtils;
 };

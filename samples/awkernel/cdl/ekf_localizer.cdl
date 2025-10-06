@@ -35,7 +35,7 @@ celltype tEkfLocalizer {
         [omit] PLType("Cow") reactorName = PL_EXP("EkfLocalizer");
         [omit] PLType("SchedulerType") schedType = PL_EXP("SchedulerType::FIFO");
         [omit] PLType("Cow") subscribeTopicNames = PL_EXP("TwistWithCovarianceG");
-        [omit] RType("Duration") relativeDeadline = PL_EXP("Duration::from_secs(1)");
+        [omit] PLType("Duration") relativeDeadline = PL_EXP("Duration::from_secs(1)");
     };
 };
 
@@ -73,7 +73,7 @@ import("ekf_module.cdl");
 
 signature sEkfLocalizerTimer {
     // EKFの更新処理。入力(サブスクライブ)と出力(パブリッシュ)を引数で定義
-    void main( [in] struct KinematicState kinematic_state );
+    void main( [out] struct KinematicState* kinematic_state );
 };
 
 [generate( RustAWKPlugin, "PERIODIC_REACTOR_BODY")]
@@ -83,6 +83,8 @@ celltype tEkfLocalizerTimer{
 
     call sEkfModule cEkfModule;
     call sTwistWithCovarianceGet cQueue;
+
+    entry sEkfLocalizerTimer eReactor;
 
     attr{
 	    [omit] PLType("Cow") reactorName  = PL_EXP("EkfLocalizerTimer");
@@ -98,6 +100,6 @@ celltype tEkfLocalizerTimer{
 
     var {
         double64_t ekf_dt = 0;
-        PLType("awkernel_lib::time::Time") last_predict_time = PL_EXP(Default::default());
+        PLType("awkernel_lib::time::Time") last_predict_time = PL_EXP("Default::default()");
     };
 };

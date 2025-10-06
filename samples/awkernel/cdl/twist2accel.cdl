@@ -1,16 +1,15 @@
 import("struct.cdl");
 import("publish_signature.cdl");
 
-
 // Main reactor signature: converts TwistStamped to AccelWithCovarianceStamped
 signature sTwist2Accel {
-    void main([in] struct KinematicState twist, [out] struct AccelWithCovarianceStamped accel);
+    void main([in] struct KinematicState twist, [out] struct AccelWithCovarianceStamped* accel);
 };
 
 
 // Lowpass filter signature (1D) operating on a scalar value
 signature sLowpass1d {
-    void filter([in] double64_t value, [out] double64_t filtered);
+    void filter([in] double64_t value, [out] double64_t* filtered);
 };
 
 // ------------------------------
@@ -30,7 +29,7 @@ celltype tLowpassFilter1D {
 [generate(RustAWKPlugin, "REACTOR_BODY")]
 celltype tTwist2Accel {
     // Topic interfaces
-    [omit] call sAccel cAccel;       // publisher (omit)
+    [omit] call sAccelWithCovarianceStamped cAccel;       // publisher (omit)
     entry sKinematicState eKinematicState;        
 
     // Reactor entry for plugin

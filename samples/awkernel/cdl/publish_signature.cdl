@@ -31,3 +31,8 @@ signature sKinematicState {
 signature sAccelWithCovariance {
     void send([in] struct AccelWithCovariance accel_with_covariance);
 };
+
+signature sAccelWithCovarianceStamped {
+    void send([in] struct AccelWithCovarianceStamped accel_with_covariance);
+};
+

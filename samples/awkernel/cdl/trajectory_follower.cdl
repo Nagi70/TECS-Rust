@@ -1,0 +1,27 @@
+import("struct.cdl");
+import("publish_signature.cdl");
+
+// まだダミー段階で、本来は引数に steering_state が必要。また、パブリッシュも必要
+signature sTrajectoryFollower {
+    void main([in] struct KinematicState kinematic_state, [in] struct AccelWithCovarianceStamped accel); 
+};
+
+[generate(RustAWKPlugin, "SINK_REACTOR_BODY")]
+celltype tTrajectoryFollower {
+    
+    /* トピックI/F（omit 必須） */
+    entry     sKinematicState  eKinematicStateSf;      /* 入力: 生 Odometry を subscribe */
+    entry     sAccelWithCovarianceStamped  eAccel;      /* 入力: 生 Odometry を subscribe */
+    
+    /* リアクターの受け口（必須: eReactor） */
+    entry sTrajectoryFollower eReactor;
+    
+    /* 属性（プラグインが要求するリアクター属性は omit 指定） */
+    attr {
+        /* REACTOR_BODY で必須のメタ属性 */
+        [omit] PLType("Cow") reactorName          = PL_EXP("TrajectoryFollower");
+        [omit] PLType("SchedulerType") schedType  = PL_EXP("SchedulerType::FIFO");
+        [omit] PLType("Cow") subscribeTopicNames  = PL_EXP("KinematicStateSf, Accel");
+        [omit] PLType("Duration") relativeDeadline = PL_EXP("Duration::from_secs(1)");
+    };
+};
