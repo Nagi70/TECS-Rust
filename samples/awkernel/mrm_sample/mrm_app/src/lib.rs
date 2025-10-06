@@ -79,6 +79,36 @@ pub async fn run() {
 	)
 	.await;
 
+	use tecs_signature::s_stop_filter::*;
+
+	spawn_reactor::<_, (KinematicState,), (KinematicState,)>(
+		"StopFilter".into(),
+		|(odom_in,): (KinematicState,)| -> (KinematicState,) {
+			let mut odom_out: KinematicState = Default::default();
+			tecs_celltype::t_stop_filter_reactor::STOPFILTERREACTOR.c_reactor.main(&odom_in, &mut odom_out);
+			(odom_out,)
+		},
+		vec![Cow::from("KinematicState")],
+		vec![Cow::from("KinematicStateSf")],
+		SchedulerType::FIFO,
+	)
+	.await;
+
+	use tecs_signature::s_twist2_accel::*;
+
+	spawn_reactor::<_, (KinematicState,), (AccelWithCovarianceStamped,)>(
+		"Twist2Accel".into(),
+		|(twist,): (KinematicState,)| -> (AccelWithCovarianceStamped,) {
+			let mut accel: AccelWithCovarianceStamped = Default::default();
+			tecs_celltype::t_twist2_accel_reactor::TWIST2ACCELREACTOR.c_reactor.main(&twist, &mut accel);
+			(accel,)
+		},
+		vec![Cow::from("KinematicState")],
+		vec![Cow::from("Accel")],
+		SchedulerType::FIFO,
+	)
+	.await;
+
 	use tecs_signature::s_ekf_localizer::*;
 
 	spawn_sink_reactor::<_, (TwistWithCovarianceStamped,)>(
@@ -87,6 +117,19 @@ pub async fn run() {
 			tecs_celltype::t_ekf_localizer_sink_reactor::EKFLOCALIZERSINKREACTOR.c_sink_reactor.main(&twist);
 		},
 		vec![Cow::from("TwistWithCovarianceG")],
+		SchedulerType::FIFO,
+		Duration::from_secs(1),
+	)
+	.await;
+
+	use tecs_signature::s_trajectory_follower::*;
+
+	spawn_sink_reactor::<_, (KinematicState,AccelWithCovarianceStamped,)>(
+		"TrajectoryFollower".into(),
+		|(kinematic_state,accel,): (KinematicState,AccelWithCovarianceStamped,)| {
+			tecs_celltype::t_trajectory_follower_sink_reactor::TRAJECTORYFOLLOWERSINKREACTOR.c_sink_reactor.main(&kinematic_state, &accel);
+		},
+		vec![Cow::from("KinematicStateSf, Accel")],
 		SchedulerType::FIFO,
 		Duration::from_secs(1),
 	)
@@ -103,6 +146,21 @@ pub async fn run() {
 			(imu,velocity_status,)
 		},
 		vec![Cow::from("Imu, VelocityStatus")],
+		SchedulerType::FIFO,
+		Duration::from_millis(50),
+	)
+	.await;
+
+	use tecs_signature::s_ekf_localizer_timer::*;
+
+	spawn_periodic_reactor::<_, (KinematicState,)>(
+		"EkfLocalizerTimer".into(),
+		|| -> (KinematicState,) {
+			let mut kinematic_state: KinematicState = Default::default();
+			tecs_celltype::t_ekf_localizer_timer_periodic_reactor::EKFLOCALIZERTIMERPERIODICREACTOR.c_periodic_reactor.main(&mut kinematic_state);
+			(kinematic_state,)
+		},
+		vec![Cow::from("KinematicState")],
 		SchedulerType::FIFO,
 		Duration::from_millis(50),
 	)

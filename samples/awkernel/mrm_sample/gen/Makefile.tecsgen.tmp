@@ -1,0 +1,241 @@
+# generated automatically by tecsgen.
+# This file is not intended to modify.
+#
+# Makefile variables below are defined.
+#  TECS_IMPORT_CDLS          .cdl files improted by import statement
+#  SIGNATURE_HEADERS         .h files of signature
+#  CELLTYPE_TECSGEN_HEADERS  .h files of celltype
+#  CELLTYPE_FACTORY_HEADERS  .h files of celltype's factory
+#  TECS_HEADERS              summary of .h files above
+#  TECS_INLINE_HEADERS       .h files of celltype inline header
+#  PLUGIN_INLINE_HEADERS     .h files of plugin generated inline header
+#
+#  TECS_COBJS                .o files of TECS
+#                            = $(TECSGEN_COBJS)+$(PLUGIN_COBJS)+$(CELLTYPE_COBJS)
+#                            = $(TECS_KERNEL_COBJS)+$(TECS_USER_COBJS)+$(TECS_OUTOFDOMAIN_COBJS)
+#                            = $(TECSGEN_domain_COBJS)+$(PLUGIN_domain_COBJS)+$(CELLTYPE_domain_COBJS) for each domain
+#
+#  TECSGEN_COBJS             .o files of celltype_tecsgen.c
+#  CELLTYPE_COBJS            .o files of celltype.c (celltype code)
+#  PLUGIN_COBJS              .o files of plugin generated .c files
+#
+#  TECSGEN_SRCS              .c files of celltype_tecsgen.c
+#  CELLTYPE_SRCS             .c files of celltype.c (celltype code)
+#  PLUGIN_SRCS               .c files of plugin generated
+#  PLUGIN_CELLTYPE_SRCS      .c files of plugin generated celltype.c (celltype code)
+#  PLUGIN_TECSGEN_SRCS       .c files of plugin generated celltype_tecsgen.c
+#
+# Variables for domain (These are defined if domain is specified)
+#  TECS_DOMAINS             domain names
+#  TECS_KERNEL_COBJS        .o files of kernel domain (tecsgen, celltype, plugin)
+#  TECS_USER_COBJS          .o files of user domain (tecsgen, celltype, plugin)
+#  TECS_OUTOFDOMAIN_COBJS   .o files of OutOfDomain (tecsgen, celltype, plugin)
+#  TECSGEN_domain_COBJS     .o files of celltype_tecsgen.c files for each domain
+#  PLUGIN_domain_COBJS      .o files of plugin generated .c files for each domain
+#  CELLTYPE_domain_COBJS    .o files of celltype.c files for each domain
+#  TECSGEN_domain_SRCS      .c files of celltype_domain_tecsgen.c
+#  PLUGIN_domain_SRCS       .c files of plugin generated .c files for each domain
+#  CELLTYPE_domain_SRCS     .c files of celltype.c files for each domain
+#
+# Rust files
+#  RUST_PLUGIN_SIGNATURE      .rs files of signature
+#  RUST_PLUGIN_CELLTYPE_SRCS  .rs files of Rust plugin generated celltype_impl.rs (celltype code)
+#  RUST_PLUGIN_TECSGEN_SRCS   .rs files of Rust plugin generated celltype.rs
+#  RUST_PLUGIN_SRCS           .rs files of Rust plugin generated
+
+TECS_IMPORT_CDLS = mrm_app.cdl ../cdl//dummy_periodic_reactor_in_mrm.cdl ../cdl//struct.cdl ../cdl//publish_signature.cdl ../cdl//imu_driver.cdl ../cdl//imu_corrector.cdl ../cdl//tf.cdl ../cdl//vehicle_velocity_converter.cdl ../cdl//gyro_odometer.cdl ../cdl//ekf_localizer.cdl ../cdl/ekf_localizer//ekf_module.cdl ../cdl/ekf_localizer//time_delay_kalman_filter.cdl ../cdl/ekf_localizer//state_transition.cdl ../cdl/ekf_localizer//measurement.cdl ../cdl/ekf_localizer//mahalanobis.cdl ../cdl/ekf_localizer//covariance.cdl ../cdl/ekf_localizer//utils_geometry.cdl ../cdl//stop_filter.cdl ../cdl//twist2accel.cdl ../cdl//trajectory_follower.cdl gen/tmp_RustAWKCelltypePlugin_post_code.cdl gen/tImuDriver_reactor.cdl gen/tImuCorrector_reactor.cdl gen/tVehicleVelocityConverter_reactor.cdl gen/tGyroOdometer_reactor.cdl gen/tStopFilter_reactor.cdl gen/tTwist2Accel_reactor.cdl gen/tEkfLocalizer_sink_reactor.cdl gen/tTrajectoryFollower_sink_reactor.cdl gen/tDummyPeriodicReactorInMrm_periodic_reactor.cdl gen/tEkfLocalizerTimer_periodic_reactor.cdl
+TECS_IMPORT_HEADERS =
+TECS_IMPORTS = $(TECS_IMPORT_CDLS) $(TECS_IMPORT_HEADERS)
+
+SIGNATURE_HEADERS = \
+	$(GEN_DIR)/sImu_tecsgen.h \
+	$(GEN_DIR)/sImuRaw_tecsgen.h \
+	$(GEN_DIR)/sImuData_tecsgen.h \
+	$(GEN_DIR)/sVelocityStatus_tecsgen.h \
+	$(GEN_DIR)/sTwistWithCovariance_tecsgen.h \
+	$(GEN_DIR)/sTwistWithCovarianceStamped_tecsgen.h \
+	$(GEN_DIR)/sKinematicState_tecsgen.h \
+	$(GEN_DIR)/sAccelWithCovariance_tecsgen.h \
+	$(GEN_DIR)/sAccelWithCovarianceStamped_tecsgen.h \
+	$(GEN_DIR)/sDummyPeriodicReactorInMrm_tecsgen.h \
+	$(GEN_DIR)/sImuDevice_tecsgen.h \
+	$(GEN_DIR)/sImuDriver_tecsgen.h \
+	$(GEN_DIR)/sTf_tecsgen.h \
+	$(GEN_DIR)/sImuCorrector_tecsgen.h \
+	$(GEN_DIR)/sVehicleVelocityConverter_tecsgen.h \
+	$(GEN_DIR)/sGyroOdometer_tecsgen.h \
+	$(GEN_DIR)/sEkfLocalizer_tecsgen.h \
+	$(GEN_DIR)/sTwistWithCovarianceSet_tecsgen.h \
+	$(GEN_DIR)/sTwistWithCovarianceGet_tecsgen.h \
+	$(GEN_DIR)/sTimeDelayKalmanFilter_tecsgen.h \
+	$(GEN_DIR)/sStateTransition_tecsgen.h \
+	$(GEN_DIR)/sMeasurement_tecsgen.h \
+	$(GEN_DIR)/sMahalanobis_tecsgen.h \
+	$(GEN_DIR)/sCovariance_tecsgen.h \
+	$(GEN_DIR)/sUtilsGeometry_tecsgen.h \
+	$(GEN_DIR)/sEkfModule_tecsgen.h \
+	$(GEN_DIR)/sEkfLocalizerTimer_tecsgen.h \
+	$(GEN_DIR)/sStopFilter_tecsgen.h \
+	$(GEN_DIR)/sTwist2Accel_tecsgen.h \
+	$(GEN_DIR)/sLowpass1d_tecsgen.h \
+	$(GEN_DIR)/sTrajectoryFollower_tecsgen.h \
+# SIGNATURE_HEADERS terminator
+
+CELLTYPE_TECSGEN_HEADERS = \
+ 	$(GEN_DIR)/tLowpassFilter1D_tecsgen.h \
+# CELLTYPE_TECSGEN_HEADERS terminator
+
+CELLTYPE_FACTORY_HEADERS = \
+ 	$(GEN_DIR)/tLowpassFilter1D_factory.h \
+# CELLTYPE_FACTORY_HEADERS terminator
+
+# TECS_HEADERS:  headers generated by tecsgen
+TECS_HEADERS = $(SIGNATURE_HEADERS) $(CELLTYPE_TECSGEN_HEADERS) $(CELLTYPE_FACTORY_HEADERS)
+
+TECS_INLINE_HEADERS = \
+ 	tLowpassFilter1D_tecsgen.h \
+# TECS_INLINE_HEADERS terminator
+
+PLUGIN_INLINE_HEADERS = \
+# PLUGIN_INLINE_HEADERS terminator
+
+# TECS_COBJS: all objects of TECS, include both user written code and tecsgen automatically generated code
+TECS_COBJS = $(TECSGEN_COBJS) $(PLUGIN_COBJS) $(CELLTYPE_COBJS)
+
+# TECSGEN_COBJS: objects from sources which are automatically generated by tecsgen
+TECSGEN_COBJS = \
+ 	$(_TECS_OBJ_DIR)tLowpassFilter1D_tecsgen.o \
+# TECSGEN_COBJS terminator
+
+# PLUGIN_COBJS: objects from sources which are automatically generated by plugin(s)
+PLUGIN_COBJS = \
+# PLUGIN_COBJS terminator
+
+# CELLTYPE_COBJS: objects of celltype code written by user
+CELLTYPE_COBJS = \
+ 	$(_TECS_OBJ_DIR)tLowpassFilter1D.o \
+# CELLTYPE_COBJS terminator
+
+# TECSGEN_SRCS: sources automatically generated by tecsgen
+TECSGEN_SRCS = \
+ 	$(GEN_DIR)/tLowpassFilter1D_tecsgen.c \
+# TECSGEN_SRCS terminator
+
+# PLUGIN_SRCS: sources automatically generated by plugin
+PLUGIN_CELLTYPE_SRCS = \
+  $(PLUGIN_CELLTYPE_SRCS)\
+# PLUGIN_CELLTYPE_SRCS terminator
+
+PLUGIN_TECSGEN_SRCS = \
+  $(PLUGIN_TECSGEN_SRCS)\
+# PLUGIN_TECSGEN_SRCS terminator
+
+PLUGIN_SRCS = $(PLUGIN_CELLTYPE_SRCS) $(PLUGIN_TECSGEN_SRCS)
+
+PLUGIN_CELLTYPE_SRCS = \
+# PLUGIN_CELLTYPE_SRCS terminator
+
+PLUGIN_TECSGEN_SRCS = \
+# PLUGIN_TECSGEN_SRCS terminator
+
+# CELLTYPE_SRCS: sources of celltype code written by user
+CELLTYPE_SRCS = \
+ 	tLowpassFilter1D.c \
+# CELLTYPE_SRCS terminator
+
+# RUST_PLUGIN_SIGNATURE: trait files generated by Rust plugin
+RUST_PLUGIN_SIGNATURE = \
+	$(GEN_DIR)/../$(APPLNAME)/src/tecs_signature/s_imu.rs \
+	$(GEN_DIR)/../$(APPLNAME)/src/tecs_signature/s_velocity_status.rs \
+	$(GEN_DIR)/../$(APPLNAME)/src/tecs_signature/s_dummy_periodic_reactor_in_mrm.rs \
+	$(GEN_DIR)/../$(APPLNAME)/src/tecs_signature/s_imu_device.rs \
+	$(GEN_DIR)/../$(APPLNAME)/src/tecs_signature/s_imu_driver.rs \
+	$(GEN_DIR)/../$(APPLNAME)/src/tecs_signature/s_imu_raw.rs \
+	$(GEN_DIR)/../$(APPLNAME)/src/tecs_signature/s_tf.rs \
+	$(GEN_DIR)/../$(APPLNAME)/src/tecs_signature/s_imu_data.rs \
+	$(GEN_DIR)/../$(APPLNAME)/src/tecs_signature/s_imu_corrector.rs \
+	$(GEN_DIR)/../$(APPLNAME)/src/tecs_signature/s_twist_with_covariance_stamped.rs \
+	$(GEN_DIR)/../$(APPLNAME)/src/tecs_signature/s_vehicle_velocity_converter.rs \
+	$(GEN_DIR)/../$(APPLNAME)/src/tecs_signature/s_gyro_odometer.rs \
+	$(GEN_DIR)/../$(APPLNAME)/src/tecs_signature/s_twist_with_covariance_set.rs \
+	$(GEN_DIR)/../$(APPLNAME)/src/tecs_signature/s_ekf_localizer.rs \
+	$(GEN_DIR)/../$(APPLNAME)/src/tecs_signature/s_twist_with_covariance_get.rs \
+	$(GEN_DIR)/../$(APPLNAME)/src/tecs_signature/s_time_delay_kalman_filter.rs \
+	$(GEN_DIR)/../$(APPLNAME)/src/tecs_signature/s_state_transition.rs \
+	$(GEN_DIR)/../$(APPLNAME)/src/tecs_signature/s_measurement.rs \
+	$(GEN_DIR)/../$(APPLNAME)/src/tecs_signature/s_mahalanobis.rs \
+	$(GEN_DIR)/../$(APPLNAME)/src/tecs_signature/s_covariance.rs \
+	$(GEN_DIR)/../$(APPLNAME)/src/tecs_signature/s_utils_geometry.rs \
+	$(GEN_DIR)/../$(APPLNAME)/src/tecs_signature/s_ekf_module.rs \
+	$(GEN_DIR)/../$(APPLNAME)/src/tecs_signature/s_kinematic_state.rs \
+	$(GEN_DIR)/../$(APPLNAME)/src/tecs_signature/s_ekf_localizer_timer.rs \
+	$(GEN_DIR)/../$(APPLNAME)/src/tecs_signature/s_stop_filter.rs \
+	$(GEN_DIR)/../$(APPLNAME)/src/tecs_signature/s_accel_with_covariance_stamped.rs \
+	$(GEN_DIR)/../$(APPLNAME)/src/tecs_signature/s_twist2_accel.rs \
+	$(GEN_DIR)/../$(APPLNAME)/src/tecs_signature/s_lowpass1d.rs \
+	$(GEN_DIR)/../$(APPLNAME)/src/tecs_signature/s_trajectory_follower.rs \
+# RUST_PLUGIN_SIGNATURE terminator
+
+# RUST_PLUGIN_CELLTYPE_SRCS: sources of Rust celltype code written by user
+RUST_PLUGIN_CELLTYPE_SRCS = \
+ 	$(GEN_DIR)/../$(APPLNAME)/src/tecs_impl/t_dummy_periodic_reactor_in_mrm_impl.rs \
+ 	$(GEN_DIR)/../$(APPLNAME)/src/tecs_impl/t_tamagawa_imu_device_impl.rs \
+ 	$(GEN_DIR)/../$(APPLNAME)/src/tecs_impl/t_imu_driver_impl.rs \
+ 	$(GEN_DIR)/../$(APPLNAME)/src/tecs_impl/t_tf_impl.rs \
+ 	$(GEN_DIR)/../$(APPLNAME)/src/tecs_impl/t_imu_corrector_impl.rs \
+ 	$(GEN_DIR)/../$(APPLNAME)/src/tecs_impl/t_vehicle_velocity_converter_impl.rs \
+ 	$(GEN_DIR)/../$(APPLNAME)/src/tecs_impl/t_gyro_odometer_impl.rs \
+ 	$(GEN_DIR)/../$(APPLNAME)/src/tecs_impl/t_ekf_localizer_impl.rs \
+ 	$(GEN_DIR)/../$(APPLNAME)/src/tecs_impl/t_twist_with_covariance_aged_object_queue_impl.rs \
+ 	$(GEN_DIR)/../$(APPLNAME)/src/tecs_impl/t_time_delay_kalman_filter_impl.rs \
+ 	$(GEN_DIR)/../$(APPLNAME)/src/tecs_impl/t_state_transition_impl.rs \
+ 	$(GEN_DIR)/../$(APPLNAME)/src/tecs_impl/t_measurement_impl.rs \
+ 	$(GEN_DIR)/../$(APPLNAME)/src/tecs_impl/t_mahalanobis_impl.rs \
+ 	$(GEN_DIR)/../$(APPLNAME)/src/tecs_impl/t_covariance_impl.rs \
+ 	$(GEN_DIR)/../$(APPLNAME)/src/tecs_impl/t_utils_geometry_impl.rs \
+ 	$(GEN_DIR)/../$(APPLNAME)/src/tecs_impl/t_ekf_module_impl.rs \
+ 	$(GEN_DIR)/../$(APPLNAME)/src/tecs_impl/t_ekf_localizer_timer_impl.rs \
+ 	$(GEN_DIR)/../$(APPLNAME)/src/tecs_impl/t_stop_filter_impl.rs \
+ 	$(GEN_DIR)/../$(APPLNAME)/src/tecs_impl/t_twist2_accel_impl.rs \
+ 	$(GEN_DIR)/../$(APPLNAME)/src/tecs_impl/t_trajectory_follower_impl.rs \
+# RUST_PLUGIN_CELLTYPE_SRCS terminator
+
+# RUST_PLUGIN_TECSGEN_SRCS: Rust celltype code generated by Rust plugin
+RUST_PLUGIN_TECSGEN_SRCS = \
+ 	$(GEN_DIR)/../$(APPLNAME)/src/tecs_celltype/t_dummy_periodic_reactor_in_mrm.rs \
+ 	$(GEN_DIR)/../$(APPLNAME)/src/tecs_celltype/t_tamagawa_imu_device.rs \
+ 	$(GEN_DIR)/../$(APPLNAME)/src/tecs_celltype/t_imu_driver.rs \
+ 	$(GEN_DIR)/../$(APPLNAME)/src/tecs_celltype/t_tf.rs \
+ 	$(GEN_DIR)/../$(APPLNAME)/src/tecs_celltype/t_imu_corrector.rs \
+ 	$(GEN_DIR)/../$(APPLNAME)/src/tecs_celltype/t_vehicle_velocity_converter.rs \
+ 	$(GEN_DIR)/../$(APPLNAME)/src/tecs_celltype/t_gyro_odometer.rs \
+ 	$(GEN_DIR)/../$(APPLNAME)/src/tecs_celltype/t_ekf_localizer.rs \
+ 	$(GEN_DIR)/../$(APPLNAME)/src/tecs_celltype/t_twist_with_covariance_aged_object_queue.rs \
+ 	$(GEN_DIR)/../$(APPLNAME)/src/tecs_celltype/t_time_delay_kalman_filter.rs \
+ 	$(GEN_DIR)/../$(APPLNAME)/src/tecs_celltype/t_state_transition.rs \
+ 	$(GEN_DIR)/../$(APPLNAME)/src/tecs_celltype/t_measurement.rs \
+ 	$(GEN_DIR)/../$(APPLNAME)/src/tecs_celltype/t_mahalanobis.rs \
+ 	$(GEN_DIR)/../$(APPLNAME)/src/tecs_celltype/t_covariance.rs \
+ 	$(GEN_DIR)/../$(APPLNAME)/src/tecs_celltype/t_utils_geometry.rs \
+ 	$(GEN_DIR)/../$(APPLNAME)/src/tecs_celltype/t_ekf_module.rs \
+ 	$(GEN_DIR)/../$(APPLNAME)/src/tecs_celltype/t_ekf_localizer_timer.rs \
+ 	$(GEN_DIR)/../$(APPLNAME)/src/tecs_celltype/t_stop_filter.rs \
+ 	$(GEN_DIR)/../$(APPLNAME)/src/tecs_celltype/t_twist2_accel.rs \
+ 	$(GEN_DIR)/../$(APPLNAME)/src/tecs_celltype/t_trajectory_follower.rs \
+ 	$(GEN_DIR)/../$(APPLNAME)/src/tecs_celltype/t_imu_driver_reactor.rs \
+ 	$(GEN_DIR)/../$(APPLNAME)/src/tecs_celltype/t_imu_corrector_reactor.rs \
+ 	$(GEN_DIR)/../$(APPLNAME)/src/tecs_celltype/t_vehicle_velocity_converter_reactor.rs \
+ 	$(GEN_DIR)/../$(APPLNAME)/src/tecs_celltype/t_gyro_odometer_reactor.rs \
+ 	$(GEN_DIR)/../$(APPLNAME)/src/tecs_celltype/t_stop_filter_reactor.rs \
+ 	$(GEN_DIR)/../$(APPLNAME)/src/tecs_celltype/t_twist2_accel_reactor.rs \
+ 	$(GEN_DIR)/../$(APPLNAME)/src/tecs_celltype/t_ekf_localizer_sink_reactor.rs \
+ 	$(GEN_DIR)/../$(APPLNAME)/src/tecs_celltype/t_trajectory_follower_sink_reactor.rs \
+ 	$(GEN_DIR)/../$(APPLNAME)/src/tecs_celltype/t_dummy_periodic_reactor_in_mrm_periodic_reactor.rs \
+ 	$(GEN_DIR)/../$(APPLNAME)/src/tecs_celltype/t_ekf_localizer_timer_periodic_reactor.rs \
+# RUST_PLUGIN_TECSGEN_SRCS terminator
+
+# RUST_PLUGIN_SRCS: sources automatically generated by Rust plugin
+RUST_PLUGIN_SRCS = \
+	$(GEN_DIR)/../$(APPLNAME)/src/lib.rs \
+# RUST_PLUGIN_SRCS terminator
+

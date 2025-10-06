@@ -98,6 +98,42 @@ impl Default for TwistWithCovarianceStamped {
 	}
 }
 
+#[derive(Clone)]
+pub struct KinematicState {
+    pub header: Header,
+    pub child_frame_id: heapless::String<256>,
+    pub pose: PoseWithCovariance,
+    pub twist: TwistWithCovariance,
+    pub accel: AccelWithCovariance,
+}
+
+impl Default for KinematicState {
+	fn default() -> Self {
+		Self {
+			header: Default::default(),
+			child_frame_id: Default::default(),
+			pose: Default::default(),
+			twist: Default::default(),
+			accel: Default::default(),
+		}
+	}
+}
+
+#[derive(Clone)]
+pub struct AccelWithCovarianceStamped {
+    pub header: Header,
+    pub accel: AccelWithCovariance,
+}
+
+impl Default for AccelWithCovarianceStamped {
+	fn default() -> Self {
+		Self {
+			header: Default::default(),
+			accel: Default::default(),
+		}
+	}
+}
+
 #[derive(Default, Clone)]
 pub struct TwistWithCovariance {
     pub twist: Twist,
@@ -108,5 +144,56 @@ pub struct TwistWithCovariance {
 pub struct Twist {
     pub linear: nalgebra::Vector3<f64>,
     pub angular: nalgebra::Vector3<f64>,
+}
+
+#[derive(Default, Clone)]
+pub struct PoseWithCovariance {
+    pub pose: Pose,
+    pub covariance: nalgebra::Matrix6<f64>,
+}
+
+#[derive(Default, Clone)]
+pub struct Pose {
+    pub point: nalgebra::Vector3<f64>,
+    pub orientation: nalgebra::Quaternion<f64>,
+}
+
+#[derive(Default, Clone)]
+pub struct AccelWithCovariance {
+    pub accel: Accel,
+    pub covariance: nalgebra::Matrix6<f64>,
+}
+
+#[derive(Default, Clone)]
+pub struct Accel {
+    pub linear: nalgebra::Vector3<f64>,
+    pub angular: nalgebra::Vector3<f64>,
+}
+
+#[derive(Default, Clone)]
+pub struct Transform {
+    pub translation: nalgebra::Vector3<f64>,
+    pub rotatoin: nalgebra::Quaternion<f64>,
+}
+
+#[derive(Default, Clone)]
+pub struct Simple1DFilter {
+    pub x: f64,
+    pub value: f64,
+}
+
+#[derive(Clone)]
+pub struct TwistStamped {
+    pub header: Header,
+    pub twist: Twist,
+}
+
+impl Default for TwistStamped {
+	fn default() -> Self {
+		Self {
+			header: Default::default(),
+			twist: Default::default(),
+		}
+	}
 }
 

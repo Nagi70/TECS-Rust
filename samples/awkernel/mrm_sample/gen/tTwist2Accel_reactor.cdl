@@ -1,0 +1,11 @@
+[active, generate(RustAWKPlugin, "REACTOR")]
+celltype tTwist2AccelReactor {
+  [async] call sTwist2Accel cReactor;
+  attr {
+    [omit] PLType("Cow") name = PL_EXP("Twist2Accel");
+    [omit] PLType("SchedulerType") schedType = PL_EXP("SchedulerType::FIFO");
+    [omit] PLType("Cow") publishTopicNames = PL_EXP("Accel");
+    [omit] PLType("Cow") subscribeTopicNames = PL_EXP("KinematicState");
+  };
+};
+

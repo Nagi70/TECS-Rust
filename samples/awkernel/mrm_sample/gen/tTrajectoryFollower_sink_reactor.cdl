@@ -1,0 +1,11 @@
+[active, generate(RustAWKPlugin, "SINK_REACTOR")]
+celltype tTrajectoryFollowerSinkReactor {
+  [async] call sTrajectoryFollower cSinkReactor;
+  attr {
+    [omit] PLType("Cow") name = PL_EXP("TrajectoryFollower");
+    [omit] PLType("SchedulerType") schedType = PL_EXP("SchedulerType::FIFO");
+    [omit] PLType("Cow") subscribeTopicNames = PL_EXP("KinematicStateSf, Accel");
+    [omit] PLType("Cow") relativeDeadline = PL_EXP("Duration::from_secs(1)");
+  };
+};
+

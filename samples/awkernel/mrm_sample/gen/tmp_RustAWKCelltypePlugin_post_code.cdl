@@ -23,15 +23,39 @@ cell tGyroOdometerReactor GyroOdometerReactor {
   cReactor = GyroOdometer.eReactor;
 };
 
+import("gen/tStopFilter_reactor.cdl");
+
+cell tStopFilterReactor StopFilterReactor {
+  cReactor = StopFilter.eReactor;
+};
+
+import("gen/tTwist2Accel_reactor.cdl");
+
+cell tTwist2AccelReactor Twist2AccelReactor {
+  cReactor = Twist2Accel.eReactor;
+};
+
 import("gen/tEkfLocalizer_sink_reactor.cdl");
 
 cell tEkfLocalizerSinkReactor EkfLocalizerSinkReactor {
   cSinkReactor = EkfLocalizer.eReactor;
 };
 
+import("gen/tTrajectoryFollower_sink_reactor.cdl");
+
+cell tTrajectoryFollowerSinkReactor TrajectoryFollowerSinkReactor {
+  cSinkReactor = TrajectoryFollower.eReactor;
+};
+
 import("gen/tDummyPeriodicReactorInMrm_periodic_reactor.cdl");
 
 cell tDummyPeriodicReactorInMrmPeriodicReactor DummyHardwarePeriodicReactor {
   cPeriodicReactor = DummyHardware.eReactor;
+};
+
+import("gen/tEkfLocalizerTimer_periodic_reactor.cdl");
+
+cell tEkfLocalizerTimerPeriodicReactor EkfLocalizerTimerPeriodicReactor {
+  cPeriodicReactor = EkfLocalizerTimer.eReactor;
 };
 

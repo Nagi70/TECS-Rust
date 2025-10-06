@@ -6,6 +6,8 @@ import("vehicle_velocity_converter.cdl");
 import("gyro_odometer.cdl");
 import("ekf_localizer.cdl");
 
+// IMU -> Ekf まで
+
 cell tDummyPeriodicReactorInMrm DummyHardware {
     cImu = ImuDriver.eImu;
     cVelocityStatus = VehicleVelocityConverter.eVelocityStatus;
@@ -50,5 +52,88 @@ cell tEkfLocalizer EkfLocalizer {
 cell tTwistWithCovarianceAgedObjectQueue TwistWithCovarianceQueue {
 };
 
+// Ekf から trajectory_follower まで
 
+import("covariance.cdl");
+import("time_delay_kalman_filter.cdl");
+import("mahalanobis.cdl");
+import("measurement.cdl");
+import("state_transition.cdl");
+import("utils_geometry.cdl");
+
+import("stop_filter.cdl");
+import("twist2accel.cdl");
+import("trajectory_follower.cdl");
+
+cell tEkfLocalizerTimer EkfLocalizerTimer {
+    cKinematicState[0] = StopFilter.eKinematicState;
+    cKinematicState[1] = Twist2Accel.eKinematicState;
+
+    cEkfModule = EkfModule.eEkfModule;
+    cQueue = TwistWithCovarianceQueue.eGet;
+};
+
+cell tEkfModule EkfModule {
+    cKalman = TimeDelayKalmanFilter.eKalman;
+    cState = StateTransition.eState;
+    cMeasure = Measurement.eMeasure;
+    cMaha = Mahalanobis.eMaha;
+    cCov = Covariance.eCov;
+    cUtils = UtilsGeometry.eUtils;
+};
+
+cell tTimeDelayKalmanFilter TimeDelayKalmanFilter {
+};
+
+cell tStateTransition StateTransition {
+};
+
+cell tMeasurement Measurement {
+};
+
+cell tMahalanobis Mahalanobis {
+};
+
+cell tCovariance Covariance {
+};
+
+cell tUtilsGeometry UtilsGeometry {
+};
+
+cell tStopFilter StopFilter {
+    cKinematicStateSf = TrajectoryFollower.eKinematicStateSf;
+};
+
+cell tTwist2Accel Twist2Accel {
+    cAccel = TrajectoryFollower.eAccel;
+    
+    cFilterAlx = FilterAlx.eFilter;
+    cFilterAly = FilterAly.eFilter;
+    cFilterAlz = FilterAlz.eFilter;
+    cFilterAax = FilterAax.eFilter;
+    cFilterAay = FilterAay.eFilter;
+    cFilterAaz = FilterAaz.eFilter;
+};
+
+cell tLowpassFilter1D FilterAlx{
+};
+
+cell tLowpassFilter1D FilterAly{
+};
+
+cell tLowpassFilter1D FilterAlz{
+};
+
+cell tLowpassFilter1D FilterAax{
+};
+
+cell tLowpassFilter1D FilterAay{
+};
+
+cell tLowpassFilter1D FilterAaz{
+};
+
+cell tTrajectoryFollower TrajectoryFollower {
+
+};
 
