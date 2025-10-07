@@ -628,7 +628,7 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
         file.print "use awkernel_lib::delay::wait_microsec;\n"
         file.print "use core::time::Duration;\n\n"
 
-        file.print "use tecs_struct_def::*;\n\n"
+        file.print "use tecs_global::*;\n\n"
 
         if @@use_periodic_reactor_gen then
             # file.print "use tecs_celltype::t_dag_periodic_reactor::*;\n"
@@ -1127,8 +1127,8 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
         end
     end
 
-    def gen_use_in_tecs_struct_def_rs file
-        file.print("use awkernel_lib::time::Time;\n")
+    def gen_use_in_tecs_global_rs file
+        # file.print("use awkernel_lib::time::Time;\n")
     end
 
     # awkernelのTime型など、defaultの実装がない型への特別な対応を生成する

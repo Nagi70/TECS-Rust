@@ -57,8 +57,8 @@ class RustGenCelltypePlugin < CelltypePlugin
     @@mod_global_celltypes_list = []
     @@mod_global_impls_list = []
     @@struct_type_list = []
-    # tecs_struct_def.rs を 1 度だけ生成したかどうかを示すフラグ
-    @@struct_def_generated = false
+    # tecs_global.rs を 1 度だけ生成したかどうかを示すフラグ
+    @@global_generated = false
     @@default_impled_custom_struct_list = Hash.new { |hash, key| hash[key] = [] }
 
     @@gen_heapless_crate_dependency = false
@@ -76,7 +76,7 @@ class RustGenCelltypePlugin < CelltypePlugin
       @mod_signatures_list = []
       @mod_celltypes_list = []
       @mod_impls_list = []
-      @gen_use_struct_def = false
+      @gen_use_global = false
       
 
       require_tecsgen_lib 'lib/RustDefaultTypeChecker.rb'
@@ -257,8 +257,8 @@ class RustGenCelltypePlugin < CelltypePlugin
             gen_use_mutex file
         end
 
-        if @gen_use_struct_def then
-            file.print "use crate::tecs_struct_def::*;\n"
+        if @gen_use_global then
+            file.print "use crate::tecs_global::*;\n"
         end
 
         if @mod_signatures_list.length == 1 then
@@ -367,7 +367,7 @@ class RustGenCelltypePlugin < CelltypePlugin
         elsif c_type.kind_of?( StructType ) then
             str = c_type.get_name.to_s
             # TODO: 構造体の定義がある場合は、その構造体の定義を生成する。
-            # すべてのオリジナル構造体の定義を tecs_struct_def.rs に生成する
+            # すべてのオリジナル構造体の定義を tecs_global.rs に生成する
             @@struct_type_list.push(c_type)
 
             # まだチェックされていない構造体の場合は、チェックを行う
@@ -386,7 +386,7 @@ class RustGenCelltypePlugin < CelltypePlugin
                 end
             end
 
-            @gen_use_struct_def = true
+            @gen_use_global = true
         elsif c_type.kind_of?( PtrType ) then
             if c_type.get_string != nil then
                 # str = "#{c_type.has_sized_pointer?}"
@@ -444,13 +444,42 @@ class RustGenCelltypePlugin < CelltypePlugin
         return str
     end
 
-    # tecs_struct_def.rs に use 文を生成する
-    def gen_use_in_tecs_struct_def_rs file
-        file.print("use heapless::String;\n")
+    # tecs_global.rs に use 文を生成する
+    def gen_use_in_tecs_global_rs file
+        # file.print("use heapless::String;\n")
     end
-    
-    # オリジナル構造体の定義を tecs_struct_def.rs に生成する
-    def gen_tecs_struct_def_rs
+
+    # const定数の定義を生成する
+    def gen_const_in_tecs_global_rs(file)
+        root = Namespace.get_root
+
+        traverse = lambda do |ns|
+            consts = ns.instance_variable_get(:@const_decl_list) || []
+            consts.each do |c|
+            # ポインタ定数は Rust へ安全に落としにくいのでスキップ
+            next if c.get_type.kind_of?(PtrType)
+
+            rust_ty = c_type_to_rust_type(c.get_type)
+
+            # tecsgen 本体と同じ評価ロジック
+            val = c.get_initializer.eval_const2(nil)
+            lit = val.to_s  # IntegerVal/FloatVal/BoolVal は妥当な文字列になる
+
+            # グローバル名ベースで一意な CONST 名に
+            name = c.get_global_name.to_s.gsub(/[^A-Za-z0-9_]/, "_").upcase
+
+            file.print("pub const #{name}: #{rust_ty} = #{lit};\n")
+            end
+            ns.get_namespace_list.each { |child| traverse.call(child) }
+        end
+
+        file.print("\n")
+        traverse.call(root)
+        file.print("\n")
+    end
+
+    # オリジナル構造体、const定数の定義を tecs_global.rs に生成する
+    def gen_tecs_global_rs
         # 構造体が 1 つも収集されていない場合は何もしない
         # return if @@struct_type_list.empty?
 
@@ -462,10 +491,12 @@ class RustGenCelltypePlugin < CelltypePlugin
 
         # ファイルを生成
         require 'fileutils'
-        out_path = "#{$gen}/tecs_struct_def.rs"
+        out_path = "#{$gen}/tecs_global.rs"
         file = CFile.open(out_path, "w")
 
-        gen_use_in_tecs_struct_def_rs file
+        gen_use_in_tecs_global_rs file
+
+        gen_const_in_tecs_global_rs file
 
         uniq_list.each_value do |st|
             rust_name = camel_case(snake_case(st.get_name.to_s.sub(/^_+/, "")))
@@ -496,7 +527,7 @@ class RustGenCelltypePlugin < CelltypePlugin
         file.close
 
         # Cargo プロジェクトへコピー（トップレベルなので file_type=nil）
-        copy_gen_files_to_cargo "tecs_struct_def.rs", nil
+        copy_gen_files_to_cargo "tecs_global.rs", nil
     end
 
     # TODO: Timeなど、特別扱いをする型に対して、defaultを実装する
@@ -524,9 +555,9 @@ class RustGenCelltypePlugin < CelltypePlugin
             trait_file = CFile.open( "#{$gen}/tecs_signature/#{snake_case(sig_name)}.rs", "w" )
             # gen_use_mutex trait_file
 
-            # 必ず tecs_struct_def を use する
+            # 必ず tecs_global を use する
             #TODO: 必要なときにだけ use するようにする
-            trait_file.print "use crate::tecs_struct_def::*;\n"
+            trait_file.print "use crate::tecs_global::*;\n"
 
             trait_file.print "pub trait #{camel_case(snake_case(sig_name))} {\n"
 
@@ -626,7 +657,7 @@ class RustGenCelltypePlugin < CelltypePlugin
         file.print "mod tecs_celltype;\n"
         file.print "mod tecs_signature;\n"
         file.print "mod tecs_impl;\n"
-        file.print "mod tecs_struct_def;\n"
+        file.print "mod tecs_global;\n"
     end
 
     def gen_mod_in_main_lib_rs_for_signature signature
@@ -1297,9 +1328,9 @@ class RustGenCelltypePlugin < CelltypePlugin
         #     gen_use_mutex file
         # end
         
-        # 必ず tecs_struct_def を use する
+        # 必ず tecs_global を use する
         #TODO: 必要なときにだけ use するようにする
-        file.print "use crate::tecs_struct_def::*;\n"
+        file.print "use crate::tecs_global::*;\n"
 
         file.print "use crate::tecs_celltype::#{snake_case(celltype.get_global_name.to_s)}::*;\n"
 
@@ -2149,8 +2180,8 @@ class RustGenCelltypePlugin < CelltypePlugin
         gen_rust_plugin_tecsgen_srcs_for_makefile
 
 
-        puts "#{@celltype.get_global_name.to_s}: gen_tecs_struct_def_rs"
-        gen_tecs_struct_def_rs
+        puts "#{@celltype.get_global_name.to_s}: gen_tecs_global_rs"
+        gen_tecs_global_rs
     end # gen_factory
 
 end
