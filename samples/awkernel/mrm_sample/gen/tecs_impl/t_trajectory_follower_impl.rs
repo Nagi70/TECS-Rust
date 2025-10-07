@@ -1,4 +1,4 @@
-use crate::tecs_struct_def::*;
+use crate::tecs_global::*;
 use crate::tecs_celltype::t_trajectory_follower::*;
 use crate::tecs_signature::{s_kinematic_state::*, s_accel_with_covariance_stamped::*, s_trajectory_follower::*};
 use awkernel_lib::sync::mutex::MCSNode;

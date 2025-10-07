@@ -21,7 +21,7 @@ struct tag_sMeasurement_VDES {
 /* signature function table #_SFT_# */
 struct tag_sMeasurement_VMT {
     RType( nalgebra::Matrix2x6<f64> ) (*twistMeasurementMatrix__T)( const struct tag_sMeasurement_VDES *edp );
-    RType( nalgebra::Matrix2<f64> ) (*twistMeasurementCovariance__T)( const struct tag_sMeasurement_VDES *edp, RType( nalgebra::Matrix6<f64> ) covairance, uint32_t smoothing_step );
+    RType( nalgebra::Matrix2<f64> ) (*twistMeasurementCovariance__T)( const struct tag_sMeasurement_VDES *edp, RType( nalgebra::Matrix6<f64> ) covariance, uint32_t smoothing_step );
 };
 
 /* signature descriptor #_SDES_# for dynamic join */

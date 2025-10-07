@@ -1,4 +1,4 @@
-use crate::tecs_struct_def::*;
+use crate::tecs_global::*;
 pub trait SStateTransition {
 	fn normalize_yaw(&'static self, yaw: &f64)-> f64;
 	fn predict_next_state(&'static self, x_curr: &nalgebra::Matrix6x1<f64>, dt: &f64)-> nalgebra::Vector6<f64>;

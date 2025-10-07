@@ -1,4 +1,4 @@
-use crate::tecs_struct_def::*;
+use crate::tecs_global::*;
 use crate::tecs_celltype::t_tf::*;
 use crate::tecs_signature::s_tf::*;
 use awkernel_lib::sync::mutex::MCSNode;

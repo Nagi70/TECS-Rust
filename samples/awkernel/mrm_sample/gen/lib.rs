@@ -2,7 +2,7 @@
 mod tecs_celltype;
 mod tecs_signature;
 mod tecs_impl;
-mod tecs_struct_def;
+mod tecs_global;
 mod tecs_variable;
 extern crate alloc;
 use alloc::{borrow::Cow, vec};
@@ -11,7 +11,7 @@ use awkernel_async_lib::scheduler::SchedulerType;
 use awkernel_lib::delay::wait_microsec;
 use core::time::Duration;
 
-use tecs_struct_def::*;
+use tecs_global::*;
 
 pub async fn run() {
 

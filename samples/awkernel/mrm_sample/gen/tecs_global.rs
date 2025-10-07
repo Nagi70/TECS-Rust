@@ -1,4 +1,11 @@
-use awkernel_lib::time::Time;
+
+pub const IDX_X: u32 = 0;
+pub const IDX_Y: u32 = 1;
+pub const IDX_YAW: u32 = 2;
+pub const IDX_YAWB: u32 = 3;
+pub const IDX_VX: u32 = 4;
+pub const IDX_WZ: u32 = 5;
+
 #[derive(Clone)]
 pub struct Frame {
     pub header: Header,

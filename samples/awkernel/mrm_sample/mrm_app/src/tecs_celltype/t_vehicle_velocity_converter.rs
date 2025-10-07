@@ -1,4 +1,4 @@
-use crate::tecs_struct_def::*;
+use crate::tecs_global::*;
 use crate::tecs_signature::s_twist_with_covariance_stamped::*;
 use crate::tecs_celltype::t_gyro_odometer::*;
 pub struct TVehicleVelocityConverter<'a>{

@@ -1,0 +1,6 @@
+const uint32_t IDX_X = 0;
+const uint32_t IDX_Y = 1;
+const uint32_t IDX_YAW = 2;
+const uint32_t IDX_YAWB = 3;
+const uint32_t IDX_VX = 4;
+const uint32_t IDX_WZ = 5;

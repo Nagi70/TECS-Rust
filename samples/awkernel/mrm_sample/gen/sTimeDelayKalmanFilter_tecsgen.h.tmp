@@ -20,9 +20,9 @@ struct tag_sTimeDelayKalmanFilter_VDES {
 
 /* signature function table #_SFT_# */
 struct tag_sTimeDelayKalmanFilter_VMT {
-    void           (*init__T)( const struct tag_sTimeDelayKalmanFilter_VDES *edp, RType( nalgebra::Vector6<f64> ) x, RType( nalgebra::Matrix6<f64> ) p, int32_t max_delay_step );
-    void           (*predictWithDelay__T)( const struct tag_sTimeDelayKalmanFilter_VDES *edp, RType( nalgebra::Vector6<f64> ) x_next, RType( nalgebra::Matrix6<f64> ) a, RType( nalgebra::Matrix6<f64> ) q );
-    RType( Result<(), KalmanFilterError> ) (*updateWithDelay__T)( const struct tag_sTimeDelayKalmanFilter_VDES *edp, RType( nalgebra::Vector2<f64> ) y, RType( nalgebra::Matrix2x6<f64> ) c, RType( nalgebra::Matrix2<f64> ) r, int32_t delay_step );
+    void           (*init__T)( const struct tag_sTimeDelayKalmanFilter_VDES *edp, RType( nalgebra::Matrix6x1<f64> ) x, RType( nalgebra::Matrix6<f64> ) p );
+    void           (*predictWithDelay__T)( const struct tag_sTimeDelayKalmanFilter_VDES *edp, RType( nalgebra::Matrix6x1<f64> ) x_next, RType( nalgebra::Matrix6<f64> ) a, RType( nalgebra::Matrix6<f64> ) q );
+    RType( Result<(), KalmanFilterError> ) (*updateWithDelay__T)( const struct tag_sTimeDelayKalmanFilter_VDES *edp, RType( nalgebra::Matrix2x1<f64> ) y, RType( nalgebra::Matrix2x6<f64> ) c, RType( nalgebra::Matrix2<f64> ) r, int32_t delay_step );
     RType( nalgebra::Matrix6x1<f64> ) (*getLatestX__T)( const struct tag_sTimeDelayKalmanFilter_VDES *edp );
     RType( nalgebra::Matrix6<f64> ) (*getLatestP__T)( const struct tag_sTimeDelayKalmanFilter_VDES *edp );
     double64_t     (*getXelement__T)( const struct tag_sTimeDelayKalmanFilter_VDES *edp, uint32_t i );

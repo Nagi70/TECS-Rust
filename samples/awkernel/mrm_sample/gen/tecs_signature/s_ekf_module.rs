@@ -1,4 +1,4 @@
-use crate::tecs_struct_def::*;
+use crate::tecs_global::*;
 pub trait SEkfModule {
 	fn init(&'static self);
 	fn accumulate_delay_time(&'static self, dt: &f64);

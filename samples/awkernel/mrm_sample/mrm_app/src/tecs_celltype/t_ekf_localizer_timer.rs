@@ -1,5 +1,5 @@
 use crate::tecs_variable::*;
-use crate::tecs_struct_def::*;
+use crate::tecs_global::*;
 use crate::tecs_signature::{s_kinematic_state::*, s_ekf_module::*, s_twist_with_covariance_get::*};
 
 use crate::tecs_celltype::{t_stop_filter::*, t_ekf_module::*, t_twist_with_covariance_aged_object_queue::*};

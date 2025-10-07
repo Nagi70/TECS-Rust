@@ -1,4 +1,4 @@
-use crate::tecs_struct_def::*;
+use crate::tecs_global::*;
 use crate::tecs_celltype::t_vehicle_velocity_converter::*;
 use crate::tecs_signature::{s_twist_with_covariance_stamped::*, s_velocity_status::*, s_vehicle_velocity_converter::*};
 use awkernel_lib::sync::mutex::MCSNode;

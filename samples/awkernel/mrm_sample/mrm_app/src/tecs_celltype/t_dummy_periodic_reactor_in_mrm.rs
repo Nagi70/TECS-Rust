@@ -1,5 +1,5 @@
 use crate::tecs_variable::*;
-use crate::tecs_struct_def::*;
+use crate::tecs_global::*;
 use crate::tecs_signature::{s_imu::*, s_velocity_status::*};
 
 use crate::tecs_celltype::{t_imu_driver::*, t_vehicle_velocity_converter::*};

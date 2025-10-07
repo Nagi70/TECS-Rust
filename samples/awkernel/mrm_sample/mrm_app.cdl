@@ -6,6 +6,8 @@ import("vehicle_velocity_converter.cdl");
 import("gyro_odometer.cdl");
 import("ekf_localizer.cdl");
 
+import("idx.cdl");
+
 // IMU -> Ekf まで
 
 cell tDummyPeriodicReactorInMrm DummyHardware {

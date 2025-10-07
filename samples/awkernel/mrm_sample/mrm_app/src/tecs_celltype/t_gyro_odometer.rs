@@ -1,5 +1,5 @@
 use crate::tecs_variable::*;
-use crate::tecs_struct_def::*;
+use crate::tecs_global::*;
 use crate::tecs_signature::{s_twist_with_covariance_stamped::*, s_tf::*};
 
 use crate::tecs_celltype::{t_ekf_localizer::*, t_tf::*};

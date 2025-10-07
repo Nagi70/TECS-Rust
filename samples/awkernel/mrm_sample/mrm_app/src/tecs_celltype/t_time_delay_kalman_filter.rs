@@ -9,10 +9,8 @@ pub struct TTimeDelayKalmanFilter<'a>{
 }
 
 pub struct TTimeDelayKalmanFilterVar{
-	pub x: nalgebra::SVector<f64, 300>,
+	pub x: nalgebra::SMatrix<f64, 300, 1>,
 	pub p: nalgebra::SMatrix<f64, 300, 300>,
-	pub x_temp: nalgebra::SVector<f64, 300>,
-	pub p_temp: nalgebra::SMatrix<f64, 300, 300>,
 }
 
 pub struct EKalmanForTTimeDelayKalmanFilter<'a>{
@@ -42,8 +40,6 @@ static TIMEDELAYKALMANFILTERVAR: TECSVariable<TTimeDelayKalmanFilterVar> = TECSV
 /// This UnsafeCell is accessed by multiple tasks, but is safe because it is operated exclusively by the mutex object.
 		x: Default::default(),
 		p: Default::default(),
-		x_temp: Default::default(),
-		p_temp: Default::default(),
 	}
 ));
 pub static EKALMANFORTIMEDELAYKALMANFILTER: EKalmanForTTimeDelayKalmanFilter = EKalmanForTTimeDelayKalmanFilter {

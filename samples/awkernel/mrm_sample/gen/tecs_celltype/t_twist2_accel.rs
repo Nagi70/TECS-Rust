@@ -1,5 +1,5 @@
 use crate::tecs_variable::*;
-use crate::tecs_struct_def::*;
+use crate::tecs_global::*;
 use crate::tecs_signature::{s_accel_with_covariance_stamped::*, s_lowpass1d::*};
 
 use crate::tecs_celltype::{t_trajectory_follower::*, t_lowpass_filter1_d::*};

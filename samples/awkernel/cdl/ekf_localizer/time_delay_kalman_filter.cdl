@@ -1,19 +1,18 @@
 signature sTimeDelayKalmanFilter {
     /* 初期化（拡張列を x0/P0 複製で埋める） */
     void init(
-        [in] PLType("nalgebra::Vector6<f64>") x,
-        [in] PLType("nalgebra::Matrix6<f64>") p,
-        [in] int32_t  max_delay_step);
+        [in] PLType("nalgebra::Matrix6x1<f64>") x,
+        [in] PLType("nalgebra::Matrix6<f64>") p);
 
     /* 予測（スライド＋最新ブロックの P 伝播） */
     void predictWithDelay(
-        [in] PLType("nalgebra::Vector6<f64>") x_next,
+        [in] PLType("nalgebra::Matrix6x1<f64>") x_next,
         [in] PLType("nalgebra::Matrix6<f64>") a,
         [in] PLType("nalgebra::Matrix6<f64>") q);
 
     /* 遅延観測更新（C を delay_step ブロックに配置して update）この中に update を埋め込む */
     PLType("Result<(), KalmanFilterError>") updateWithDelay(
-        [in] PLType("nalgebra::Vector2<f64>") y,
+        [in] PLType("nalgebra::Matrix2x1<f64>") y,
         [in] PLType("nalgebra::Matrix2x6<f64>") c,
         [in] PLType("nalgebra::Matrix2<f64>") r,
         [in] int32_t  delay_step);
@@ -42,10 +41,7 @@ celltype tTimeDelayKalmanFilter {
     /* 変化する値（実行中に更新） */
     var {
         /* 拡張状態・拡張共分散（先頭が最新スロット） */
-        PLType("nalgebra::SVector<f64, 300>") x = PL_EXP("Default::default()");
+        PLType("nalgebra::SMatrix<f64, 300, 1>") x = PL_EXP("Default::default()");
         PLType("nalgebra::SMatrix<f64, 300, 300>") p = PL_EXP("Default::default()");
-
-        PLType("nalgebra::SVector<f64, 300>") x_temp = PL_EXP("Default::default()");
-        PLType("nalgebra::SMatrix<f64, 300, 300>") p_temp = PL_EXP("Default::default()");
     };
 };
