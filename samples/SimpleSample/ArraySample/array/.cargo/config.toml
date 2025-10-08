@@ -1,0 +1,2 @@
+[build]
+target = "armv7a-none-eabi"          # Bare Armv7-A (e.g., Zynq-7000 (Xilinx))

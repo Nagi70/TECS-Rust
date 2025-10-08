@@ -835,38 +835,20 @@ class RustITRONCelltypePlugin < RustGenCelltypePlugin
     end
 
     # セル構造体の属性フィールドの定義を生成
-    def gen_rust_cell_structure_attribute file, celltype
-        celltype.get_attribute_list.each{ |attr|
-            if attr.is_omit? then
-                next
-            else
-                file.print "\t#{attr.get_name.to_s}: "
-                # file.print "#{c_type_to_rust_type(attr.get_type)}"
-                str = c_type_to_rust_type(attr.get_type)
-                # 属性や変数のフィールドに構造体がある場合は，ライフタイムを付与する必要がある
-                # itron-rsオブジェクトに対する，特別な生成
-                # ライフタイムを付与
-                case str
-                when "TaskRef"
-                    str = "TaskRef<'a>"
-                when "SemaphoreRef"
-                    str = "SemaphoreRef<'a>"
-                when "EventflagRef"
-                    str = "EventflagRef<'a>"
-                when "DataqueueRef"
-                    str = "DataqueueRef<'a>"
-                when "MutexRef"
-                    str = "MutexRef<'a>"
-                end
-
-                # 配列の場合、不変のポインタにする
-                if attr.get_type.kind_of?(ArrayType) then
-                    str.prepend("* ")
-                end
-
-                file.print "#{str},\n"
-            end
-        }
+    def gen_attribute_field file, attr_name, attr_type_str
+        case attr_type_str
+        when "TaskRef"
+            attr_type_str = "TaskRef<'a>"
+        when "SemaphoreRef"
+            attr_type_str = "SemaphoreRef<'a>"
+        when "EventflagRef"
+            attr_type_str = "EventflagRef<'a>"
+        when "DataqueueRef"
+            attr_type_str = "DataqueueRef<'a>"
+        when "MutexRef"
+            attr_type_str = "MutexRef<'a>"
+        end
+        super(file, attr_name, attr_type_str)
     end
 
     def gen_rust_get_cell_ref file, celltype, callport_list, use_jenerics_alphabet
@@ -1173,28 +1155,7 @@ class RustITRONCelltypePlugin < RustGenCelltypePlugin
             gen_comments_safe_reason file, cell
             file.print "\tunsafe_var: UnsafeCell::new(#{get_rust_celltype_name(cell.get_celltype)}Var {\n"
             # 変数構造体のフィールドの初期化を生成
-            @celltype.get_var_list.each{ |var|
-                var_array = var.get_initializer
-                # 右辺が定義されていない場合、defaultにする
-                if var_array.nil? then
-                    file.print "\t\t#{var.get_name}: Default::default(),\n"
-                else
-                    # 属性が配列であるときに対応
-                    if var_array.is_a?(Array) then
-                        file.print "\t\t#{var.get_name}: ["
-                        var_array.each{ |var_array_item|
-                            if var_array_item == var_array.last then
-                                file.print "#{var_array_item.to_s}"
-                            else
-                                file.print "#{var_array_item.to_s}, "
-                            end
-                        }
-                        file.print "],\n"
-                    else
-                        file.print "\t\t#{var.get_name}: #{var.get_initializer},\n"
-                    end
-                end
-            }
+            gen_rust_variable_structure_field_initialize(file, cell)
             file.print "\t}),\n"
             file.print "};\n\n"
         end

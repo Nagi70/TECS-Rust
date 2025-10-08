@@ -77,6 +77,7 @@ class RustGenCelltypePlugin < CelltypePlugin
       @mod_celltypes_list = []
       @mod_impls_list = []
       @gen_use_global = false
+      @pointer_array = [] #配列を指すポインタのリスト   [[セル名, シンボル, 名前]]
       
 
       require_tecsgen_lib 'lib/RustDefaultTypeChecker.rb'
@@ -388,6 +389,7 @@ class RustGenCelltypePlugin < CelltypePlugin
 
             @gen_use_global = true
         elsif c_type.kind_of?( PtrType ) then
+            puts "PtrType: #{c_type.get_type_str}"
             if c_type.get_string != nil then
                 # str = "#{c_type.has_sized_pointer?}"
                 # str = "#{c_type.get_max}"
@@ -415,9 +417,11 @@ class RustGenCelltypePlugin < CelltypePlugin
                     str.concat(", #{size}>")
                 end
             elsif c_type.get_size != nil then
+                puts "PtrType with size: #{c_type.get_size}"
                 # TODO: size_is指定子のときの処理
                 type = c_type_to_rust_type(c_type.get_type)
-                str = "[#{type}; #{c_type.get_size}]"
+                # str = "[#{type}; #{c_type.get_size}]"
+                str = "[#{type}]"
             elsif c_type.get_count != nil then
                 type = c_type_to_rust_type(c_type.get_type)
                 str = "[#{type}; #{c_type.get_size}]"
@@ -819,12 +823,20 @@ class RustGenCelltypePlugin < CelltypePlugin
     # セル構造体の属性フィールドの定義を生成
     def gen_rust_cell_structure_attribute file, celltype
         celltype.get_attribute_list.each{ |attr|
-            if attr.is_omit? then
-                next
-            else
-                file.print "\t#{attr.get_name.to_s}: #{c_type_to_rust_type(attr.get_type)},\n"
+            next if attr.is_omit?
+
+            attr_type = c_type_to_rust_type(attr.get_type)
+            if attr.get_type.kind_of?( PtrType ) then
+                # ポインタ型の場合は，ポインタにする
+                attr_type.prepend("*")
             end
+            gen_attribute_field(file, attr.get_name.to_s, attr_type)
         }
+    end
+
+    # ITRONプラグインでオーバーライドされるため、分離
+    def gen_attribute_field file, attr_name, attr_type_str
+        file.print "\t#{attr_name}: #{attr_type_str},\n"
     end
 
     # セル構造体の変数フィールドの定義を生成
@@ -861,7 +873,11 @@ class RustGenCelltypePlugin < CelltypePlugin
 
             # 変数構造体のフィールドの定義を生成
             celltype.get_var_list.each{ |var|
-                file.print "\tpub #{var.get_name}: #{c_type_to_rust_type(var.get_type)},\n"
+                var_type = c_type_to_rust_type(var.get_type)
+                if var.get_type.kind_of?( PtrType ) then
+                    var_type.prepend("*mut ")
+                end
+                file.print "\tpub #{var.get_name}: #{var_type},\n"
             }
 
             file.print "}\n\n"
@@ -912,6 +928,7 @@ class RustGenCelltypePlugin < CelltypePlugin
 
     # セルの構造体の属性フィールドの初期化を生成
     def gen_rust_cell_structure_attribute_initialize file, celltype, cell
+        array_number = 1
         celltype.get_attribute_list.each{ |attr|
             if attr.is_omit? then
                 next
@@ -919,8 +936,16 @@ class RustGenCelltypePlugin < CelltypePlugin
                 # セル記述で初期化されていても，反映する
                 attr_symbol = attr.get_name.to_s.to_sym
                 attr_array = cell.get_attr_initializer(attr_symbol)
+                # 属性がポインタであるときに対応
+                if attr.get_type.kind_of?( PtrType ) then
+                    type = c_type_to_rust_type(attr.get_type).delete("[]")
+                    size = cell.get_attr_initializer(attr.get_type.get_size.to_s.to_sym)
+                    name = "#{cell.get_global_name.upcase}ATTRARRAY#{array_number}"
+                    @pointer_array.push([name, type, size, attr_array])
+                    file.print "\t#{attr.get_name.to_s}: unsafe{ &#{name} as * #{c_type_to_rust_type(attr.get_type)} },\n"
+                    array_number += 1
                 # 属性が配列であるときに対応
-                if attr_array.is_a?(Array) then
+                elsif attr_array.is_a?(Array) then 
                     file.print "\t#{attr.get_name.to_s}: ["
                     attr_array.each{ |attr_array_item|
                         if attr_array_item == attr_array.last then
@@ -950,33 +975,47 @@ class RustGenCelltypePlugin < CelltypePlugin
         if @celltype.get_var_list.length != 0 then
             file.print "static #{cell.get_global_name.to_s.upcase}VAR: Mutex<#{get_rust_celltype_name(cell.get_celltype)}Var> = Mutex::new(#{get_rust_celltype_name(cell.get_celltype)}Var {\n"
 
-            # 変数構造体のフィールドの初期化を生成
-            @celltype.get_var_list.each{ |var|
-                var_array = var.get_initializer
-                # 右辺が定義されていない場合、defaultにする
-                if var_array.nil? then
-                    file.print "\t\t#{var.get_name}: Default::default(),\n"
-                else
-                    # 属性が配列であるときに対応
-                    if var_array.is_a?(Array) then
-                        file.print "\t#{var.get_name}: ["
-                        var_array.each{ |var_array_item|
-                            if var_array_item == var_array.last then
-                                file.print "#{var_array_item.to_s}"
-                            else
-                                file.print "#{var_array_item.to_s}, "
-                            end
-                        }
-                        file.print "],\n"
-                    else
-                        file.print "\t#{var.get_name}: #{var.get_initializer},\n"
-                    end
-                end
-            }
+            gen_rust_variable_structure_field_initialize(file, cell)
 
             file.print "});\n\n"
 
         end
+    end
+
+    def gen_rust_variable_structure_field_initialize file, cell
+        array_number = 1
+        # 変数構造体のフィールドの初期化を生成
+        @celltype.get_var_list.each{ |var|
+            var_array = var.get_initializer
+            # 変数がポインタであるときに対応
+            if var.get_type.kind_of?( PtrType ) then
+
+                type = c_type_to_rust_type(var.get_type).delete("[]")
+                size = cell.get_attr_initializer(var.get_type.get_size.to_s.to_sym)
+                name = "mut #{cell.get_global_name.upcase}VARARRAY#{array_number}"
+                @pointer_array.push([name, type, size, var_array])
+                file.print "\t\t#{var.get_name.to_s}: unsafe{ &#{name} as *mut #{c_type_to_rust_type(var.get_type)} },\n"
+                array_number += 1
+            # 右辺が定義されていない場合、defaultにする
+            elsif var_array.nil? then
+                file.print "\t\t#{var.get_name}: Default::default(),\n"
+            else
+                # 属性が配列であるときに対応
+                if var_array.is_a?(Array) then
+                    file.print "\t#{var.get_name}: ["
+                    var_array.each{ |var_array_item|
+                        if var_array_item == var_array.last then
+                            file.print "#{var_array_item.to_s}"
+                        else
+                            file.print "#{var_array_item.to_s}, "
+                        end
+                    }
+                    file.print "],\n"
+                else
+                    file.print "\t#{var.get_name}: #{var.get_initializer},\n"
+                end
+            end
+        }
     end
 
     # 受け口構造体の定義を生成
@@ -2035,6 +2074,35 @@ class RustGenCelltypePlugin < CelltypePlugin
         
     end
 
+    # ポインタ配列を生成
+    def gen_pointer_array file
+        @pointer_array.each{ |pointer|
+            name = pointer[0]
+            type = pointer[1]
+            size = pointer[2]
+            initializer = pointer[3]
+
+            file.print "static #{name}: [#{type}; #{size}] = "
+
+            # 未初期化の場合 Default にする
+            if initializer.nil? then
+                file.print "Default::default();\n"
+            elsif initializer.is_a?(Array) then
+                file.print "["
+                initializer.each{ |item|
+                    if item == initializer.last then
+                        file.print "#{item.to_s}"
+                    else
+                        file.print "#{item.to_s}, "
+                    end
+                }
+                file.print "];"
+            end
+
+            file.print "\n"
+        }
+    end
+
     #=== tCelltype_factory.h に挿入するコードを生成する
     # file 以外の他のファイルにファクトリコードを生成してもよい
     # セルタイププラグインが指定されたセルタイプのみ呼び出される
@@ -2250,6 +2318,10 @@ class RustGenCelltypePlugin < CelltypePlugin
             gen_rust_entryport_structure_initialize file, @celltype, cell
 
         } # celltype.get_cell_list.each
+
+        print "#{@celltype.get_global_name.to_s}: gen_pointer_array\n"
+        # ポインタ配列を生成
+        gen_pointer_array(file)
 
         print "#{@celltype.get_global_name.to_s}: gen_rust_impl_drop_for_lock_guard_structure\n"
         # ロックガードに Drop トレイトを実装する

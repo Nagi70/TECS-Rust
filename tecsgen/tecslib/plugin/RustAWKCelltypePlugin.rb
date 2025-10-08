@@ -1360,28 +1360,7 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
             file.print "\t#{get_rust_celltype_name(cell.get_celltype)}Var {\n"
             gen_comments_safe_reason file, cell
             # 変数構造体のフィールドの初期化を生成
-            @celltype.get_var_list.each{ |var|
-                var_array = var.get_initializer
-                # 右辺が定義されていない場合、defaultにする
-                if var_array.nil? then
-                    file.print "\t\t#{var.get_name}: Default::default(),\n"
-                else
-                    # 変数が配列であるときに対応
-                    if var_array.is_a?(Array) then
-                        file.print "\t\t#{var.get_name}: ["
-                        var_array.each{ |var_array_item|
-                            if var_array_item == var_array.last then
-                                file.print "#{var_array_item.to_s}"
-                            else
-                                file.print "#{var_array_item.to_s}, "
-                            end
-                        }
-                        file.print "],\n"
-                    else
-                        file.print "\t\t#{var.get_name}: #{var.get_initializer},\n"
-                    end
-                end
-            }
+            gen_rust_variable_structure_field_initialize(file, cell)
 
             if check_exclusive_control_for_cell(cell) == true then
                 file.print "\t}\n"

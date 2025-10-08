@@ -1,0 +1,30 @@
+signature sArray {
+    void main(void);
+};
+
+[generate(RustAWKPlugin, "")]
+celltype tArray {
+
+    entry sArray eArray;
+
+  attr {
+    [omit] int32_t  array_size = 2;
+
+    [size_is(array_size)]
+    int32_t  *attr_array;
+  };
+  var {
+    [size_is(array_size)]
+    int32_t  *var_array;
+  };
+};
+
+cell tArray Array1 {
+    array_size = 1;
+    attr_array = { 0 };
+};
+
+cell tArray Array2 {
+    array_size = 2;
+    attr_array = { 0, 0 };
+};
