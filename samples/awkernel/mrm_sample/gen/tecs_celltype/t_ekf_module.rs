@@ -110,8 +110,8 @@ static EKFMODULE: TEkfModule<EKalmanForTTimeDelayKalmanFilter, EStateForTStateTr
 static EKFMODULEVAR: TECSVariable<TEkfModuleVar> = TECSVariable::Mutexed(awkernel_lib::sync::mutex::Mutex::new(
 	TEkfModuleVar {
 /// This UnsafeCell is accessed by multiple tasks, but is safe because it is operated exclusively by the mutex object.
-		accumulated_delay_times: [0.0],
-		ekf_dt: 0,
+		accumulated_delay_times: Default::default(),
+		ekf_dt: 0.0,
 		last_angular_velocity: Default::default(),
 		z_filter: [0.0, 0.0],
 		roll_filter: [0.0, 0.0],

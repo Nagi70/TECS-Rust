@@ -4,3 +4,10 @@ const uint32_t IDX_YAW = 2;
 const uint32_t IDX_YAWB = 3;
 const uint32_t IDX_VX = 4;
 const uint32_t IDX_WZ = 5;
+
+const uint32_t COV_IDX_X = 0;
+const uint32_t COV_IDX_Y = 1;
+const uint32_t COV_IDX_Z = 2;
+const uint32_t COV_IDX_ROLL = 3;
+const uint32_t COV_IDX_PITCH = 4;
+const uint32_t COV_IDX_YAW = 5;

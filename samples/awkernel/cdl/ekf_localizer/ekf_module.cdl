@@ -11,10 +11,11 @@ signature sEkfModule {
     void accumulateDelayTime( [in] double64_t dt );
     int32_t findClosestDelayTimeIndex( [in] double64_t target_value); // measurementUpdateTwist に埋め込む方がいいかも
     void predictWithDelay([in] double64_t dt );
-    PLType("Result<(), EkfModuleError>") measurementUpdateTwist( [in] struct TwistWithCovariance twist, [in] PLType("awkernel_lib::time::Time") ccurent_time ); // エラーenumはユーザ定義
+    PLType("Result<(), EkfModuleError>") measurementUpdateTwist( [in] struct TwistWithCovarianceStamped twist, [in] PLType("awkernel_lib::time::Time") current_time ); // エラーenumはユーザ定義
     void getCurrentTwist( [in] PLType("awkernel_lib::time::Time") current_time, [out] struct TwistWithCovarianceStamped* twist );
-    void getCurrentTwistCovariance( [out] struct TwistWithCovariance* twist );
-    void getCurrentPoseCovariance( [out] struct PoseWithCovariance* pose );
+    void getCurrentPose( [in] PLType("awkernel_lib::time::Time") current_time, [in] bool_t get_biased_yaw, [out] struct PoseWithCovarianceStamped* pose );
+    void getCurrentTwistCovariance( [out] PLType("nalgebra::Matrix6<f64>")* cov );
+    void getCurrentPoseCovariance( [out] PLType("nalgebra::Matrix6<f64>")* cov );
 };
 
 struct Simple1DFilter {
@@ -63,8 +64,8 @@ celltype tEkfModule {
 
     var {
         [size_is(extend_state_step)]
-        double64_t *accumulated_delay_times = { 0.0 };
-        double64_t ekf_dt = 0;
+        double64_t *accumulated_delay_times;
+        double64_t ekf_dt = 0.0;
         /* DRでは角速度の履歴だけ最小保持（必要に応じて） */
         PLType("nalgebra::Vector3<f64>") last_angular_velocity = PL_EXP("Default::default()");
         struct Simple1DFilter z_filter = {0.0, 0.0};

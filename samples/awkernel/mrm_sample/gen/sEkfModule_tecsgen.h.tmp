@@ -24,10 +24,11 @@ struct tag_sEkfModule_VMT {
     void           (*accumulateDelayTime__T)( const struct tag_sEkfModule_VDES *edp, double64_t dt );
     int32_t        (*findClosestDelayTimeIndex__T)( const struct tag_sEkfModule_VDES *edp, double64_t target_value );
     void           (*predictWithDelay__T)( const struct tag_sEkfModule_VDES *edp, double64_t dt );
-    RType( Result<(), EkfModuleError> ) (*measurementUpdateTwist__T)( const struct tag_sEkfModule_VDES *edp, struct TwistWithCovariance twist, RType( awkernel_lib::time::Time ) ccurent_time );
+    RType( Result<(), EkfModuleError> ) (*measurementUpdateTwist__T)( const struct tag_sEkfModule_VDES *edp, struct TwistWithCovarianceStamped twist, RType( awkernel_lib::time::Time ) current_time );
     void           (*getCurrentTwist__T)( const struct tag_sEkfModule_VDES *edp, RType( awkernel_lib::time::Time ) current_time, struct TwistWithCovarianceStamped* twist );
-    void           (*getCurrentTwistCovariance__T)( const struct tag_sEkfModule_VDES *edp, struct TwistWithCovariance* twist );
-    void           (*getCurrentPoseCovariance__T)( const struct tag_sEkfModule_VDES *edp, struct PoseWithCovariance* pose );
+    void           (*getCurrentPose__T)( const struct tag_sEkfModule_VDES *edp, RType( awkernel_lib::time::Time ) current_time, bool_t get_biased_yaw, struct PoseWithCovarianceStamped* pose );
+    void           (*getCurrentTwistCovariance__T)( const struct tag_sEkfModule_VDES *edp, RType( nalgebra::Matrix6<f64> )* cov );
+    void           (*getCurrentPoseCovariance__T)( const struct tag_sEkfModule_VDES *edp, RType( nalgebra::Matrix6<f64> )* cov );
 };
 
 /* signature descriptor #_SDES_# for dynamic join */
@@ -44,7 +45,8 @@ typedef struct { struct tag_sEkfModule_VDES *vdes; } Descriptor( sEkfModule );
 #define	FUNCID_SEKFMODULE_PREDICTWITHDELAY     (4)
 #define	FUNCID_SEKFMODULE_MEASUREMENTUPDATETWIST (5)
 #define	FUNCID_SEKFMODULE_GETCURRENTTWIST      (6)
-#define	FUNCID_SEKFMODULE_GETCURRENTTWISTCOVARIANCE (7)
-#define	FUNCID_SEKFMODULE_GETCURRENTPOSECOVARIANCE (8)
+#define	FUNCID_SEKFMODULE_GETCURRENTPOSE       (7)
+#define	FUNCID_SEKFMODULE_GETCURRENTTWISTCOVARIANCE (8)
+#define	FUNCID_SEKFMODULE_GETCURRENTPOSECOVARIANCE (9)
 
 #endif /* sEkfModule_TECSGEN_H */

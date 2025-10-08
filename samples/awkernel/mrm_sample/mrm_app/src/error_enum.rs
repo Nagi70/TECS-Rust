@@ -4,5 +4,7 @@ pub enum KalmanFilterError {
 }
 
 pub enum EkfModuleError {
-    
+    DelayTime,
+    InvalidTwistMeasurement,
+    TwistGate,
 }

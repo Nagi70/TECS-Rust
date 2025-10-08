@@ -58,9 +58,19 @@ struct Pose {
     PLType("nalgebra::Quaternion<f64>")    orientation;
 };
 
+struct PoseStamped {
+    struct Header header;
+    struct Pose      pose;      /* Twist + Covariance         */
+};
+
 struct PoseWithCovariance {
     struct Pose    pose;
     PLType("nalgebra::Matrix6<f64>")    covariance;
+};
+
+struct PoseWithCovarianceStamped {
+    struct Header header;
+    struct PoseWithCovariance      pose;      /* Twist + Covariance         */
 };
 
 struct Accel {

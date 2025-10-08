@@ -5,6 +5,12 @@ pub const IDX_YAW: u32 = 2;
 pub const IDX_YAWB: u32 = 3;
 pub const IDX_VX: u32 = 4;
 pub const IDX_WZ: u32 = 5;
+pub const COV_IDX_X: u32 = 0;
+pub const COV_IDX_Y: u32 = 1;
+pub const COV_IDX_Z: u32 = 2;
+pub const COV_IDX_ROLL: u32 = 3;
+pub const COV_IDX_PITCH: u32 = 4;
+pub const COV_IDX_YAW: u32 = 5;
 
 #[derive(Clone)]
 pub struct Frame {
@@ -187,6 +193,21 @@ pub struct Transform {
 pub struct Simple1DFilter {
     pub x: f64,
     pub value: f64,
+}
+
+#[derive(Clone)]
+pub struct PoseWithCovarianceStamped {
+    pub header: Header,
+    pub pose: PoseWithCovariance,
+}
+
+impl Default for PoseWithCovarianceStamped {
+	fn default() -> Self {
+		Self {
+			header: Default::default(),
+			pose: Default::default(),
+		}
+	}
 }
 
 #[derive(Clone)]

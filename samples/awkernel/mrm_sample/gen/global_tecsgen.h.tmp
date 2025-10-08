@@ -55,9 +55,17 @@ struct Pose {
                 RType( nalgebra::Vector3<f64> ) point;
                 RType( nalgebra::Quaternion<f64> ) orientation;
 };
+struct PoseStamped {
+                struct Header  header;
+                struct Pose    pose;
+};
 struct PoseWithCovariance {
                 struct Pose    pose;
                 RType( nalgebra::Matrix6<f64> ) covariance;
+};
+struct PoseWithCovarianceStamped {
+                struct Header  header;
+                struct PoseWithCovariance pose;
 };
 struct Accel {
                 RType( nalgebra::Vector3<f64> ) linear;
@@ -102,5 +110,11 @@ struct Simple1DFilter {
 #define IDX_YAWB       ((const uint32_t)3)
 #define IDX_VX         ((const uint32_t)4)
 #define IDX_WZ         ((const uint32_t)5)
+#define COV_IDX_X      ((const uint32_t)0)
+#define COV_IDX_Y      ((const uint32_t)1)
+#define COV_IDX_Z      ((const uint32_t)2)
+#define COV_IDX_ROLL   ((const uint32_t)3)
+#define COV_IDX_PITCH  ((const uint32_t)4)
+#define COV_IDX_YAW    ((const uint32_t)5)
 
 #endif /* GLOBAL_TECSGEN_H */

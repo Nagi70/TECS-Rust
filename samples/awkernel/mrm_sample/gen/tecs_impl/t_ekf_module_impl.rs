@@ -24,7 +24,7 @@ impl SEkfModule for EEkfModuleForTEkfModule<'_>{
 		let mut lg = self.cell.get_cell_ref(&mut node);
 
 	}
-	fn measurement_update_twist(&'static self, twist: &TwistWithCovariance, ccurent_time: &awkernel_lib::time::Time) -> Result<(), EkfModuleError>{
+	fn measurement_update_twist(&'static self, twist: &TwistWithCovarianceStamped, current_time: &awkernel_lib::time::Time) -> Result<(), EkfModuleError>{
 		let mut node = MCSNode::new();
 		let mut lg = self.cell.get_cell_ref(&mut node);
 
@@ -34,12 +34,17 @@ impl SEkfModule for EEkfModuleForTEkfModule<'_>{
 		let mut lg = self.cell.get_cell_ref(&mut node);
 
 	}
-	fn get_current_twist_covariance(&'static self, twist: &mut TwistWithCovariance) {
+	fn get_current_pose(&'static self, current_time: &awkernel_lib::time::Time, get_biased_yaw: &bool, pose: &mut PoseWithCovarianceStamped) {
 		let mut node = MCSNode::new();
 		let mut lg = self.cell.get_cell_ref(&mut node);
 
 	}
-	fn get_current_pose_covariance(&'static self, pose: &mut PoseWithCovariance) {
+	fn get_current_twist_covariance(&'static self, cov: &mut nalgebra::Matrix6<f64>) {
+		let mut node = MCSNode::new();
+		let mut lg = self.cell.get_cell_ref(&mut node);
+
+	}
+	fn get_current_pose_covariance(&'static self, cov: &mut nalgebra::Matrix6<f64>) {
 		let mut node = MCSNode::new();
 		let mut lg = self.cell.get_cell_ref(&mut node);
 
