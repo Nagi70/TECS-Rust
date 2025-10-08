@@ -29,7 +29,7 @@ celltype tEkfLocalizer {
     // ----- 属性定義 (不変パラメータ) -----
     attr {
 
-        double64_t threshold_observable_velocity_mps = 0.0;
+        double64_t threshold_observable_velocity_mps = 0.1;
 
         // --- awkernel リアクター用属性 ---
         [omit] PLType("Cow") reactorName = PL_EXP("EkfLocalizer");
@@ -95,7 +95,6 @@ celltype tEkfLocalizerTimer{
         double64_t ekf_rate = 0.01;
         uint32_t pose_smoothing_steps = 5;
         uint32_t twist_smoothing_steps = 5;
-        double64_t threshold_observable_velocity_mps = 0.01;
     };
 
     var {

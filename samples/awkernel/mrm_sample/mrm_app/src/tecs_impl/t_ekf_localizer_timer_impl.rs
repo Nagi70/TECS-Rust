@@ -10,35 +10,41 @@ impl SEkfLocalizerTimer for EReactorForTEkfLocalizerTimer<'_>{
 		// 現在時刻取得
 		let now = awkernel_lib::time::Time::now();
 
-		// dt 計算（前回時刻が未設定なら既定の ekf_rate を使用）
-		let mut dt_sec: f64;
-		if lg.var.last_predict_time == awkernel_lib::time::Time::zero() {
-			dt_sec = *lg.ekf_rate; // 初回は既定の周期
-		} else {
-			let dt = now.saturating_duration_since(lg.var.last_predict_time);
-			dt_sec = (dt.as_nanos() as f64) * 1.0e-9;
-			if dt_sec <= 0.0 { dt_sec = *lg.ekf_rate; }
-		}
+		// dt 計算
+		let dt = now.saturating_duration_since(lg.var.last_predict_time);
+		lg.var.ekf_dt = (dt.as_nanos() as f64) * 1.0e-9;
+
 		// dt 上限（C++ 相当の安全弁）
-		if dt_sec > 10.0 { dt_sec = 10.0; }
+		if lg.var.ekf_dt > 10.0 { lg.var.ekf_dt = 10.0; }
 
 		// 遅延時間の蓄積と予測実行
-		lg.c_ekf_module.accumulate_delay_time(&dt_sec);
-		lg.c_ekf_module.predict_with_delay(&dt_sec);
+		lg.c_ekf_module.accumulate_delay_time(&lg.var.ekf_dt);
+		lg.c_ekf_module.predict_with_delay(&lg.var.ekf_dt);
 
 		// 現在時刻を保存
 		lg.var.last_predict_time = now;
-		lg.var.ekf_dt = dt_sec;
 
 		// Twist 測定更新（姿勢の測定更新は行わない: デッドレコニング）
 		// キューを空になるまで処理（pop は再キューしない実装）
-		while let Some(mut twist) = lg.c_queue.pop() {
+		while let Some(twist) = lg.c_queue.pop_increment_age() {
 			// 低速時は vx の分散を大きくする（C++ の購読側の処理をここで反映）
-			if twist.twist.twist.linear.x.abs() < *lg.threshold_observable_velocity_mps {
-				// covariance の (0,0) = vx の分散
-				twist.twist.covariance[(0, 0)] = 10000.0;
+			match lg.c_ekf_module.measurement_update_twist(&twist, &now) {
+				Ok(()) => {},
+				Err(e) => {
+					match e {
+						EkfModuleError::DelayTime => {
+							log::warn!("Twist measurement delay time is too large, skipping this measurement update.");
+						},
+						EkfModuleError::InvalidTwistMeasurement => {
+							log::warn!("Twist measurement covariance is invalid, skipping this measurement update.");
+						},
+						EkfModuleError::TwistGate => {
+							log::warn!("Twist measurement is out of gate, skipping this measurement update.");
+						},
+						_ => {}, // その他のエラーは無視して続行
+					}
+				}
 			}
-			let _ = lg.c_ekf_module.measurement_update_twist(&twist, &now);
 		}
 
 		// 最新の推定結果を取り出して KinematicState に格納（Pose と Twist）
