@@ -1,0 +1,11 @@
+[active, generate(RustAWKPlugin, "DAG_SINK_REACTOR")]
+celltype tDummyDagSinkReactor {
+  [async] call sDummy cDagSinkReactor;
+  attr {
+    [omit] PLType("Cow") name = PL_EXP("Dummy");
+    [omit] PLType("SchedulerType") schedType = PL_EXP("SchedulerType::PrioritizedFIFO(7)");
+    [omit] PLType("Cow") subscribeTopicNames = PL_EXP("Int");
+    [omit] PLType("Cow") relativeDeadline = PL_EXP("Duration::from_secs(1)");
+  };
+};
+

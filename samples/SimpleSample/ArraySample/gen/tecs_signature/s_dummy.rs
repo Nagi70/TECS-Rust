@@ -1,4 +1,4 @@
 use crate::tecs_global::*;
-pub trait SArray {
+pub trait SDummy {
 	fn main(&'static self, value: &i32);
 }

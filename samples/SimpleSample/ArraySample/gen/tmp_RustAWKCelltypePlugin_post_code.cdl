@@ -1,1 +1,13 @@
 /* 'Class' post code */
+import("gen/tDummy_dag_sink_reactor.cdl");
+
+cell tDummyDagSinkReactor DummyDagSinkReactor {
+  cDagSinkReactor = Dummy.eReactor;
+};
+
+import("gen/tArrayTest_dag_periodic_reactor.cdl");
+
+cell tArrayTestDagPeriodicReactor ArrayTestDagPeriodicReactor {
+  cDagPeriodicReactor = ArrayTest.eReactor;
+};
+

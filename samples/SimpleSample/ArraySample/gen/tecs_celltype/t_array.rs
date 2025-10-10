@@ -1,11 +1,11 @@
 use crate::tecs_variable::*;
 pub struct TArray<'a>{
-	attr_array: *[i32],
+	attr_array: &'static [i32],
 	variable: &'a TECSVariable<TArrayVar>,
 }
 
 pub struct TArrayVar{
-	pub var_array: *mut [i32],
+	pub var_array: &'static mut [i32],
 }
 
 pub struct EArrayForTArray<'a>{
@@ -18,14 +18,14 @@ pub struct LockGuardForTArray<'a>{
 }
 
 static ARRAY1: TArray = TArray {
-	attr_array: unsafe{ &ARRAY1ATTRARRAY1 as * [i32] },
+	attr_array: &ARRAY1ATTRARRAY1,
 	variable: &ARRAY1VAR,
 };
 
 static ARRAY1VAR: TECSVariable<TArrayVar> = TECSVariable::Mutexed(awkernel_lib::sync::mutex::Mutex::new(
 	TArrayVar {
 /// This UnsafeCell is accessed by multiple tasks, but is safe because it is operated exclusively by the mutex object.
-		var_array: unsafe{ &mut ARRAY1VARARRAY1 as *mut [i32] },
+		var_array: unsafe{ &mut *core::ptr::addr_of_mut!(mut ARRAY1VARARRAY1) },
 	}
 ));
 pub static EARRAYFORARRAY1: EArrayForTArray = EArrayForTArray {
@@ -33,14 +33,14 @@ pub static EARRAYFORARRAY1: EArrayForTArray = EArrayForTArray {
 };
 
 static ARRAY2: TArray = TArray {
-	attr_array: unsafe{ &ARRAY2ATTRARRAY1 as * [i32] },
+	attr_array: &ARRAY2ATTRARRAY1,
 	variable: &ARRAY2VAR,
 };
 
 static ARRAY2VAR: TECSVariable<TArrayVar> = TECSVariable::Mutexed(awkernel_lib::sync::mutex::Mutex::new(
 	TArrayVar {
 /// This UnsafeCell is accessed by multiple tasks, but is safe because it is operated exclusively by the mutex object.
-		var_array: unsafe{ &mut ARRAY2VARARRAY1 as *mut [i32] },
+		var_array: unsafe{ &mut *core::ptr::addr_of_mut!(mut ARRAY2VARARRAY1) },
 	}
 ));
 pub static EARRAYFORARRAY2: EArrayForTArray = EArrayForTArray {
@@ -48,10 +48,10 @@ pub static EARRAYFORARRAY2: EArrayForTArray = EArrayForTArray {
 };
 
 static ARRAY1ATTRARRAY1: [i32; 1] = [0];
-static mut ARRAY1VARARRAY1: [i32; 1] = Default::default();
+static mut ARRAY1VARARRAY1: [i32; 1] = [0; 1];
 
 static ARRAY2ATTRARRAY1: [i32; 2] = [0, 0];
-static mut ARRAY2VARARRAY1: [i32; 2] = Default::default();
+static mut ARRAY2VARARRAY1: [i32; 2] = [0; 2];
 
 impl<'a> TArray<'a> {
 	#[inline]

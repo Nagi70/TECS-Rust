@@ -20,7 +20,7 @@ struct tag_sArray_VDES {
 
 /* signature function table #_SFT_# */
 struct tag_sArray_VMT {
-    void           (*main__T)( const struct tag_sArray_VDES *edp );
+    void           (*main__T)( const struct tag_sArray_VDES *edp, int32_t value );
 };
 
 /* signature descriptor #_SDES_# for dynamic join */

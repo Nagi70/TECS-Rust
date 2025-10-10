@@ -389,7 +389,6 @@ class RustGenCelltypePlugin < CelltypePlugin
 
             @gen_use_global = true
         elsif c_type.kind_of?( PtrType ) then
-            puts "PtrType: #{c_type.get_type_str}"
             if c_type.get_string != nil then
                 # str = "#{c_type.has_sized_pointer?}"
                 # str = "#{c_type.get_max}"
@@ -417,7 +416,6 @@ class RustGenCelltypePlugin < CelltypePlugin
                     str.concat(", #{size}>")
                 end
             elsif c_type.get_size != nil then
-                puts "PtrType with size: #{c_type.get_size}"
                 # TODO: size_is指定子のときの処理
                 type = c_type_to_rust_type(c_type.get_type)
                 # str = "[#{type}; #{c_type.get_size}]"
@@ -826,9 +824,9 @@ class RustGenCelltypePlugin < CelltypePlugin
             next if attr.is_omit?
 
             attr_type = c_type_to_rust_type(attr.get_type)
-            if attr.get_type.kind_of?( PtrType ) then
+            if attr.get_type.kind_of?( PtrType ) && attr.get_type.get_size != nil then
                 # ポインタ型の場合は，ポインタにする
-                attr_type.prepend("*")
+                attr_type.prepend("&'static ")
             end
             gen_attribute_field(file, attr.get_name.to_s, attr_type)
         }
@@ -874,8 +872,8 @@ class RustGenCelltypePlugin < CelltypePlugin
             # 変数構造体のフィールドの定義を生成
             celltype.get_var_list.each{ |var|
                 var_type = c_type_to_rust_type(var.get_type)
-                if var.get_type.kind_of?( PtrType ) then
-                    var_type.prepend("*mut ")
+                if var.get_type.kind_of?( PtrType ) && var.get_type.get_size != nil then
+                    var_type.prepend("&'static mut ")
                 end
                 file.print "\tpub #{var.get_name}: #{var_type},\n"
             }
@@ -937,12 +935,12 @@ class RustGenCelltypePlugin < CelltypePlugin
                 attr_symbol = attr.get_name.to_s.to_sym
                 attr_array = cell.get_attr_initializer(attr_symbol)
                 # 属性がポインタであるときに対応
-                if attr.get_type.kind_of?( PtrType ) then
+                if attr.get_type.kind_of?( PtrType ) && attr.get_type.get_size != nil then
                     type = c_type_to_rust_type(attr.get_type).delete("[]")
                     size = cell.get_attr_initializer(attr.get_type.get_size.to_s.to_sym)
                     name = "#{cell.get_global_name.upcase}ATTRARRAY#{array_number}"
                     @pointer_array.push([name, type, size, attr_array])
-                    file.print "\t#{attr.get_name.to_s}: unsafe{ &#{name} as * #{c_type_to_rust_type(attr.get_type)} },\n"
+                    file.print "\t#{attr.get_name.to_s}: &#{name},\n"
                     array_number += 1
                 # 属性が配列であるときに対応
                 elsif attr_array.is_a?(Array) then 
@@ -988,13 +986,13 @@ class RustGenCelltypePlugin < CelltypePlugin
         @celltype.get_var_list.each{ |var|
             var_array = var.get_initializer
             # 変数がポインタであるときに対応
-            if var.get_type.kind_of?( PtrType ) then
+            if var.get_type.kind_of?( PtrType ) && var.get_type.get_size != nil then
 
                 type = c_type_to_rust_type(var.get_type).delete("[]")
                 size = cell.get_attr_initializer(var.get_type.get_size.to_s.to_sym)
                 name = "mut #{cell.get_global_name.upcase}VARARRAY#{array_number}"
                 @pointer_array.push([name, type, size, var_array])
-                file.print "\t\t#{var.get_name.to_s}: unsafe{ &#{name} as *mut #{c_type_to_rust_type(var.get_type)} },\n"
+                file.print "\t\t#{var.get_name.to_s}: unsafe{ &mut *core::ptr::addr_of_mut!(#{name}) },\n"
                 array_number += 1
             # 右辺が定義されていない場合、defaultにする
             elsif var_array.nil? then
@@ -1171,19 +1169,21 @@ class RustGenCelltypePlugin < CelltypePlugin
             end
         }
     end
-    # セルタイプに受け口以外の要素があるかどうかを判断する
+    # セルタイプに受け口以外に生成する要素（呼び口、属性、変数）があるかどうかを判断する
     def check_only_entryport_celltype celltype
         celltype.get_port_list.each{ |port|
             if port.get_port_type == :CALL then
+                next if port.is_omit?
                 # if check_gen_dyn_for_port(port) != nil then
                 #     next
                 # end
                 return false
             end
         }
-        if celltype.get_attribute_list.length != 0 then
+        celltype.get_var_list.each{ |var|
+            next if var.is_omit?
             return false
-        end
+        }
         if celltype.get_var_list.length != 0 then
             return false
         end
@@ -2086,7 +2086,7 @@ class RustGenCelltypePlugin < CelltypePlugin
 
             # 未初期化の場合 Default にする
             if initializer.nil? then
-                file.print "Default::default();\n"
+                file.print "[0; #{size}];\n"
             elsif initializer.is_a?(Array) then
                 file.print "["
                 initializer.each{ |item|

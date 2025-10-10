@@ -1,5 +1,48 @@
 signature sArray {
-    void main(void);
+    void main( [in] int32_t value );
+};
+
+signature sArrayTest {
+    void main( [out] int32_t *value);
+};
+
+signature sInt {
+    void send( [in] int32_t value);
+};
+
+[generate(RustAWKPlugin, "DAG_PERIODIC_REACTOR_BODY")]
+celltype tArrayTest {
+    call sArray cArray1;
+    call sArray cArray2;
+
+    entry sArrayTest eReactor;
+
+    [omit] call sInt cInt;
+
+    attr{
+	    [omit] PLType("Cow") reactorName  = PL_EXP("ArrayTest");
+	    [omit] PLType("SchedulerType") schedType = PL_EXP("SchedulerType::PrioritizedFIFO(7)");
+	    [omit] PLType("Duration") period = PL_EXP("Duration::from_millis(50)");
+        [omit] PLType("Cow") publishTopicNames = PL_EXP("Int");
+    };
+};
+
+signature sDummy {
+    void main( [in] int32_t value);
+};
+
+[generate(RustAWKPlugin, "DAG_SINK_REACTOR_BODY")]
+celltype tDummy {
+    entry sDummy eReactor;
+
+    entry sInt eInt;
+
+    attr{
+	    [omit] PLType("Cow") reactorName  = PL_EXP("Dummy");
+	    [omit] PLType("SchedulerType") schedType = PL_EXP("SchedulerType::PrioritizedFIFO(7)");
+        [omit] PLType("Cow") subscribeTopicNames = PL_EXP("Int");
+        [omit] PLType("Duration") relativeDeadline = PL_EXP("Duration::from_secs(1)");
+    };
 };
 
 [generate(RustAWKPlugin, "")]
@@ -17,6 +60,16 @@ celltype tArray {
     [size_is(array_size)]
     int32_t  *var_array;
   };
+};
+
+cell tArrayTest ArrayTest {
+    cArray1 = Array1.eArray;
+    cArray2 = Array2.eArray;
+
+    cInt = Dummy.eInt;
+};
+
+cell tDummy Dummy {
 };
 
 cell tArray Array1 {
