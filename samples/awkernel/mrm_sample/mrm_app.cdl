@@ -1,4 +1,4 @@
-import("dummy_periodic_reactor_in_mrm.cdl");
+import("dummy_periodic_reactor.cdl");
 import("publish_signature.cdl");
 import("imu_driver.cdl");
 import("imu_corrector.cdl");
@@ -66,6 +66,9 @@ import("utils_geometry.cdl");
 import("stop_filter.cdl");
 import("twist2accel.cdl");
 import("trajectory_follower.cdl");
+import("utils_trajectory.cdl");
+import("utils_pose_deviation.cdl");
+import("dummy_sink_reactor.cdl");
 
 cell tEkfLocalizerTimer EkfLocalizerTimer {
     cKinematicState[0] = StopFilter.eKinematicState;
@@ -136,6 +139,16 @@ cell tLowpassFilter1D FilterAaz{
 };
 
 cell tTrajectoryFollower TrajectoryFollower {
-
+    cTraj = UtilsTrajectory.eUtils;
+    cPose = UtilsPoseDeviation.eUtils;
+    cControl = DummySinkReactor.eControl;
 };
 
+cell tUtilsTrajectory UtilsTrajectory {
+};
+
+cell tUtilsPoseDeviation UtilsPoseDeviation {
+};
+
+cell tDummySinkReactorInMrm DummySinkReactor {  
+};

@@ -2,7 +2,7 @@ use crate::tecs_global::*;
 use crate::tecs_celltype::t_state_transition::*;
 use crate::tecs_signature::s_state_transition::*;
 use awkernel_lib::sync::mutex::MCSNode;
-impl SStateTransition for EStateForTStateTransition<'_>{
+impl SStateTransition for EStateForTStateTransition{
 
 	fn normalize_yaw(&'static self, yaw: &f64) -> f64{
 

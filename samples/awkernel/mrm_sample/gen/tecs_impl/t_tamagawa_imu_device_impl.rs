@@ -2,7 +2,7 @@ use crate::tecs_global::*;
 use crate::tecs_celltype::t_tamagawa_imu_device::*;
 use crate::tecs_signature::s_imu_device::*;
 use awkernel_lib::sync::mutex::MCSNode;
-impl SImuDevice for EImuDeviceForTTamagawaImuDevice<'_>{
+impl SImuDevice for EImuDeviceForTTamagawaImuDevice{
 
 	fn read(&'static self, msg: &Frame, imu_msg: &mut ImuMsg) {
 		let mut node = MCSNode::new();

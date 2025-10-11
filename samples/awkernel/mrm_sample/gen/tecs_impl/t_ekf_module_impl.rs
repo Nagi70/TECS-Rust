@@ -2,7 +2,7 @@ use crate::tecs_global::*;
 use crate::tecs_celltype::t_ekf_module::*;
 use crate::tecs_signature::{s_time_delay_kalman_filter::*, s_state_transition::*, s_measurement::*, s_mahalanobis::*, s_covariance::*, s_utils_geometry::*, s_ekf_module::*};
 use awkernel_lib::sync::mutex::MCSNode;
-impl SEkfModule for EEkfModuleForTEkfModule<'_>{
+impl SEkfModule for EEkfModuleForTEkfModule{
 
 	fn init(&'static self) {
 		let mut node = MCSNode::new();

@@ -1,0 +1,11 @@
+[active, generate(RustAWKPlugin, "DAG_REACTOR")]
+celltype tVehicleVelocityConverterDagReactor {
+  [async] call sVehicleVelocityConverter cDagReactor;
+  attr {
+    [omit] PLType("Cow") name = PL_EXP("VehicleVelocityConverter");
+    [omit] PLType("SchedulerType") schedType = PL_EXP("SchedulerType::PrioritizedFIFO(7)");
+    [omit] PLType("Cow") publishTopicNames = PL_EXP("TwistWithCovarianceV");
+    [omit] PLType("Cow") subscribeTopicNames = PL_EXP("VelocityStatus");
+  };
+};
+

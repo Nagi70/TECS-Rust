@@ -4,34 +4,34 @@ use crate::tecs_signature::{s_twist_with_covariance_stamped::*, s_tf::*};
 
 use crate::tecs_celltype::{t_ekf_localizer::*, t_tf::*};
 
-pub struct TGyroOdometer<'a, T>
+pub struct TGyroOdometer<T>
 where
-	T: STf,
+	T: STf + 'static,
 {
-	c_tf: &'a T,
+	c_tf: &'static T,
 	output_frame: &'static str,
-	variable: &'a TECSVariable<TGyroOdometerVar>,
+	variable: &'static TECSVariable<TGyroOdometerVar>,
 }
 
-pub struct TGyroOdometerVar{
+pub struct TGyroOdometerVar {
 	pub imu_covariance: nalgebra::Matrix3<f64>,
 }
 
-pub struct ETwistWithCovarianceVForTGyroOdometer<'a>{
-	pub cell: &'a TGyroOdometer<'a, ETfForTTf<'a>>,
+pub struct ETwistWithCovarianceVForTGyroOdometer {
+	pub cell: &'static TGyroOdometer<ETfForTTf>,
 }
 
-pub struct EImuDataForTGyroOdometer<'a>{
-	pub cell: &'a TGyroOdometer<'a, ETfForTTf<'a>>,
+pub struct EImuDataForTGyroOdometer {
+	pub cell: &'static TGyroOdometer<ETfForTTf>,
 }
 
-pub struct EReactorForTGyroOdometer<'a>{
-	pub cell: &'a TGyroOdometer<'a, ETfForTTf<'a>>,
+pub struct EReactorForTGyroOdometer {
+	pub cell: &'static TGyroOdometer<ETfForTTf>,
 }
 
 pub struct LockGuardForTGyroOdometer<'a, T>
 where
-	T: STf,
+	T: STf + 'static,
 {
 	pub c_tf: &'a T,
 	pub output_frame: &'a &'static str,
@@ -47,7 +47,7 @@ static GYROODOMETER: TGyroOdometer<ETfForTTf> = TGyroOdometer {
 static GYROODOMETERVAR: TECSVariable<TGyroOdometerVar> = TECSVariable::Mutexed(awkernel_lib::sync::mutex::Mutex::new(
 	TGyroOdometerVar {
 /// This UnsafeCell is accessed by multiple tasks, but is safe because it is operated exclusively by the mutex object.
-		imu_covariance: Default::default,
+	imu_covariance: Default::default,
 	}
 ));
 pub static ETWISTWITHCOVARIANCEVFORGYROODOMETER: ETwistWithCovarianceVForTGyroOdometer = ETwistWithCovarianceVForTGyroOdometer {
@@ -62,12 +62,9 @@ pub static EREACTORFORGYROODOMETER: EReactorForTGyroOdometer = EReactorForTGyroO
 	cell: &GYROODOMETER,
 };
 
-impl<'a, T: STf> TGyroOdometer<'a, T> {
+impl<T: STf> TGyroOdometer<T> {
 	#[inline]
-	pub fn get_cell_ref<'b>(&'a self, node: &'b mut awkernel_lib::sync::mutex::MCSNode<TGyroOdometerVar>) -> LockGuardForTGyroOdometer<'_, T>
-	where
-		'b: 'a,
-	{
+	pub fn get_cell_ref<'node>(&'static self, node: &'node mut awkernel_lib::sync::mutex::MCSNode<TGyroOdometerVar>) -> LockGuardForTGyroOdometer<'node, T> {
 		LockGuardForTGyroOdometer {
 			c_tf: self.c_tf,
 			output_frame: &self.output_frame,

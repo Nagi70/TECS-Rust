@@ -3,24 +3,24 @@ use crate::tecs_signature::{s_imu_raw::*, s_imu_device::*};
 
 use crate::tecs_celltype::{t_imu_corrector::*, t_tamagawa_imu_device::*};
 
-pub struct TImuDriver<'a, T>
+pub struct TImuDriver<T>
 where
-	T: SImuDevice,
+	T: SImuDevice + 'static,
 {
-	c_dev: &'a T,
+	c_dev: &'static T,
 }
 
-pub struct EReactorForTImuDriver<'a>{
-	pub cell: &'a TImuDriver<'a, EImuDeviceForTTamagawaImuDevice<'a>>,
+pub struct EReactorForTImuDriver {
+	pub cell: &'static TImuDriver<EImuDeviceForTTamagawaImuDevice>,
 }
 
-pub struct EImuForTImuDriver<'a>{
-	pub cell: &'a TImuDriver<'a, EImuDeviceForTTamagawaImuDevice<'a>>,
+pub struct EImuForTImuDriver {
+	pub cell: &'static TImuDriver<EImuDeviceForTTamagawaImuDevice>,
 }
 
 pub struct LockGuardForTImuDriver<'a, T>
 where
-	T: SImuDevice,
+	T: SImuDevice + 'static,
 {
 	pub c_dev: &'a T,
 }
@@ -37,9 +37,9 @@ pub static EIMUFORIMUDRIVER: EImuForTImuDriver = EImuForTImuDriver {
 	cell: &IMUDRIVER,
 };
 
-impl<'a, T: SImuDevice> TImuDriver<'a, T> {
+impl<T: SImuDevice> TImuDriver<T> {
 	#[inline]
-	pub fn get_cell_ref(&'a self) -> LockGuardForTImuDriver<'_, T>	{
+	pub fn get_cell_ref(&'static self) -> LockGuardForTImuDriver<T> {
 		LockGuardForTImuDriver {
 			c_dev: self.c_dev,
 		}

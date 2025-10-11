@@ -4,40 +4,38 @@ use crate::tecs_signature::{s_kinematic_state::*, s_ekf_module::*, s_twist_with_
 
 use crate::tecs_celltype::{t_stop_filter::*, t_ekf_module::*, t_twist_with_covariance_aged_object_queue::*};
 
-pub struct TEkfLocalizerTimer<'a, T, U>
+pub struct TEkfLocalizerTimer<T, U>
 where
-	T: SEkfModule,
-	U: STwistWithCovarianceGet,
+	T: SEkfModule + 'static,
+	U: STwistWithCovarianceGet + 'static,
 {
-	c_ekf_module: &'a T,
-	c_queue: &'a U,
+	c_ekf_module: &'static T,
+	c_queue: &'static U,
 	ekf_rate: f64,
 	pose_smoothing_steps: u32,
 	twist_smoothing_steps: u32,
-	threshold_observable_velocity_mps: f64,
-	variable: &'a TECSVariable<TEkfLocalizerTimerVar>,
+	variable: &'static TECSVariable<TEkfLocalizerTimerVar>,
 }
 
-pub struct TEkfLocalizerTimerVar{
+pub struct TEkfLocalizerTimerVar {
 	pub ekf_dt: f64,
 	pub last_predict_time: awkernel_lib::time::Time,
 }
 
-pub struct EReactorForTEkfLocalizerTimer<'a>{
-	pub cell: &'a TEkfLocalizerTimer<'a, EEkfModuleForTEkfModule<'a>, EGetForTTwistWithCovarianceAgedObjectQueue<'a>>,
+pub struct EReactorForTEkfLocalizerTimer {
+	pub cell: &'static TEkfLocalizerTimer<EEkfModuleForTEkfModule, EGetForTTwistWithCovarianceAgedObjectQueue>,
 }
 
 pub struct LockGuardForTEkfLocalizerTimer<'a, T, U>
 where
-	T: SEkfModule,
-	U: STwistWithCovarianceGet,
+	T: SEkfModule + 'static,
+	U: STwistWithCovarianceGet + 'static,
 {
 	pub c_ekf_module: &'a T,
 	pub c_queue: &'a U,
 	pub ekf_rate: &'a f64,
 	pub pose_smoothing_steps: &'a u32,
 	pub twist_smoothing_steps: &'a u32,
-	pub threshold_observable_velocity_mps: &'a f64,
 	pub var: TECSVarGuard<'a, TEkfLocalizerTimerVar>,
 }
 
@@ -47,34 +45,29 @@ static EKFLOCALIZERTIMER: TEkfLocalizerTimer<EEkfModuleForTEkfModule, EGetForTTw
 	ekf_rate: 0.01,
 	pose_smoothing_steps: 5,
 	twist_smoothing_steps: 5,
-	threshold_observable_velocity_mps: 0.01,
 	variable: &EKFLOCALIZERTIMERVAR,
 };
 
 static EKFLOCALIZERTIMERVAR: TECSVariable<TEkfLocalizerTimerVar> = TECSVariable::Mutexed(awkernel_lib::sync::mutex::Mutex::new(
 	TEkfLocalizerTimerVar {
 /// This UnsafeCell is accessed by multiple tasks, but is safe because it is operated exclusively by the mutex object.
-		ekf_dt: 0,
-		last_predict_time: Default::default(),
+	ekf_dt: 0,
+	last_predict_time: awkernel_lib::time::Time::zero(),
 	}
 ));
 pub static EREACTORFOREKFLOCALIZERTIMER: EReactorForTEkfLocalizerTimer = EReactorForTEkfLocalizerTimer {
 	cell: &EKFLOCALIZERTIMER,
 };
 
-impl<'a, T: SEkfModule, U: STwistWithCovarianceGet> TEkfLocalizerTimer<'a, T, U> {
+impl<T: SEkfModule, U: STwistWithCovarianceGet> TEkfLocalizerTimer<T, U> {
 	#[inline]
-	pub fn get_cell_ref<'b>(&'a self, node: &'b mut awkernel_lib::sync::mutex::MCSNode<TEkfLocalizerTimerVar>) -> LockGuardForTEkfLocalizerTimer<'_, T, U>
-	where
-		'b: 'a,
-	{
+	pub fn get_cell_ref<'node>(&'static self, node: &'node mut awkernel_lib::sync::mutex::MCSNode<TEkfLocalizerTimerVar>) -> LockGuardForTEkfLocalizerTimer<'node, T, U> {
 		LockGuardForTEkfLocalizerTimer {
 			c_ekf_module: self.c_ekf_module,
 			c_queue: self.c_queue,
 			ekf_rate: &self.ekf_rate,
 			pose_smoothing_steps: &self.pose_smoothing_steps,
 			twist_smoothing_steps: &self.twist_smoothing_steps,
-			threshold_observable_velocity_mps: &self.threshold_observable_velocity_mps,
 			var: self.variable.lock(node),
 		}
 	}

@@ -4,11 +4,11 @@ use crate::tecs_signature::{s_imu_data::*, s_tf::*};
 
 use crate::tecs_celltype::{t_gyro_odometer::*, t_tf::*};
 
-pub struct TImuCorrector<'a, T>
+pub struct TImuCorrector<T>
 where
-	T: STf,
+	T: STf + 'static,
 {
-	c_tf: &'a T,
+	c_tf: &'static T,
 	output_frame: &'static str,
 	angular_velocity_offset_x: f64,
 	angular_velocity_offset_y: f64,
@@ -17,25 +17,25 @@ where
 	angular_velocity_stddev_yy: f64,
 	angular_velocity_stddev_zz: f64,
 	accel_stddev: f64,
-	variable: &'a TECSVariable<TImuCorrectorVar>,
+	variable: &'static TECSVariable<TImuCorrectorVar>,
 }
 
-pub struct TImuCorrectorVar{
+pub struct TImuCorrectorVar {
 	pub linear_acceleration_covariance: nalgebra::Matrix3<f64>,
 	pub angular_velocity_covariance: nalgebra::Matrix3<f64>,
 }
 
-pub struct EImuRawForTImuCorrector<'a>{
-	pub cell: &'a TImuCorrector<'a, ETfForTTf<'a>>,
+pub struct EImuRawForTImuCorrector {
+	pub cell: &'static TImuCorrector<ETfForTTf>,
 }
 
-pub struct EReactorForTImuCorrector<'a>{
-	pub cell: &'a TImuCorrector<'a, ETfForTTf<'a>>,
+pub struct EReactorForTImuCorrector {
+	pub cell: &'static TImuCorrector<ETfForTTf>,
 }
 
 pub struct LockGuardForTImuCorrector<'a, T>
 where
-	T: STf,
+	T: STf + 'static,
 {
 	pub c_tf: &'a T,
 	pub output_frame: &'a &'static str,
@@ -65,8 +65,8 @@ static IMUCORRECTOR: TImuCorrector<ETfForTTf> = TImuCorrector {
 static IMUCORRECTORVAR: TECSVariable<TImuCorrectorVar> = TECSVariable::Mutexed(awkernel_lib::sync::mutex::Mutex::new(
 	TImuCorrectorVar {
 /// This UnsafeCell is accessed by multiple tasks, but is safe because it is operated exclusively by the mutex object.
-		linear_acceleration_covariance: nalgebra::Matrix3::default(),
-		angular_velocity_covariance: nalgebra::Matrix3::default(),
+	linear_acceleration_covariance: nalgebra::Matrix3::default(),
+	angular_velocity_covariance: nalgebra::Matrix3::default(),
 	}
 ));
 pub static EIMURAWFORIMUCORRECTOR: EImuRawForTImuCorrector = EImuRawForTImuCorrector {
@@ -77,12 +77,9 @@ pub static EREACTORFORIMUCORRECTOR: EReactorForTImuCorrector = EReactorForTImuCo
 	cell: &IMUCORRECTOR,
 };
 
-impl<'a, T: STf> TImuCorrector<'a, T> {
+impl<T: STf> TImuCorrector<T> {
 	#[inline]
-	pub fn get_cell_ref<'b>(&'a self, node: &'b mut awkernel_lib::sync::mutex::MCSNode<TImuCorrectorVar>) -> LockGuardForTImuCorrector<'_, T>
-	where
-		'b: 'a,
-	{
+	pub fn get_cell_ref<'node>(&'static self, node: &'node mut awkernel_lib::sync::mutex::MCSNode<TImuCorrectorVar>) -> LockGuardForTImuCorrector<'node, T> {
 		LockGuardForTImuCorrector {
 			c_tf: self.c_tf,
 			output_frame: &self.output_frame,

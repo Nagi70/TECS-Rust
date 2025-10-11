@@ -1,27 +1,52 @@
 import("struct.cdl");
 import("publish_signature.cdl");
 
+import("utils_pose_deviation.cdl");
+import("utils_trajectory.cdl");
+
 // まだダミー段階で、本来は引数に steering_state が必要。また、パブリッシュも必要
 signature sTrajectoryFollower {
-    void main([in] struct KinematicState kinematic_state, [in] struct AccelWithCovarianceStamped accel); 
+    void main(
+    [in] struct KinematicState kinematic_state,
+    [in] struct AccelWithCovarianceStamped accel,
+    [out] struct Control* control); 
 };
 
-[generate(RustAWKPlugin, "SINK_REACTOR_BODY")]
+[generate(RustAWKPlugin, "DAG_REACTOR_BODY")]
 celltype tTrajectoryFollower {
     
     /* トピックI/F（omit 必須） */
     entry     sKinematicState  eKinematicStateSf;      /* 入力: 生 Odometry を subscribe */
     entry     sAccelWithCovarianceStamped  eAccel;      /* 入力: 生 Odometry を subscribe */
+    [omit] call sControl cControl;
     
     /* リアクターの受け口（必須: eReactor） */
     entry sTrajectoryFollower eReactor;
+
+    call sUtilsTrajectory cTraj;
+    call sUtilsPoseDeviation cPose;
     
     /* 属性（プラグインが要求するリアクター属性は omit 指定） */
     attr {
+        bool_t   use_external_target_vel = true;
+        double64_t external_target_vel     = 5.0;
+        double64_t lateral_deviation       = 0.0;
+
+        double64_t wheel_base      = 4.0;
+        double64_t lookahead_time  = 3.0;
+        double64_t min_lookahead   = 3.0;
+        double64_t steer_lim       = 0.6;
+
+        double64_t kp_longitudinal = 0.5;
+        double64_t acc_lim         = 2.0;
+
+        // ここの初期化は考える必要がある
+        PLType("heapless::Vec<TrajectoryPoint, 10>") fix_points = PL_EXP("Default::default()");
+
         /* REACTOR_BODY で必須のメタ属性 */
         [omit] PLType("Cow") reactorName          = PL_EXP("TrajectoryFollower");
-        [omit] PLType("SchedulerType") schedType  = PL_EXP("SchedulerType::FIFO");
+        [omit] PLType("SchedulerType") schedType  = PL_EXP("SchedulerType::PrioritizedFIFO(7)");
         [omit] PLType("Cow") subscribeTopicNames  = PL_EXP("KinematicStateSf, Accel");
-        [omit] PLType("Duration") relativeDeadline = PL_EXP("Duration::from_secs(1)");
+        [omit] PLType("Cow") publishTopicNames = PL_EXP("Control");
     };
 };

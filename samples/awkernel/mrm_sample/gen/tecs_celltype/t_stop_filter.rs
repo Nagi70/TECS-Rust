@@ -6,20 +6,8 @@ pub struct TStopFilter{
 	wz_threshold: f64,
 }
 
-pub struct EKinematicStateForTStopFilter<'a>{
-	pub cell: &'a TStopFilter,
-}
-
-pub struct EReactorForTStopFilter<'a>{
-	pub cell: &'a TStopFilter,
-}
-
-pub struct LockGuardForTStopFilter<'a>{
-	pub vx_threshold: &'a f64,
-	pub wz_threshold: &'a f64,
-}
-
-static STOPFILTER: TStopFilter = TStopFilter {
+pub struct EKinematicStateForTStopFilter {
+	pub cell: &'static TStopFilterstatic STOPFILTER: TStopFilter = TStopFilter {
 	vx_threshold: 0.0,
 	wz_threshold: 0.0,
 };
@@ -32,12 +20,3 @@ pub static EREACTORFORSTOPFILTER: EReactorForTStopFilter = EReactorForTStopFilte
 	cell: &STOPFILTER,
 };
 
-impl<'a> TStopFilter {
-	#[inline]
-	pub fn get_cell_ref(&'a self) -> LockGuardForTStopFilter	{
-		LockGuardForTStopFilter {
-			vx_threshold: &self.vx_threshold,
-			wz_threshold: &self.wz_threshold,
-		}
-	}
-}

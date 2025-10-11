@@ -20,7 +20,7 @@ struct tag_sTrajectoryFollower_VDES {
 
 /* signature function table #_SFT_# */
 struct tag_sTrajectoryFollower_VMT {
-    void           (*main__T)( const struct tag_sTrajectoryFollower_VDES *edp, struct KinematicState kinematic_state, struct AccelWithCovarianceStamped accel );
+    void           (*main__T)( const struct tag_sTrajectoryFollower_VDES *edp, struct KinematicState kinematic_state, struct AccelWithCovarianceStamped accel, struct Control* control );
 };
 
 /* signature descriptor #_SDES_# for dynamic join */

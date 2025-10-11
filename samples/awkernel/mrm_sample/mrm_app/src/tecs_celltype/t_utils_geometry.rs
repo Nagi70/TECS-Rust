@@ -1,11 +1,8 @@
 pub struct TUtilsGeometry{
 }
 
-pub struct EUtilsForTUtilsGeometry<'a>{
-	pub cell: &'a TUtilsGeometry,
-}
-
-static UTILSGEOMETRY: TUtilsGeometry = TUtilsGeometry {
+pub struct EUtilsForTUtilsGeometry {
+	pub cell: &'static TUtilsGeometrystatic UTILSGEOMETRY: TUtilsGeometry = TUtilsGeometry {
 };
 
 pub static EUTILSFORUTILSGEOMETRY: EUtilsForTUtilsGeometry = EUtilsForTUtilsGeometry {

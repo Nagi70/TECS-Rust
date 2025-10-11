@@ -1,38 +1,50 @@
 /* 'Class' post code */
-import("gen/tImuDriver_reactor.cdl");
+import("gen/tImuDriver_dag_reactor.cdl");
 
-cell tImuDriverReactor ImuDriverReactor {
-  cReactor = ImuDriver.eReactor;
+cell tImuDriverDagReactor ImuDriverDagReactor {
+  cDagReactor = ImuDriver.eReactor;
 };
 
-import("gen/tImuCorrector_reactor.cdl");
+import("gen/tImuCorrector_dag_reactor.cdl");
 
-cell tImuCorrectorReactor ImuCorrectorReactor {
-  cReactor = ImuCorrector.eReactor;
+cell tImuCorrectorDagReactor ImuCorrectorDagReactor {
+  cDagReactor = ImuCorrector.eReactor;
 };
 
-import("gen/tVehicleVelocityConverter_reactor.cdl");
+import("gen/tVehicleVelocityConverter_dag_reactor.cdl");
 
-cell tVehicleVelocityConverterReactor VehicleVelocityConverterReactor {
-  cReactor = VehicleVelocityConverter.eReactor;
+cell tVehicleVelocityConverterDagReactor VehicleVelocityConverterDagReactor {
+  cDagReactor = VehicleVelocityConverter.eReactor;
 };
 
-import("gen/tGyroOdometer_reactor.cdl");
+import("gen/tGyroOdometer_dag_reactor.cdl");
 
-cell tGyroOdometerReactor GyroOdometerReactor {
-  cReactor = GyroOdometer.eReactor;
+cell tGyroOdometerDagReactor GyroOdometerDagReactor {
+  cDagReactor = GyroOdometer.eReactor;
 };
 
-import("gen/tStopFilter_reactor.cdl");
+import("gen/tStopFilter_dag_reactor.cdl");
 
-cell tStopFilterReactor StopFilterReactor {
-  cReactor = StopFilter.eReactor;
+cell tStopFilterDagReactor StopFilterDagReactor {
+  cDagReactor = StopFilter.eReactor;
 };
 
-import("gen/tTwist2Accel_reactor.cdl");
+import("gen/tTwist2Accel_dag_reactor.cdl");
 
-cell tTwist2AccelReactor Twist2AccelReactor {
-  cReactor = Twist2Accel.eReactor;
+cell tTwist2AccelDagReactor Twist2AccelDagReactor {
+  cDagReactor = Twist2Accel.eReactor;
+};
+
+import("gen/tTrajectoryFollower_dag_reactor.cdl");
+
+cell tTrajectoryFollowerDagReactor TrajectoryFollowerDagReactor {
+  cDagReactor = TrajectoryFollower.eReactor;
+};
+
+import("gen/tDummySinkReactorInMrm_dag_sink_reactor.cdl");
+
+cell tDummySinkReactorInMrmDagSinkReactor DummySinkReactorDagSinkReactor {
+  cDagSinkReactor = DummySinkReactor.eReactor;
 };
 
 import("gen/tEkfLocalizer_sink_reactor.cdl");
@@ -41,21 +53,15 @@ cell tEkfLocalizerSinkReactor EkfLocalizerSinkReactor {
   cSinkReactor = EkfLocalizer.eReactor;
 };
 
-import("gen/tTrajectoryFollower_sink_reactor.cdl");
+import("gen/tDummyPeriodicReactorInMrm_dag_periodic_reactor.cdl");
 
-cell tTrajectoryFollowerSinkReactor TrajectoryFollowerSinkReactor {
-  cSinkReactor = TrajectoryFollower.eReactor;
+cell tDummyPeriodicReactorInMrmDagPeriodicReactor DummyHardwareDagPeriodicReactor {
+  cDagPeriodicReactor = DummyHardware.eReactor;
 };
 
-import("gen/tDummyPeriodicReactorInMrm_periodic_reactor.cdl");
+import("gen/tEkfLocalizerTimer_dag_periodic_reactor.cdl");
 
-cell tDummyPeriodicReactorInMrmPeriodicReactor DummyHardwarePeriodicReactor {
-  cPeriodicReactor = DummyHardware.eReactor;
-};
-
-import("gen/tEkfLocalizerTimer_periodic_reactor.cdl");
-
-cell tEkfLocalizerTimerPeriodicReactor EkfLocalizerTimerPeriodicReactor {
-  cPeriodicReactor = EkfLocalizerTimer.eReactor;
+cell tEkfLocalizerTimerDagPeriodicReactor EkfLocalizerTimerDagPeriodicReactor {
+  cDagPeriodicReactor = EkfLocalizerTimer.eReactor;
 };
 

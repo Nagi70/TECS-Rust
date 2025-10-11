@@ -4,44 +4,44 @@ use crate::tecs_signature::{s_accel_with_covariance_stamped::*, s_lowpass1d::*};
 
 use crate::tecs_celltype::{t_trajectory_follower::*, t_lowpass_filter1_d::*};
 
-pub struct TTwist2Accel<'a, T, U, V, W, X, Y>
+pub struct TTwist2Accel<T, U, V, W, X, Y>
 where
-	T: SLowpass1d,
-	U: SLowpass1d,
-	V: SLowpass1d,
-	W: SLowpass1d,
-	X: SLowpass1d,
-	Y: SLowpass1d,
+	T: SLowpass1d + 'static,
+	U: SLowpass1d + 'static,
+	V: SLowpass1d + 'static,
+	W: SLowpass1d + 'static,
+	X: SLowpass1d + 'static,
+	Y: SLowpass1d + 'static,
 {
-	c_filter_alx: &'a T,
-	c_filter_aly: &'a U,
-	c_filter_alz: &'a V,
-	c_filter_aax: &'a W,
-	c_filter_aay: &'a X,
-	c_filter_aaz: &'a Y,
-	variable: &'a TECSVariable<TTwist2AccelVar>,
+	c_filter_alx: &'static T,
+	c_filter_aly: &'static U,
+	c_filter_alz: &'static V,
+	c_filter_aax: &'static W,
+	c_filter_aay: &'static X,
+	c_filter_aaz: &'static Y,
+	variable: &'static TECSVariable<TTwist2AccelVar>,
 }
 
-pub struct TTwist2AccelVar{
+pub struct TTwist2AccelVar {
 	pub prev_twist: TwistStamped,
 }
 
-pub struct EKinematicStateForTTwist2Accel<'a>{
-	pub cell: &'a TTwist2Accel<'a, EFilterForTLowpassFilter1D<'a>, EFilterForTLowpassFilter1D<'a>, EFilterForTLowpassFilter1D<'a>, EFilterForTLowpassFilter1D<'a>, EFilterForTLowpassFilter1D<'a>, EFilterForTLowpassFilter1D<'a>>,
+pub struct EKinematicStateForTTwist2Accel {
+	pub cell: &'static TTwist2Accel<EFilterForTLowpassFilter1D, EFilterForTLowpassFilter1D, EFilterForTLowpassFilter1D, EFilterForTLowpassFilter1D, EFilterForTLowpassFilter1D, EFilterForTLowpassFilter1D>,
 }
 
-pub struct EReactorForTTwist2Accel<'a>{
-	pub cell: &'a TTwist2Accel<'a, EFilterForTLowpassFilter1D<'a>, EFilterForTLowpassFilter1D<'a>, EFilterForTLowpassFilter1D<'a>, EFilterForTLowpassFilter1D<'a>, EFilterForTLowpassFilter1D<'a>, EFilterForTLowpassFilter1D<'a>>,
+pub struct EReactorForTTwist2Accel {
+	pub cell: &'static TTwist2Accel<EFilterForTLowpassFilter1D, EFilterForTLowpassFilter1D, EFilterForTLowpassFilter1D, EFilterForTLowpassFilter1D, EFilterForTLowpassFilter1D, EFilterForTLowpassFilter1D>,
 }
 
 pub struct LockGuardForTTwist2Accel<'a, T, U, V, W, X, Y>
 where
-	T: SLowpass1d,
-	U: SLowpass1d,
-	V: SLowpass1d,
-	W: SLowpass1d,
-	X: SLowpass1d,
-	Y: SLowpass1d,
+	T: SLowpass1d + 'static,
+	U: SLowpass1d + 'static,
+	V: SLowpass1d + 'static,
+	W: SLowpass1d + 'static,
+	X: SLowpass1d + 'static,
+	Y: SLowpass1d + 'static,
 {
 	pub c_filter_alx: &'a T,
 	pub c_filter_aly: &'a U,
@@ -65,7 +65,7 @@ static TWIST2ACCEL: TTwist2Accel<EFilterForTLowpassFilter1D, EFilterForTLowpassF
 static TWIST2ACCELVAR: TECSVariable<TTwist2AccelVar> = TECSVariable::Mutexed(awkernel_lib::sync::mutex::Mutex::new(
 	TTwist2AccelVar {
 /// This UnsafeCell is accessed by multiple tasks, but is safe because it is operated exclusively by the mutex object.
-		prev_twist: Default::default(),
+	prev_twist: Default::default(),
 	}
 ));
 pub static EKINEMATICSTATEFORTWIST2ACCEL: EKinematicStateForTTwist2Accel = EKinematicStateForTTwist2Accel {
@@ -76,12 +76,9 @@ pub static EREACTORFORTWIST2ACCEL: EReactorForTTwist2Accel = EReactorForTTwist2A
 	cell: &TWIST2ACCEL,
 };
 
-impl<'a, T: SLowpass1d, U: SLowpass1d, V: SLowpass1d, W: SLowpass1d, X: SLowpass1d, Y: SLowpass1d> TTwist2Accel<'a, T, U, V, W, X, Y> {
+impl<T: SLowpass1d, U: SLowpass1d, V: SLowpass1d, W: SLowpass1d, X: SLowpass1d, Y: SLowpass1d> TTwist2Accel<T, U, V, W, X, Y> {
 	#[inline]
-	pub fn get_cell_ref<'b>(&'a self, node: &'b mut awkernel_lib::sync::mutex::MCSNode<TTwist2AccelVar>) -> LockGuardForTTwist2Accel<'_, T, U, V, W, X, Y>
-	where
-		'b: 'a,
-	{
+	pub fn get_cell_ref<'node>(&'static self, node: &'node mut awkernel_lib::sync::mutex::MCSNode<TTwist2AccelVar>) -> LockGuardForTTwist2Accel<'node, T, U, V, W, X, Y> {
 		LockGuardForTTwist2Accel {
 			c_filter_alx: self.c_filter_alx,
 			c_filter_aly: self.c_filter_aly,

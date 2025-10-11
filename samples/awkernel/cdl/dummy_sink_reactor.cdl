@@ -1,0 +1,20 @@
+import("struct.cdl");
+import("publish_signature.cdl");
+
+signature sDummySinkReactorInMrm {
+    void main( [in] struct Control control);
+};
+
+[generate( RustAWKPlugin, "DAG_SINK_REACTOR_BODY")]
+celltype tDummySinkReactorInMrm{
+
+    entry sControl eControl;
+    entry sDummySinkReactorInMrm eReactor;
+
+    attr{
+	    [omit] PLType("Cow") reactorName  = PL_EXP("DummyPeriodicReactorInMrm");
+	    [omit] PLType("SchedulerType") schedType = PL_EXP("SchedulerType::PrioritizedFIFO(7)");
+        [omit] PLType("Cow") subscribeTopicNames = PL_EXP("Control");
+        [omit] PLType("Duration") relativeDeadline = PL_EXP("Duration::from_secs(1)");
+    };
+};

@@ -1,0 +1,11 @@
+signature sUtilsPoseDeviation {
+    double64_t calcLateralDeviation([in] struct Pose base_pose,
+                              [in] PLType("nalgebra::Vector3<f64>") target_point);
+    double64_t calcYawDeviation([in] struct Pose base_pose,
+                          [in] struct Pose target_pose);
+};
+
+[generate(RustAWKPlugin, "")]
+celltype tUtilsPoseDeviation {
+    entry sUtilsPoseDeviation eUtils;
+};

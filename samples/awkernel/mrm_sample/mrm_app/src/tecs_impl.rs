@@ -17,4 +17,7 @@ pub mod t_ekf_module_impl;
 pub mod t_ekf_localizer_timer_impl;
 pub mod t_stop_filter_impl;
 pub mod t_twist2_accel_impl;
+pub mod t_utils_pose_deviation_impl;
+pub mod t_utils_trajectory_impl;
 pub mod t_trajectory_follower_impl;
+pub mod t_dummy_sink_reactor_in_mrm_impl;

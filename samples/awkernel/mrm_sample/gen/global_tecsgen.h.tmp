@@ -90,6 +90,28 @@ struct Transform {
                 RType( nalgebra::Vector3<f64> ) translation;
                 RType( nalgebra::Quaternion<f64> ) rotatoin;
 };
+struct TrajectoryPoint {
+                struct Pose    pose;
+                double64_t     longitudinal_velocity_mps;
+};
+struct Trajectory {
+                struct Header  header;
+                RType( heapless::Vec<TrajectoryPoint, 5000> ) points;
+};
+struct Lateral {
+                RType( awkernel_lib::time::Time ) stamp;
+                double64_t     steering_tire_angle;
+};
+struct Longitudinal {
+                RType( awkernel_lib::time::Time ) stamp;
+                double64_t     velocity;
+                double64_t     acceleration;
+};
+struct Control {
+                RType( awkernel_lib::time::Time ) stamp;
+                struct Lateral lateral;
+                struct Longitudinal longitudinal;
+};
 struct Simple1DFilter {
                 double64_t     x;
                 double64_t     value;

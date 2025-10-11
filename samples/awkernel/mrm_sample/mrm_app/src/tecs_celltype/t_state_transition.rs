@@ -1,11 +1,8 @@
 pub struct TStateTransition{
 }
 
-pub struct EStateForTStateTransition<'a>{
-	pub cell: &'a TStateTransition,
-}
-
-static STATETRANSITION: TStateTransition = TStateTransition {
+pub struct EStateForTStateTransition {
+	pub cell: &'static TStateTransitionstatic STATETRANSITION: TStateTransition = TStateTransition {
 };
 
 pub static ESTATEFORSTATETRANSITION: EStateForTStateTransition = EStateForTStateTransition {

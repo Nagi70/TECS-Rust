@@ -2,7 +2,7 @@ use crate::tecs_global::*;
 use crate::tecs_celltype::t_utils_geometry::*;
 use crate::tecs_signature::s_utils_geometry::*;
 use awkernel_lib::sync::mutex::MCSNode;
-impl SUtilsGeometry for EUtilsForTUtilsGeometry<'_>{
+impl SUtilsGeometry for EUtilsForTUtilsGeometry{
 
 	fn get_rpy(&'static self, quat: &nalgebra::Quaternion<f64>) -> nalgebra::Vector3<f64>{
 

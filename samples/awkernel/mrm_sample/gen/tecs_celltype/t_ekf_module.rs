@@ -3,21 +3,21 @@ use crate::tecs_signature::{s_time_delay_kalman_filter::*, s_state_transition::*
 
 use crate::tecs_celltype::{t_time_delay_kalman_filter::*, t_state_transition::*, t_measurement::*, t_mahalanobis::*, t_covariance::*, t_utils_geometry::*};
 
-pub struct TEkfModule<'a, T, U, V, W, X, Y>
+pub struct TEkfModule<T, U, V, W, X, Y>
 where
-	T: STimeDelayKalmanFilter,
-	U: SStateTransition,
-	V: SMeasurement,
-	W: SMahalanobis,
-	X: SCovariance,
-	Y: SUtilsGeometry,
+	T: STimeDelayKalmanFilter + 'static,
+	U: SStateTransition + 'static,
+	V: SMeasurement + 'static,
+	W: SMahalanobis + 'static,
+	X: SCovariance + 'static,
+	Y: SUtilsGeometry + 'static,
 {
-	c_kalman: &'a T,
-	c_state: &'a U,
-	c_measure: &'a V,
-	c_maha: &'a W,
-	c_cov: &'a X,
-	c_utils: &'a Y,
+	c_kalman: &'static T,
+	c_state: &'static U,
+	c_measure: &'static V,
+	c_maha: &'static W,
+	c_cov: &'static X,
+	c_utils: &'static Y,
 	extend_state_step: i32,
 	enable_yaw_bias_estimation: bool,
 	z_filter_proc_dev: f64,
@@ -33,11 +33,11 @@ where
 	twist_additional_delay: f64,
 	initial_pose: PoseWithCovariance,
 	tf: Transform,
-	variable: &'a TECSVariable<TEkfModuleVar>,
+	variable: &'static TECSVariable<TEkfModuleVar>,
 }
 
-pub struct TEkfModuleVar{
-	pub accumulated_delay_times: [f64; extend_state_step],
+pub struct TEkfModuleVar {
+	pub accumulated_delay_times: &'static mut [f64],
 	pub ekf_dt: f64,
 	pub last_angular_velocity: nalgebra::Vector3<f64>,
 	pub z_filter: Simple1DFilter,
@@ -45,18 +45,18 @@ pub struct TEkfModuleVar{
 	pub pitch_filter: Simple1DFilter,
 }
 
-pub struct EEkfModuleForTEkfModule<'a>{
-	pub cell: &'a TEkfModule<'a, EKalmanForTTimeDelayKalmanFilter<'a>, EStateForTStateTransition<'a>, EMeasureForTMeasurement<'a>, EMahaForTMahalanobis<'a>, ECovForTCovariance<'a>, EUtilsForTUtilsGeometry<'a>>,
+pub struct EEkfModuleForTEkfModule {
+	pub cell: &'static TEkfModule<EKalmanForTTimeDelayKalmanFilter, EStateForTStateTransition, EMeasureForTMeasurement, EMahaForTMahalanobis, ECovForTCovariance, EUtilsForTUtilsGeometry>,
 }
 
 pub struct LockGuardForTEkfModule<'a, T, U, V, W, X, Y>
 where
-	T: STimeDelayKalmanFilter,
-	U: SStateTransition,
-	V: SMeasurement,
-	W: SMahalanobis,
-	X: SCovariance,
-	Y: SUtilsGeometry,
+	T: STimeDelayKalmanFilter + 'static,
+	U: SStateTransition + 'static,
+	V: SMeasurement + 'static,
+	W: SMahalanobis + 'static,
+	X: SCovariance + 'static,
+	Y: SUtilsGeometry + 'static,
 {
 	pub c_kalman: &'a T,
 	pub c_state: &'a U,
@@ -110,24 +110,23 @@ static EKFMODULE: TEkfModule<EKalmanForTTimeDelayKalmanFilter, EStateForTStateTr
 static EKFMODULEVAR: TECSVariable<TEkfModuleVar> = TECSVariable::Mutexed(awkernel_lib::sync::mutex::Mutex::new(
 	TEkfModuleVar {
 /// This UnsafeCell is accessed by multiple tasks, but is safe because it is operated exclusively by the mutex object.
-		accumulated_delay_times: Default::default(),
-		ekf_dt: 0.0,
-		last_angular_velocity: Default::default(),
-		z_filter: [0.0, 0.0],
-		roll_filter: [0.0, 0.0],
-		pitch_filter: [0.0, 0.0],
+		accumulated_delay_times: unsafe{ &mut *core::ptr::addr_of_mut!(mut EKFMODULEVARARRAY1) },
+	ekf_dt: 0.0,
+	last_angular_velocity: Default::default(),
+	z_filter: [0.0, 0.0],
+	roll_filter: [0.0, 0.0],
+	pitch_filter: [0.0, 0.0],
 	}
 ));
 pub static EEKFMODULEFOREKFMODULE: EEkfModuleForTEkfModule = EEkfModuleForTEkfModule {
 	cell: &EKFMODULE,
 };
 
-impl<'a, T: STimeDelayKalmanFilter, U: SStateTransition, V: SMeasurement, W: SMahalanobis, X: SCovariance, Y: SUtilsGeometry> TEkfModule<'a, T, U, V, W, X, Y> {
+static mut EKFMODULEVARARRAY1: [f64; 50] = [0; 50];
+
+impl<T: STimeDelayKalmanFilter, U: SStateTransition, V: SMeasurement, W: SMahalanobis, X: SCovariance, Y: SUtilsGeometry> TEkfModule<T, U, V, W, X, Y> {
 	#[inline]
-	pub fn get_cell_ref<'b>(&'a self, node: &'b mut awkernel_lib::sync::mutex::MCSNode<TEkfModuleVar>) -> LockGuardForTEkfModule<'_, T, U, V, W, X, Y>
-	where
-		'b: 'a,
-	{
+	pub fn get_cell_ref<'node>(&'static self, node: &'node mut awkernel_lib::sync::mutex::MCSNode<TEkfModuleVar>) -> LockGuardForTEkfModule<'node, T, U, V, W, X, Y> {
 		LockGuardForTEkfModule {
 			c_kalman: self.c_kalman,
 			c_state: self.c_state,

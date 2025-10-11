@@ -1,11 +1,8 @@
 pub struct TMeasurement{
 }
 
-pub struct EMeasureForTMeasurement<'a>{
-	pub cell: &'a TMeasurement,
-}
-
-static MEASUREMENT: TMeasurement = TMeasurement {
+pub struct EMeasureForTMeasurement {
+	pub cell: &'static TMeasurementstatic MEASUREMENT: TMeasurement = TMeasurement {
 };
 
 pub static EMEASUREFORMEASUREMENT: EMeasureForTMeasurement = EMeasureForTMeasurement {

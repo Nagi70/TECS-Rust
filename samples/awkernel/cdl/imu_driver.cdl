@@ -37,7 +37,7 @@ celltype tTamagawaImuDevice {
 };
 
 //*** IMUノードルーチンセルタイプ ***//
-[generate( RustAWKPlugin, "REACTOR_BODY")]
+[generate( RustAWKPlugin, "DAG_REACTOR_BODY")]
 celltype tImuDriver {
     entry sImuDriver eReactor;
 
@@ -49,7 +49,7 @@ celltype tImuDriver {
 
     attr{
 	    [omit] PLType("Cow") reactorName  = PL_EXP("ImuDriver");
-	    [omit] PLType("SchedulerType") schedType = PL_EXP("SchedulerType::FIFO");
+	    [omit] PLType("SchedulerType") schedType = PL_EXP("SchedulerType::PrioritizedFIFO(7)");
 	      
         [omit] PLType("Cow") subscribeTopicNames = PL_EXP("Imu");
         [omit] PLType("Cow") publishTopicNames = PL_EXP("ImuRaw");

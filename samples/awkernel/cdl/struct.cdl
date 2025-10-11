@@ -100,3 +100,32 @@ struct Transform {
     PLType("nalgebra::Vector3<f64>") translation;
     PLType("nalgebra::Quaternion<f64>") rotatoin;
 };
+
+/* Trajectory（autoware_planning_msgs/Trajectory の最小部分） */
+struct TrajectoryPoint {
+    struct Pose pose;
+    double64_t longitudinal_velocity_mps;
+};
+
+/* TECS では可変長配列は PLType で表現。容量は固定（例: 5000点） */
+struct Trajectory {
+    struct Header header;
+    PLType("heapless::Vec<TrajectoryPoint, 5000>") points;
+};
+
+struct Lateral {
+    PLType("awkernel_lib::time::Time") stamp;
+    double64_t steering_tire_angle;
+};
+
+struct Longitudinal {
+    PLType("awkernel_lib::time::Time") stamp;
+    double64_t velocity;
+    double64_t acceleration;
+};
+
+struct Control {
+    PLType("awkernel_lib::time::Time") stamp;
+    struct Lateral lateral;
+    struct Longitudinal longitudinal;
+};

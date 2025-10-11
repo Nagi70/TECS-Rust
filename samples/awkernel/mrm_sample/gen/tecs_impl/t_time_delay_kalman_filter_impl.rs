@@ -2,7 +2,7 @@ use crate::tecs_global::*;
 use crate::tecs_celltype::t_time_delay_kalman_filter::*;
 use crate::tecs_signature::s_time_delay_kalman_filter::*;
 use awkernel_lib::sync::mutex::MCSNode;
-impl STimeDelayKalmanFilter for EKalmanForTTimeDelayKalmanFilter<'_>{
+impl STimeDelayKalmanFilter for EKalmanForTTimeDelayKalmanFilter{
 
 	fn init(&'static self, x: &nalgebra::Matrix6x1<f64>, p: &nalgebra::Matrix6<f64>) {
 		let mut node = MCSNode::new();

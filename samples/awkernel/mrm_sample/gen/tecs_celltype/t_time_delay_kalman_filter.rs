@@ -1,20 +1,20 @@
 use crate::tecs_variable::*;
-pub struct TTimeDelayKalmanFilter<'a>{
+pub struct TTimeDelayKalmanFilter{
 	dim_x: i32,
 	max_delay_step: i32,
 	dim_x_ex: i32,
 	d_dim_x: i32,
 	dim_y_twist: i32,
-	variable: &'a TECSVariable<TTimeDelayKalmanFilterVar>,
+	variable: &'static TECSVariable<TTimeDelayKalmanFilterVar>,
 }
 
-pub struct TTimeDelayKalmanFilterVar{
+pub struct TTimeDelayKalmanFilterVar {
 	pub x: nalgebra::SMatrix<f64, 300, 1>,
 	pub p: nalgebra::SMatrix<f64, 300, 300>,
 }
 
-pub struct EKalmanForTTimeDelayKalmanFilter<'a>{
-	pub cell: &'a TTimeDelayKalmanFilter<'a>,
+pub struct EKalmanForTTimeDelayKalmanFilter {
+	pub cell: &'static TTimeDelayKalmanFilter,
 }
 
 pub struct LockGuardForTTimeDelayKalmanFilter<'a>{
@@ -38,20 +38,17 @@ static TIMEDELAYKALMANFILTER: TTimeDelayKalmanFilter = TTimeDelayKalmanFilter {
 static TIMEDELAYKALMANFILTERVAR: TECSVariable<TTimeDelayKalmanFilterVar> = TECSVariable::Mutexed(awkernel_lib::sync::mutex::Mutex::new(
 	TTimeDelayKalmanFilterVar {
 /// This UnsafeCell is accessed by multiple tasks, but is safe because it is operated exclusively by the mutex object.
-		x: Default::default(),
-		p: Default::default(),
+	x: Default::default(),
+	p: Default::default(),
 	}
 ));
 pub static EKALMANFORTIMEDELAYKALMANFILTER: EKalmanForTTimeDelayKalmanFilter = EKalmanForTTimeDelayKalmanFilter {
 	cell: &TIMEDELAYKALMANFILTER,
 };
 
-impl<'a> TTimeDelayKalmanFilter<'a> {
+impl TTimeDelayKalmanFilter {
 	#[inline]
-	pub fn get_cell_ref<'b>(&'a self, node: &'b mut awkernel_lib::sync::mutex::MCSNode<TTimeDelayKalmanFilterVar>) -> LockGuardForTTimeDelayKalmanFilter<'_>
-	where
-		'b: 'a,
-	{
+	pub fn get_cell_ref<'node>(&'static self, node: &'node mut awkernel_lib::sync::mutex::MCSNode<TTimeDelayKalmanFilterVar>) -> LockGuardForTTimeDelayKalmanFilter<'node> {
 		LockGuardForTTimeDelayKalmanFilter {
 			dim_x: &self.dim_x,
 			max_delay_step: &self.max_delay_step,

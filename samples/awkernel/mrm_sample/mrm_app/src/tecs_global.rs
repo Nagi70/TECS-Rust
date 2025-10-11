@@ -147,6 +147,23 @@ impl Default for AccelWithCovarianceStamped {
 	}
 }
 
+#[derive(Clone)]
+pub struct Control {
+    pub stamp: awkernel_lib::time::Time,
+    pub lateral: Lateral,
+    pub longitudinal: Longitudinal,
+}
+
+impl Default for Control {
+	fn default() -> Self {
+		Self {
+			stamp: awkernel_lib::time::Time::zero(),
+			lateral: Default::default(),
+			longitudinal: Default::default(),
+		}
+	}
+}
+
 #[derive(Default, Clone)]
 pub struct TwistWithCovariance {
     pub twist: Twist,
@@ -181,6 +198,38 @@ pub struct AccelWithCovariance {
 pub struct Accel {
     pub linear: nalgebra::Vector3<f64>,
     pub angular: nalgebra::Vector3<f64>,
+}
+
+#[derive(Clone)]
+pub struct Lateral {
+    pub stamp: awkernel_lib::time::Time,
+    pub steering_tire_angle: f64,
+}
+
+impl Default for Lateral {
+	fn default() -> Self {
+		Self {
+			stamp: awkernel_lib::time::Time::zero(),
+			steering_tire_angle: Default::default(),
+		}
+	}
+}
+
+#[derive(Clone)]
+pub struct Longitudinal {
+    pub stamp: awkernel_lib::time::Time,
+    pub velocity: f64,
+    pub acceleration: f64,
+}
+
+impl Default for Longitudinal {
+	fn default() -> Self {
+		Self {
+			stamp: awkernel_lib::time::Time::zero(),
+			velocity: Default::default(),
+			acceleration: Default::default(),
+		}
+	}
 }
 
 #[derive(Default, Clone)]

@@ -36,3 +36,7 @@ signature sAccelWithCovarianceStamped {
     void send([in] struct AccelWithCovarianceStamped accel_with_covariance);
 };
 
+signature sControl {
+    void send([in] struct Control control);
+};
+

@@ -33,7 +33,7 @@ celltype tEkfLocalizer {
 
         // --- awkernel リアクター用属性 ---
         [omit] PLType("Cow") reactorName = PL_EXP("EkfLocalizer");
-        [omit] PLType("SchedulerType") schedType = PL_EXP("SchedulerType::FIFO");
+        [omit] PLType("SchedulerType") schedType = PL_EXP("SchedulerType::PrioritizedFIFO(7)");
         [omit] PLType("Cow") subscribeTopicNames = PL_EXP("TwistWithCovarianceG");
         [omit] PLType("Duration") relativeDeadline = PL_EXP("Duration::from_secs(1)");
     };
@@ -65,7 +65,7 @@ celltype tTwistWithCovarianceAgedObjectQueue {
         //int32_t tail = 0;     // 次にデータを書き込む位置（末尾）
         //int32_t count = 0;    // 現在の要素数
 
-        PLType("heapless::Queue<(TwistWithCovarianceStamped, i32), 128>") queue = PL_EXP("Default::default()");
+        PLType("heapless::spsc::Queue<(TwistWithCovarianceStamped, i32), 128>") queue = PL_EXP("heapless::spsc::Queue::new()");
     };
 };
 
@@ -76,7 +76,7 @@ signature sEkfLocalizerTimer {
     void main( [out] struct KinematicState* kinematic_state );
 };
 
-[generate( RustAWKPlugin, "PERIODIC_REACTOR_BODY")]
+[generate( RustAWKPlugin, "DAG_PERIODIC_REACTOR_BODY")]
 celltype tEkfLocalizerTimer{
 
     [omit] call sKinematicState cKinematicState[2];
@@ -88,7 +88,7 @@ celltype tEkfLocalizerTimer{
 
     attr{
 	    [omit] PLType("Cow") reactorName  = PL_EXP("EkfLocalizerTimer");
-	    [omit] PLType("SchedulerType") schedType = PL_EXP("SchedulerType::FIFO");
+	    [omit] PLType("SchedulerType") schedType = PL_EXP("SchedulerType::PrioritizedFIFO(7)");
 	    [omit] PLType("Duration") period = PL_EXP("Duration::from_millis(50)");
         [omit] PLType("Cow") publishTopicNames = PL_EXP("KinematicState");
 
@@ -99,6 +99,6 @@ celltype tEkfLocalizerTimer{
 
     var {
         double64_t ekf_dt = 0;
-        PLType("awkernel_lib::time::Time") last_predict_time = PL_EXP("Default::default()");
+        PLType("awkernel_lib::time::Time") last_predict_time = PL_EXP("awkernel_lib::time::Time::zero()");
     };
 };

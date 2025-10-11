@@ -26,4 +26,8 @@ pub mod s_stop_filter;
 pub mod s_accel_with_covariance_stamped;
 pub mod s_twist2_accel;
 pub mod s_lowpass1d;
+pub mod s_utils_pose_deviation;
+pub mod s_utils_trajectory;
+pub mod s_control;
 pub mod s_trajectory_follower;
+pub mod s_dummy_sink_reactor_in_mrm;
