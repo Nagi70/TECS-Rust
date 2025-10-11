@@ -605,21 +605,21 @@ class RustITRONCelltypePlugin < RustGenCelltypePlugin
             # TODO: tTaskRs がタスクオブジェクトであることを前提としている
             # extern 関数で、各ルーチンの呼び口を呼び出す生成をするため、pub が必要になる
             if plugin_option.include?("TASK") && snake_case(callport.get_name.to_s) == "c_task_body" then
-                file.print "\tpub #{snake_case(callport.get_name.to_s)}: &'a "
+                file.print "\tpub #{snake_case(callport.get_name.to_s)}: &'static "
             elsif plugin_option.include?("INT_REQUEST") then
                 # TODO: CFG_INT (ASP3の場合はファクトリ生成かもしれない)
             elsif plugin_option.include?("INT_SERVICE_ROUTINE") && snake_case(callport.get_name.to_s) == "ci_isr_body" then
-                file.print "\tpub #{snake_case(callport.get_name.to_s)}: &'a "
+                file.print "\tpub #{snake_case(callport.get_name.to_s)}: &'static "
             elsif plugin_option.include?("INT_HANDLER") then
                 # TODO: DEF_INH
             elsif plugin_option.include?("CPU_EXCEPTION_HANDLER") then
                 # TODO: DEF_EXC
             elsif plugin_option.include?("INIT_ROUTINE") && snake_case(callport.get_name.to_s) == "c_initialize_routine_body" then
-                file.print "\tpub #{snake_case(callport.get_name.to_s)}: &'a "
+                file.print "\tpub #{snake_case(callport.get_name.to_s)}: &'static "
             elsif plugin_option.include?("TERM_ROUTINE") then
                 # TODO: ATT_TER
             else
-                file.print "\t#{snake_case(callport.get_name.to_s)}: &'a "
+                file.print "\t#{snake_case(callport.get_name.to_s)}: &'static "
             end
 
             if check_gen_dyn_for_port(callport) == nil then
@@ -633,15 +633,7 @@ class RustITRONCelltypePlugin < RustGenCelltypePlugin
     # セル構造体の変数フィールドの定義を生成
     def gen_rust_cell_structure_variable file, celltype
         if celltype.get_var_list.length != 0 then
-            file.print "\tvariable: &'a Sync#{get_rust_celltype_name(celltype)}Var"
-            celltype.get_var_list.each{ |var|
-                var_type_name = var.get_type.get_type_str
-                if check_lifetime_annotation_for_type(var_type_name) then
-                    file.print "<'a>"
-                    break
-                end
-            }
-            file.print ",\n"
+            file.print "\tvariable: &'static Sync#{get_rust_celltype_name(celltype)}Var,\n"
         end
     end
 
@@ -651,18 +643,18 @@ class RustITRONCelltypePlugin < RustGenCelltypePlugin
 
         case check_gen_dyn_for_ex_ctrl_ref celltype
         when "dyn"
-            file.print "\tex_ctrl_ref: &'a (dyn LockManager + Sync + Send),\n"
+            file.print "\tex_ctrl_ref: &'static (dyn LockManager + Sync + Send),\n"
         when "dummy"
-            # file.print "\tex_ctrl_ref: &'a TECSDummyMutexRef,\n"
+            # file.print "\tex_ctrl_ref: &'static TECSDummyMutexRef,\n"
         else
             case check_gen_dyn_or_mutex_or_semaphore_for_celltype celltype
             when "mutex"
-                file.print "\tex_ctrl_ref: &'a TECSMutexRef<'a>,\n"
+                file.print "\tex_ctrl_ref: &'static TECSMutexRef,\n"
             when "semaphore"
-                file.print "\tex_ctrl_ref: &'a TECSSemaphoreRef<'a>,\n"
+                file.print "\tex_ctrl_ref: &'static TECSSemaphoreRef,\n"
             when "dyn"
                 # TODO: ミューテックスとセマフォの呼び分け自体にも動的ディスパッチを使うのは議論の余地あり
-                file.print "\tex_ctrl_ref: &'a (dyn LockManager + Sync + Send),\n"
+                file.print "\tex_ctrl_ref: &'static (dyn LockManager + Sync + Send),\n"
             end
         end
     end
@@ -670,24 +662,8 @@ class RustITRONCelltypePlugin < RustGenCelltypePlugin
     # Sync変数構造体の定義を生成
     def gen_rust_sync_variable_structure file, celltype
         if celltype.get_var_list.length != 0 then
-            file.print "pub struct Sync#{get_rust_celltype_name(celltype)}Var"
-            celltype.get_var_list.each{ |var|
-                var_type_name = var.get_type.get_type_str
-                if check_lifetime_annotation_for_type(var_type_name) then
-                    file.print "<'a>"
-                    break
-                end
-            }
-            file.print "{\n"
-            file.print "\tunsafe_var: UnsafeCell<#{get_rust_celltype_name(celltype)}Var"
-            celltype.get_var_list.each{ |var|
-                var_type_name = var.get_type.get_type_str
-                if check_lifetime_annotation_for_type(var_type_name) then
-                    file.print "<'a>"
-                    break
-                end
-            }
-            file.print ">,\n"
+            file.print "pub struct Sync#{get_rust_celltype_name(celltype)}Var {\n"
+            file.print "\tunsafe_var: UnsafeCell<#{get_rust_celltype_name(celltype)}Var>,\n"
             file.print "}\n\n"
         end
     end
@@ -696,23 +672,7 @@ class RustITRONCelltypePlugin < RustGenCelltypePlugin
     def gen_rust_impl_sync_trait_for_sync_variable_structure file, celltype
         return if celltype.get_var_list.length == 0
 
-        file.print "unsafe impl"
-        celltype.get_var_list.each{ |var|
-            var_type_name = var.get_type.get_type_str
-            if check_lifetime_annotation_for_type(var_type_name) then
-                file.print "<'a>"
-                break
-            end
-        }
-        file.print " Sync for Sync#{get_rust_celltype_name(celltype)}Var"
-        celltype.get_var_list.each{ |var|
-            var_type_name = var.get_type.get_type_str
-            if check_lifetime_annotation_for_type(var_type_name) then
-                file.print "<'a>"
-                break
-            end
-        }
-        file.print " {}\n\n"
+        file.print "unsafe impl Sync for Sync#{get_rust_celltype_name(celltype)}Var {}\n\n"
     end
 
     # ロックガード構造体のヘッダーを生成
@@ -744,44 +704,34 @@ class RustITRONCelltypePlugin < RustGenCelltypePlugin
     # ロックガード構造体の属性への参照の定義を生成
     def gen_rust_lock_guard_structure_attribute file, celltype
         celltype.get_attribute_list.each{ |attr|
-            if attr.is_omit? then
-                next
-            else
-                file.print "\tpub #{attr.get_name.to_s}: "
-                # file.print "#{c_type_to_rust_type(attr.get_type)}"
-                str = c_type_to_rust_type(attr.get_type)
-                # 属性や変数のフィールドに構造体がある場合は，ライフタイムを付与する必要がある
-                # itron-rsオブジェクトに対する，特別な生成
-                # ライフタイムを付与
-                case str
-                when "TaskRef"
-                    str = "TaskRef<'a>"
-                when "SemaphoreRef"
-                    str = "SemaphoreRef<'a>"
-                when "EventflagRef"
-                    str = "EventflagRef<'a>"
-                when "DataqueueRef"
-                    str = "DataqueueRef<'a>"
-                when "MutexRef"
-                    str = "MutexRef<'a>"
-                end
-                file.print "&'a #{str},\n"
+            next if attr.is_omit?
+            
+            file.print "\tpub #{attr.get_name.to_s}: "
+            # file.print "#{c_type_to_rust_type(attr.get_type)}"
+            str = c_type_to_rust_type(attr.get_type)
+            # 属性や変数のフィールドに構造体がある場合は，ライフタイムを付与する必要がある
+            # itron-rsオブジェクトに対する，特別な生成
+            # ライフタイムを付与
+            case str
+            when "TaskRef"
+                str = "TaskRef<'static>"
+            when "SemaphoreRef"
+                str = "SemaphoreRef<'static>"
+            when "EventflagRef"
+                str = "EventflagRef<'static>"
+            when "DataqueueRef"
+                str = "DataqueueRef<'static>"
+            when "MutexRef"
+                str = "MutexRef<'static>"
             end
+            file.print "&'a #{str},\n"
         }
     end
 
     # ロックガード構造体の変数への参照の定義を生成
     def gen_rust_lock_guard_structure_variable file, celltype
         if celltype.get_var_list.length != 0 then
-            file.print "\tpub var: &'a mut #{get_rust_celltype_name(celltype)}Var"
-            celltype.get_var_list.each{ |var|
-                var_type_name = var.get_type.get_type_str
-                if check_lifetime_annotation_for_type(var_type_name) then
-                    file.print "<'a>"
-                    break
-                end
-            }
-            file.print ",\n"
+            file.print "\tpub var: &'a mut #{get_rust_celltype_name(celltype)}Var,\n"
         end
     end
 
@@ -838,15 +788,15 @@ class RustITRONCelltypePlugin < RustGenCelltypePlugin
     def gen_attribute_field file, attr_name, attr_type_str
         case attr_type_str
         when "TaskRef"
-            attr_type_str = "TaskRef<'a>"
+            attr_type_str = "TaskRef<'static>"
         when "SemaphoreRef"
-            attr_type_str = "SemaphoreRef<'a>"
+            attr_type_str = "SemaphoreRef<'static>"
         when "EventflagRef"
-            attr_type_str = "EventflagRef<'a>"
+            attr_type_str = "EventflagRef<'static>"
         when "DataqueueRef"
-            attr_type_str = "DataqueueRef<'a>"
+            attr_type_str = "DataqueueRef<'static>"
         when "MutexRef"
-            attr_type_str = "MutexRef<'a>"
+            attr_type_str = "MutexRef<'static>"
         end
         super(file, attr_name, attr_type_str)
     end
@@ -854,91 +804,49 @@ class RustITRONCelltypePlugin < RustGenCelltypePlugin
     def gen_rust_get_cell_ref file, celltype, callport_list, use_jenerics_alphabet
         # セルタイプに受け口がない場合は，生成しない
         # 受け口がないならば，get_cell_ref 関数が呼ばれることは現状無いため
-        life_time_declare = false
         celltype.get_port_list.each{ |port|
             if port.get_port_type == :ENTRY then
                 jenerics_flag = true
                 file.print "impl"
-                if check_only_entryport_celltype(celltype) then
-                else
-                    # check_only_entryport_celltype では，dyn な呼び口を判定していないため，ここで判定する
-                    celltype.get_port_list.each{ |port|
-                        if check_gen_dyn_for_port(port) == nil || use_jenerics_alphabet.length != 0 then
-                            file.print "<"
-                        end
-                        break
-                    }
-                end
-                # ライフタイムアノテーションの生成部
-                # TODO：ライフタイムについては，もう少し厳格にする必要がある
-                celltype.get_var_list.each{ |var|
-                    # ライフタイムアノテーションが必要な型が変数にあるかどうかを判断
-                    var_type_name = var.get_type.get_type_str
-                    if check_lifetime_annotation_for_type(var_type_name) then
-                        file.print "'a"
-                        life_time_declare = true
-                        break
-                    end
-                }
-
-                if use_jenerics_alphabet.length != 0 && life_time_declare == true then
-                    file.print ", "
-                end
 
                 # impl のジェネリクスを生成
                 callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
                     if check_gen_dyn_for_port(callport) == nil then
                         if jenerics_flag then
                             jenerics_flag = false
-                            file.print "#{alphabet}: #{get_rust_signature_name(callport.get_signature)}"
+                            file.print "<#{alphabet}: #{get_rust_signature_name(callport.get_signature)}"
                         else
                             file.print ", #{alphabet}: #{get_rust_signature_name(callport.get_signature)}"
                         end
                     end
                 end
-                if check_only_entryport_celltype(celltype) then
-                else
-                    # check_only_entryport_celltype では，dyn な呼び口を判定していないため，ここで判定する
-                    celltype.get_port_list.each{ |port|
-                        if check_gen_dyn_for_port(port) == nil || use_jenerics_alphabet.length != 0 then
-                            file.print ">"
-                        end
-                        break
-                    }
-                end
+                file.print ">" if jenerics_flag == false
 
                 # impl する型を生成
                 file.print " #{get_rust_celltype_name(celltype)}"
                 if check_only_entryport_celltype(celltype) then
                 else
-                    if check_lifetime_annotation_for_celltype_structure(celltype, callport_list) then
-                        file.print "<'_"
-
-                        callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
-                            if check_gen_dyn_for_port(callport) == nil then
+                    impl_first = true
+                    callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
+                        if check_gen_dyn_for_port(callport) == nil then
+                            if impl_first then
+                                impl_first = false
+                                file.print "<#{alphabet}"
+                            else
                                 file.print ", #{alphabet}"
                             end
                         end
-                        file.print ">"
                     end
+                    file.print ">" if impl_first == false
                 end
                 file.print " {\n"
+
                 # インライン化
-                # if port.is_inline? then
-                    file.print "\t#[inline]\n"
-                # end
+                file.print "\t#[inline]\n"
+
                 # get_cell_ref 関数の定義を生成
-                file.print "\tpub fn get_cell_ref"
-                # ライフタイムアノテーションの生成部
-                # TODO：ライフタイムについては，もう少し厳格にする必要がある
-                celltype.get_var_list.each{ |var|
-                    var_type_name = var.get_type.get_type_str
-                    if check_lifetime_annotation_for_type(var_type_name) && life_time_declare == false then
-                        file.print "<'a>"
-                        break
-                    end
-                }
-                file.print "(&'static self) -> "
+                # TODO: get_cell_ref にライフタイムアノテーションが必要かも？
+                file.print "\tpub fn get_cell_ref(&'static self) -> "
 
                 # 返り値のタプル型の要素をまとめるための配列
                 return_tuple_type_list = []
@@ -1308,9 +1216,7 @@ class RustITRONCelltypePlugin < RustGenCelltypePlugin
                     next
                 end
 
-                file.print "impl #{camel_case(snake_case(port.get_signature.get_global_name.to_s))} for #{camel_case(snake_case(port.get_name.to_s))}For#{get_rust_celltype_name(celltype)}"
-                file.print "<'_>"
-                file.print "{\n\n"
+                file.print "impl #{camel_case(snake_case(port.get_signature.get_global_name.to_s))} for #{camel_case(snake_case(port.get_name.to_s))}For#{get_rust_celltype_name(celltype)}{\n\n"
 
                 sig_param_str_list, _, lifetime_flag = get_sig_param_str sig
 
@@ -1321,9 +1227,10 @@ class RustITRONCelltypePlugin < RustGenCelltypePlugin
                         file.print "\t#[inline]\n"
                     end
                     file.print "\tfn #{get_rust_function_name(func_head)}"
-                    if lifetime_flag then
-                        file.print "<'a>"
-                    end
+                    # おそらく不要
+                    # if lifetime_flag then
+                    #     file.print "<'a>"
+                    # end
                     file.print"(&'static self"
                     # param_num と sig_param_str_list の要素数が等しいことを前提としている
                     param_num = func_head.get_paramlist.get_items.size
@@ -1451,11 +1358,11 @@ use crate::tecs_print::*;
 use itron::abi::uint_t;
 use crate::tecs_ex_ctrl::*;
 
-pub struct TECSMutexRef<'a>{
-	pub inner: MutexRef<'a>,
+pub struct TECSMutexRef{
+	pub inner: MutexRef<'static>,
 }
 
-impl LockManager for TECSMutexRef<'_>{
+impl LockManager for TECSMutexRef{
     #[inline]
     fn lock(&self){
         match self.inner.lock(){
@@ -1544,11 +1451,11 @@ use crate::tecs_print::*;
 use itron::abi::uint_t;
 use crate::tecs_ex_ctrl::*;
 
-pub struct TECSSemaphoreRef<'a>{
-	pub inner: SemaphoreRef<'a>,
+pub struct TECSSemaphoreRef{
+	pub inner: SemaphoreRef<'static>,
 }
 
-impl LockManager for TECSSemaphoreRef<'_>{
+impl LockManager for TECSSemaphoreRef{
     #[inline]
     fn lock(&self){
         match self.inner.wait(){
@@ -1638,12 +1545,12 @@ pub type TECSDummyLockGuard = u32;
 
 pub struct TECSDummyExCtrlRef{}
 
-pub struct TECSMutexRef<'a>{
-	pub inner: MutexRef<'a>,
+pub struct TECSMutexRef{
+	pub inner: MutexRef<'static>,
 }
 
-pub struct TECSSemaphoreRef<'a>{
-	pub inner: SemaphoreRef<'a>,
+pub struct TECSSemaphoreRef{
+	pub inner: SemaphoreRef<'static>,
 }
 
 #[link_section = ".rodata"]
@@ -1659,7 +1566,7 @@ impl LockManager for TECSDummyExCtrlRef{
     fn unlock(&self){}
 }
 
-impl LockManager for TECSMutexRef<'_>{
+impl LockManager for TECSMutexRef{
     #[inline]
     fn lock(&self){
         match self.inner.lock(){
@@ -1733,7 +1640,7 @@ impl LockManager for TECSMutexRef<'_>{
     }
 }
 
-impl LockManager for TECSSemaphoreRef<'_>{
+impl LockManager for TECSSemaphoreRef{
     #[inline]
     fn lock(&self){
         match self.inner.wait(){

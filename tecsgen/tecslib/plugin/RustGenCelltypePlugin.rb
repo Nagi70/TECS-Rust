@@ -758,21 +758,25 @@ class RustGenCelltypePlugin < CelltypePlugin
     # セルの構造体の定義の先頭部を生成
     def gen_rust_cell_structure_header file, celltype, callport_list, use_jenerics_alphabet
         file.print "pub struct #{get_rust_celltype_name(celltype)}"
-        if check_only_entryport_celltype(celltype) then
-        else
-            # セルタイプ構造体にライフタイムアノテーションが必要かどうか判定する(必要 -> 呼び口を持っている)
-            # TODO: ライフタイムアノテーションの判定は厳格にする必要がある
-            if check_lifetime_annotation_for_celltype_structure(celltype, callport_list) then
-                file.print "<'a"
-                # use_jenerics_alphabet と callport_list の要素数が等しいことを前提としている
-                callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
-                    if check_gen_dyn_for_port(callport) == nil then
-                        file.print ", #{alphabet}"
-                    end
+
+        # 生成する要素がない場合は、ライフタイムやジェネリクスを生成しない
+        return if check_only_entryport_celltype(celltype)
+
+        # セルタイプ構造体にライフタイムアノテーションが必要かどうか判定する(必要 -> 呼び口を持っている) <- 'static にするので、アノテーションは不要
+        # check_lifetime_annotation_for_celltype_structure は削除
+        first = true
+        # use_jenerics_alphabet と callport_list の要素数が等しいことを前提としている
+        callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
+            if check_gen_dyn_for_port(callport) == nil then
+                if first then 
+                    file.print "<#{alphabet}"
+                    first = false
+                else
+                    file.print ", #{alphabet}"
                 end
-                file.print ">"
             end
         end
+        file.print ">" if first == false
     end
 
     def get_rust_signature_name signature
@@ -802,7 +806,7 @@ class RustGenCelltypePlugin < CelltypePlugin
 
         callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
             if check_gen_dyn_for_port(callport) == nil then
-                file.print "\t#{alphabet}: #{get_rust_signature_name(callport.get_signature)},\n"
+                file.print "\t#{alphabet}: #{get_rust_signature_name(callport.get_signature)} + 'static,\n"
             end
         end
     end
@@ -811,9 +815,9 @@ class RustGenCelltypePlugin < CelltypePlugin
     def gen_rust_cell_structure_callport file, callport_list, use_jenerics_alphabet
         callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
             if check_gen_dyn_for_port(callport) == nil then
-                file.print "\t#{snake_case(callport.get_name.to_s)}: &'a #{alphabet},\n"
+                file.print "\t#{snake_case(callport.get_name.to_s)}: &'static #{alphabet},\n"
             else
-                file.print "\t#{snake_case(callport.get_name.to_s)}: &'a (#{check_gen_dyn_for_port(callport)} + Sync + Send),\n"
+                file.print "\t#{snake_case(callport.get_name.to_s)}: &'static (#{check_gen_dyn_for_port(callport)} + Sync + Send),\n"
             end
         end
     end
@@ -840,34 +844,14 @@ class RustGenCelltypePlugin < CelltypePlugin
     # セル構造体の変数フィールドの定義を生成
     def gen_rust_cell_structure_variable file, celltype
         if celltype.get_var_list.length != 0 then
-            file.print "\tvariable: &'a Mutex<#{get_rust_celltype_name(celltype)}Var"
-            # ライフタイムアノテーションの生成部
-            # TODO：ライフタイムについては，もう少し厳格にする必要がある
-            celltype.get_var_list.each{ |var|
-                var_type_name = var.get_type.get_type_str
-                if check_lifetime_annotation_for_type(var_type_name) then
-                    file.print "<'a>"
-                    break
-                end
-            }
-            file.print ">,\n"
+            file.print "\tvariable: &'static Mutex<#{get_rust_celltype_name(celltype)}Var>,\n"
         end
     end
 
     # 変数構造体の定義を生成
     def gen_rust_variable_structure file, celltype
         if celltype.get_var_list.length != 0 then
-            file.print "pub struct #{get_rust_celltype_name(celltype)}Var" 
-            # ライフタイムアノテーションの生成部
-            # TODO：ライフタイムについては，もう少し厳格にする必要がある
-            celltype.get_var_list.each{ |var|
-                var_type_name = var.get_type.get_type_str
-                if check_lifetime_annotation_for_type var_type_name then
-                    file.print "<'a>"
-                    break
-                end
-            }
-            file.print "{\n"
+            file.print "pub struct #{get_rust_celltype_name(celltype)}Var {\n"
 
             # 変数構造体のフィールドの定義を生成
             celltype.get_var_list.each{ |var|
@@ -980,6 +964,7 @@ class RustGenCelltypePlugin < CelltypePlugin
         end
     end
 
+    # 変数構造体のフィールドの初期化を生成 (オーバーライドのために分離)
     def gen_rust_variable_structure_field_initialize file, cell
         array_number = 1
         # 変数構造体のフィールドの初期化を生成
@@ -1027,28 +1012,30 @@ class RustGenCelltypePlugin < CelltypePlugin
                 end
 
                 # 受け口構造体の定義を生成
-                file.print"pub struct #{camel_case(snake_case(port.get_name.to_s))}For#{get_rust_celltype_name(celltype)}"
-                file.print "<'a>"
-                file.print "{\n"
+                file.print"pub struct #{camel_case(snake_case(port.get_name.to_s))}For#{get_rust_celltype_name(celltype)} {\n"
                 # 受け口を持っているセルの参照をフィールドとして生成
-                file.print "\tpub cell: &'a #{get_rust_celltype_name(celltype)}"
-                if check_only_entryport_celltype(celltype) then
-                else
-                    # セルタイプ構造体にライフタイムアノテーションが必要かどうか
-                    if check_lifetime_annotation_for_celltype_structure(celltype, callport_list) then
-                        file.print "<'a"
-                        callport_list.each{ |cport|
-                            if check_gen_dyn_for_port(cport) == nil then
-                                # entryport_name = camel_case(snake_case(cell.get_join_list.get_item(port.get_name).get_port_name.to_s))
-                                entryport_name = camel_case(snake_case(cport.get_real_callee_port.get_name.to_s))
-                                # call_celltype_name = camel_case(snake_case(cell.get_join_list.get_item(port.get_name).get_celltype.get_global_name.to_s))
-                                call_celltype_name = camel_case(snake_case(cport.get_real_callee_cell.get_celltype.get_global_name.to_s))
-                                file.print ", #{entryport_name}For#{call_celltype_name}<'a>"
-                            end   
-                        }
-                        file.print ">"
-                    end
-                end
+                file.print "\tpub cell: &'static #{get_rust_celltype_name(celltype)}"
+                
+                return if check_only_entryport_celltype(celltype)
+
+                # セルタイプ構造体にライフタイムアノテーションが必要かどうか <- 'static にするので、アノテーションは不要
+                # check_lifetime_annotation_for_celltype_structure は削除
+                first = true
+                callport_list.each{ |cport|
+                    if check_gen_dyn_for_port(cport) == nil then
+                        # entryport_name = camel_case(snake_case(cell.get_join_list.get_item(port.get_name).get_port_name.to_s))
+                        entryport_name = camel_case(snake_case(cport.get_real_callee_port.get_name.to_s))
+                        # call_celltype_name = camel_case(snake_case(cell.get_join_list.get_item(port.get_name).get_celltype.get_global_name.to_s))
+                        call_celltype_name = camel_case(snake_case(cport.get_real_callee_cell.get_celltype.get_global_name.to_s))
+                        if first then
+                            file.print "<#{entryport_name}For#{call_celltype_name}"
+                            first = false
+                        else
+                            file.print ", #{entryport_name}For#{call_celltype_name}"
+                        end
+                    end   
+                }
+                file.print ">" if first == false
                 file.print ",\n"
                 file.print "}\n\n"
             end
@@ -1087,9 +1074,7 @@ class RustGenCelltypePlugin < CelltypePlugin
                     next
                 end
 
-                file.print "impl #{camel_case(snake_case(port.get_signature.get_global_name.to_s))} for #{camel_case(snake_case(port.get_name.to_s))}For#{get_rust_celltype_name(celltype)}"
-                file.print "<'_>"
-                file.print "{\n\n"
+                file.print "impl #{camel_case(snake_case(port.get_signature.get_global_name.to_s))} for #{camel_case(snake_case(port.get_name.to_s))}For#{get_rust_celltype_name(celltype)} {\n\n"
 
                 sig_param_str_list, _, lifetime_flag = get_sig_param_str sig
 
@@ -1100,9 +1085,10 @@ class RustGenCelltypePlugin < CelltypePlugin
                         file.print "\t#[inline]\n"
                     end
                     file.print "\tfn #{get_rust_function_name(func_head)}"
-                    if lifetime_flag then
-                        file.print "<'a>"
-                    end
+                    # おそらくこのアノテーションは不要
+                    # if lifetime_flag then
+                    #     file.print "<'a>"
+                    # end
                     file.print"(&'static self"
                     # param_num と sig_param_str_list の要素数が等しいことを前提としている
                     param_num = func_head.get_paramlist.get_items.size
@@ -1194,44 +1180,17 @@ class RustGenCelltypePlugin < CelltypePlugin
     def gen_rust_get_cell_ref file, celltype, callport_list, use_jenerics_alphabet
         # セルタイプに受け口がない場合は，生成しない
         # 受け口がないならば，get_cell_ref 関数が呼ばれることは現状無いため
-        life_time_declare = false
         celltype.get_port_list.each{ |port|
             if port.get_port_type == :ENTRY then
                 jenerics_flag = true
                 file.print "impl"
-                if check_only_entryport_celltype(celltype) then
-                else
-                    # check_only_entryport_celltype では，dyn な呼び口を判定していないため，ここで判定する
-                    celltype.get_port_list.each{ |port|
-                        if check_gen_dyn_for_port(port) == nil || use_jenerics_alphabet.length != 0 then
-                            file.print "<"
-                        end
-                        break
-                    }
-                end
-                # ライフタイムアノテーションの生成部
-                # TODO：ライフタイムについては，もう少し厳格にする必要がある
-                celltype.get_var_list.each{ |var|
-                    # ライフタイムアノテーションが必要な型が変数にあるかどうかを判断
-                    var_type_name = var.get_type.get_type_str
-                    if check_lifetime_annotation_for_type(var_type_name) then
-                        # file.print "'a, "
-                        file.print "'a"
-                        life_time_declare = true
-                        break
-                    end
-                }
-
-                if use_jenerics_alphabet.length != 0 && life_time_declare == true then
-                    file.print ", "
-                end
-
+                
                 # impl のジェネリクスを生成
                 callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
                     if check_gen_dyn_for_port(callport) == nil then
                         if jenerics_flag then
                             jenerics_flag = false
-                            file.print "#{alphabet}: #{get_rust_signature_name(callport.get_signature)}"
+                            file.print "<#{alphabet}: #{get_rust_signature_name(callport.get_signature)}"
                         else
                             file.print ", #{alphabet}: #{get_rust_signature_name(callport.get_signature)}"
                         end
@@ -1252,35 +1211,26 @@ class RustGenCelltypePlugin < CelltypePlugin
                 file.print " #{get_rust_celltype_name(celltype)}"
                 if check_only_entryport_celltype(celltype) then
                 else
-                    if check_lifetime_annotation_for_celltype_structure(celltype, callport_list) then
-                        file.print "<'_"
-
-                        callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
-                            if check_gen_dyn_for_port(callport) == nil then
+                    jenerics_first = true
+                    callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
+                        if check_gen_dyn_for_port(callport) == nil then
+                            if jenerics_first then
+                                file.print "<#{alphabet}"
+                                jenerics_first = false
+                            else
                                 file.print ", #{alphabet}"
                             end
                         end
-                        file.print ">"
                     end
+                    file.print ">" if jenerics_first == false
+                end
 
-                end
                 file.print " {\n"
-                # インライン化
-                if port.is_inline? then
-                    file.print "\t#[inline]\n"
-                end
+
+                file.print "\t#[inline]\n"
+
                 # get_cell_ref 関数の定義を生成
-                file.print "\tpub fn get_cell_ref"
-                # ライフタイムアノテーションの生成部
-                # TODO：ライフタイムについては，もう少し厳格にする必要がある
-                celltype.get_var_list.each{ |var|
-                    var_type_name = var.get_type.get_type_str
-                    if check_lifetime_annotation_for_type(var_type_name) && life_time_declare == false then
-                        file.print "<'a>"
-                        break
-                    end
-                }
-                file.print "(&'static self) -> "
+                file.print "\tpub fn get_cell_ref(&'static self) -> "
 
                 # 返り値のタプル型の要素をまとめるための配列
                 return_tuple_type_list = []
@@ -1304,13 +1254,6 @@ class RustGenCelltypePlugin < CelltypePlugin
                 # 変数をタプルの配列に追加
                 if celltype.get_var_list.length != 0 then
                     return_tuple_type_list.push("&Mutex<#{get_rust_celltype_name(celltype)}Var")
-                    celltype.get_var_list.each{ |var|
-                        var_type_name = var.get_type.get_type_str
-                        if check_lifetime_annotation_for_type(var_type_name) then
-                            return_tuple_type_list[-1].concat("<'a>")
-                            break
-                        end
-                    }
                     return_tuple_type_list[-1].concat(">")
                     return_tuple_list.push("&self.variable")
                 end
@@ -1421,7 +1364,7 @@ class RustGenCelltypePlugin < CelltypePlugin
 
     end
 
-    # ポートの接続先が一意であるかどうかを判断し，一意でない場合は，そのシグニチャの名前を返す
+    # ポートの接続先が一意であるかどうかを判断し，一意でない場合は，そのシグニチャの名前を返す -> 動的ディスパッチを適用するため
     def check_gen_dyn_for_port port
         if port.get_port_type == :CALL then
             if port.get_real_callee_port == nil then  # TODO：joinではなくportで接続先を確認しているため、より厳密なチェックが必要になる可能性がある 
@@ -1442,8 +1385,8 @@ class RustGenCelltypePlugin < CelltypePlugin
     end
 
     def gen_impl_sync_send_trait file, celltype
-        file.print "unsafe impl Sync for #{get_rust_celltype_name(celltype)}<'_> {}\n"
-        file.print "unsafe impl Send for #{get_rust_celltype_name(celltype)}<'_> {}\n"
+        file.print "unsafe impl Sync for #{get_rust_celltype_name(celltype)} {}\n"
+        file.print "unsafe impl Send for #{get_rust_celltype_name(celltype)} {}\n"
     end
 
     # tecsflow.json をパースして、アクセスされたセルの情報を取得する
