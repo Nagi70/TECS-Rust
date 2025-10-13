@@ -62,6 +62,8 @@ class RustGenCelltypePlugin < CelltypePlugin
     @@default_impled_custom_struct_list = Hash.new { |hash, key| hash[key] = [] }
 
     @@gen_heapless_crate_dependency = false
+    @@const_init_catalog_loaded = false
+    @@const_init_impled_custom_struct_list = Hash.new { |hash, key| hash[key] = [] }
 
     #celltype::     Celltype        セルタイプ（インスタンス）
     def initialize( celltype, option )
@@ -500,6 +502,18 @@ class RustGenCelltypePlugin < CelltypePlugin
 
         gen_const_in_tecs_global_rs file
 
+        # 事前に ConstInit カタログをロード
+        unless @@const_init_catalog_loaded
+            begin
+                require_tecsgen_lib 'lib/RustConstInitTypeChecker.rb'
+                const_catalog_path = File.join(File.dirname(__FILE__), 'lib', 'RustConstInitTypeList.json')
+                ConstInit.load!(const_catalog_path)
+                @@const_init_catalog_loaded = true
+            rescue
+                @@const_init_catalog_loaded = false
+            end
+        end
+
         uniq_list.each_value do |st|
             rust_name = camel_case(snake_case(st.get_name.to_s.sub(/^_+/, "")))
 
@@ -523,6 +537,41 @@ class RustGenCelltypePlugin < CelltypePlugin
 
             if @@default_impled_custom_struct_list[rust_name] == false then
                 gen_default_impl_for_custom_struct file, st
+            end
+
+            # const fn const_init() の生成（入れ子構造体や Time など catalog で定義した式で初期化）
+            if @@const_init_catalog_loaded
+                custom_types = [rust_name]
+                ok_fields = true
+                field_inits = []
+                st.get_members_decl.get_items.each do |m|
+                    field_name = snake_case(m.get_name.to_s)
+                    field_type = c_type_to_rust_type(m.get_type)
+                    if @@const_init_impled_custom_struct_list[field_type] == true then
+                        # カスタム構造体で const_init() が実装されている場合
+                        field_inits << [field_name, "#{field_type}::const_init()"]
+                    else
+                        ok, expr = ConstInit.const_expr(field_type, custom_types: custom_types)
+                        if ok && expr && !expr.include?('/* not const */')
+                            field_inits << [field_name, expr]
+                        else
+                            ok_fields = false
+                            break
+                        end
+                    end
+                end
+                if ok_fields
+                    file.print("impl #{rust_name} {\n")
+                    file.print("    pub const fn const_init() -> Self {\n")
+                    file.print("        Self {\n")
+                    field_inits.each do |(n, e)|
+                        file.print("            #{n}: #{e},\n")
+                    end
+                    file.print("        }\n")
+                    file.print("    }\n")
+                    file.print("}\n\n")
+                    @@const_init_impled_custom_struct_list[rust_name] = true
+                end
             end
         end
 
@@ -979,9 +1028,6 @@ class RustGenCelltypePlugin < CelltypePlugin
                 @pointer_array.push([name, type, size, var_array])
                 file.print "\t\t#{var.get_name.to_s}: unsafe{ &mut *core::ptr::addr_of_mut!(#{name}) },\n"
                 array_number += 1
-            # 右辺が定義されていない場合、defaultにする
-            elsif var_array.nil? then
-                file.print "\t\t#{var.get_name}: Default::default(),\n"
             else
                 # 属性が配列であるときに対応
                 if var_array.is_a?(Array) then
@@ -2027,19 +2073,24 @@ class RustGenCelltypePlugin < CelltypePlugin
 
             file.print "static #{name}: [#{type}; #{size}] = "
 
-            # 未初期化の場合 Default にする
+            # 未初期化の場合 0 で埋める
             if initializer.nil? then
                 file.print "[0; #{size}];\n"
             elsif initializer.is_a?(Array) then
-                file.print "["
-                initializer.each{ |item|
-                    if item == initializer.last then
-                        file.print "#{item.to_s}"
-                    else
-                        file.print "#{item.to_s}, "
-                    end
-                }
-                file.print "];"
+                # 初期化子の数が配列のサイズと異なる場合、0で埋める
+                if initializer.length != size then
+                    file.print "[0; #{size}];\n"
+                else
+                    file.print "["
+                    initializer.each{ |item|
+                        if item == initializer.last then
+                            file.print "#{item.to_s}"
+                        else
+                            file.print "#{item.to_s}, "
+                        end
+                    }
+                    file.print "];\n"
+                end
             end
 
             file.print "\n"
