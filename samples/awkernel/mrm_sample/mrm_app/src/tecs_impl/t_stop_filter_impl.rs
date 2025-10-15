@@ -17,25 +17,25 @@ impl SStopFilter for EReactorForTStopFilter{
 
         // 停止判定: |vx| < vx_threshold かつ |wz| < wz_threshold
         let was_stopped =
-            odom_in.twist.twist.linear_x.abs() < *lg.vx_threshold &&
-            odom_in.twist.twist.angular_z.abs() < *lg.wz_threshold;
+            odom_in.twist.twist.linear.x.abs() < *lg.vx_threshold &&
+            odom_in.twist.twist.angular.z.abs() < *lg.wz_threshold;
 
         if was_stopped {
             // 停止: 速度をゼロに補正
-            odom_out.twist.twist.linear_x = 0.0;
-            odom_out.twist.twist.linear_y = 0.0;
-            odom_out.twist.twist.linear_z = 0.0;
-            odom_out.twist.twist.angular_x = 0.0;
-            odom_out.twist.twist.angular_y = 0.0;
-            odom_out.twist.twist.angular_z = 0.0;
+            odom_out.twist.twist.linear.x = 0.0;
+            odom_out.twist.twist.linear.y = 0.0;
+            odom_out.twist.twist.linear.z = 0.0;
+            odom_out.twist.twist.angular.x = 0.0;
+            odom_out.twist.twist.angular.y = 0.0;
+            odom_out.twist.twist.angular.z = 0.0;
         } else {
             // 通過: 入力をそのまま出力
-            odom_out.twist.twist.linear_x = odom_in.twist.twist.linear_x;
-            odom_out.twist.twist.linear_y = odom_in.twist.twist.linear_y;
-            odom_out.twist.twist.linear_z = odom_in.twist.twist.linear_z;
-            odom_out.twist.twist.angular_x = odom_in.twist.twist.angular_x;
-            odom_out.twist.twist.angular_y = odom_in.twist.twist.angular_y;
-            odom_out.twist.twist.angular_z = odom_in.twist.twist.angular_z;
+            odom_out.twist.twist.linear.x = odom_in.twist.twist.linear.x;
+            odom_out.twist.twist.linear.y = odom_in.twist.twist.linear.y;
+            odom_out.twist.twist.linear.z = odom_in.twist.twist.linear.z;
+            odom_out.twist.twist.angular.x = odom_in.twist.twist.angular.x;
+            odom_out.twist.twist.angular.y = odom_in.twist.twist.angular.y;
+            odom_out.twist.twist.angular.z = odom_in.twist.twist.angular.z;
         }
 	}
 }

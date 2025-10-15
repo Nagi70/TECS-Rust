@@ -9,11 +9,11 @@ impl SUtilsPoseDeviation for EUtilsForTUtilsPoseDeviation{
 		let base_point = &base_pose.point;
 		// Yaw from quaternion: assuming z-up, planar yaw
 		let q = base_pose.orientation;
-		let siny_cosp = 2.0 * (q.w * q.z + q.x * q.y);
-		let cosy_cosp = 1.0 - 2.0 * (q.y * q.y + q.z * q.z);
-		let yaw = siny_cosp.atan2(cosy_cosp);
-		let base_unit_vec = nalgebra::Vector3::new(yaw.cos(), yaw.sin(), 0.0);
-
+		let siny_cosp = 2.0 * (q.w * q.k + q.i * q.j);
+		let cosy_cosp = 1.0 - 2.0 * (q.j * q.j + q.k * q.k);
+		let yaw = libm::atan2(siny_cosp, cosy_cosp);
+		let base_unit_vec = nalgebra::Vector3::new(libm::cos(yaw), libm::sin(yaw), 0.0);
+		
 		let dx = target_point.x - base_point.x;
 		let dy = target_point.y - base_point.y;
 		let diff_vec = nalgebra::Vector3::new(dx, dy, 0.0);
@@ -25,13 +25,13 @@ impl SUtilsPoseDeviation for EUtilsForTUtilsPoseDeviation{
 		// Equivalent to autoware_utils_geometry::calc_yaw_deviation with normalization
 		let qb = base_pose.orientation;
 		let qt = target_pose.orientation;
-		let siny_cosp_b = 2.0 * (qb.w * qb.z + qb.x * qb.y);
-		let cosy_cosp_b = 1.0 - 2.0 * (qb.y * qb.y + qb.z * qb.z);
-		let base_yaw = siny_cosp_b.atan2(cosy_cosp_b);
+		let siny_cosp_b = 2.0 * (qb.w * qb.k + qb.i * qb.j);
+		let cosy_cosp_b = 1.0 - 2.0 * (qb.j * qb.j + qb.k * qb.k);
+		let base_yaw = libm::atan2(siny_cosp_b, cosy_cosp_b);
 
-		let siny_cosp_t = 2.0 * (qt.w * qt.z + qt.x * qt.y);
-		let cosy_cosp_t = 1.0 - 2.0 * (qt.y * qt.y + qt.z * qt.z);
-		let target_yaw = siny_cosp_t.atan2(cosy_cosp_t);
+		let siny_cosp_t = 2.0 * (qt.w * qt.k + qt.i * qt.j);
+		let cosy_cosp_t = 1.0 - 2.0 * (qt.j * qt.j + qt.k * qt.k);
+		let target_yaw = libm::atan2(siny_cosp_t, cosy_cosp_t);
 
 		let mut d = target_yaw - base_yaw;
 		// normalize to [-pi, pi)

@@ -5,7 +5,8 @@ use awkernel_lib::sync::mutex::MCSNode;
 impl STwistWithCovarianceStamped for ETwistWithCovarianceVForTGyroOdometer{
 
 	fn send(&'static self, twist_with_covariance: &TwistWithCovarianceStamped) {
-		let mut lg = self.cell.get_cell_ref();
+		let mut node = MCSNode::new();
+		let mut lg = self.cell.get_cell_ref(&mut node);
 
 	}
 }
@@ -13,7 +14,8 @@ impl STwistWithCovarianceStamped for ETwistWithCovarianceVForTGyroOdometer{
 impl SImuData for EImuDataForTGyroOdometer{
 
 	fn send(&'static self, imu_data: &ImuMsg) {
-		let mut lg = self.cell.get_cell_ref();
+		let mut node = MCSNode::new();
+		let mut lg = self.cell.get_cell_ref(&mut node);
 
 	}
 }
@@ -21,19 +23,20 @@ impl SImuData for EImuDataForTGyroOdometer{
 impl SGyroOdometer for EReactorForTGyroOdometer{
 
 	fn main(&'static self, vehicle_twist: &TwistWithCovarianceStamped, imu: &ImuMsg, twist_with_covariance: &mut TwistWithCovarianceStamped) {
-		let mut lg = self.cell.get_cell_ref();
+		let mut node = MCSNode::new();
+		let mut lg = self.cell.get_cell_ref(&mut node);
 
-		lg.var.imu_covariance = lg.c_tf.transform_covariance(imu.angular_velocity_covariance);
+		lg.var.imu_covariance = lg.c_tf.transform_covariance(&imu.angular_velocity_covariance);
 
-		if vehicle_twist.header.stamp > imu.header.stamp {
-			twist_with_covariance.header.stamp = vehicle_twist.header.stamp;
+		if vehicle_twist.header.time_stamp > imu.header.time_stamp {
+			twist_with_covariance.header.time_stamp = vehicle_twist.header.time_stamp;
 		} else {
-			twist_with_covariance.header.stamp = imu.header.stamp;
+			twist_with_covariance.header.time_stamp = imu.header.time_stamp;
 		}
 
 		twist_with_covariance.header.frame_id = heapless::String::try_from(*lg.output_frame).unwrap();
-		twist_with_covariance.twist.twist.linear.x = vehicle_twist.twist.linear.x;
-		twist_with_covariance.twist.twist.angular = lg.c_tf.transform_vector3(imu.angular_velocity);
+		twist_with_covariance.twist.twist.linear.x = vehicle_twist.twist.twist.linear.x;
+		twist_with_covariance.twist.twist.angular = lg.c_tf.transform_vector3(&imu.angular_velocity);
 
 		twist_with_covariance.twist.covariance[0] = vehicle_twist.twist.covariance[0];
 		twist_with_covariance.twist.covariance[7] = 10000.0;

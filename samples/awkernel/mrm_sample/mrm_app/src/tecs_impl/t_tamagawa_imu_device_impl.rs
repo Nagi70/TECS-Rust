@@ -27,9 +27,9 @@ impl SImuDevice for EImuDeviceForTTamagawaImuDevice{
 			imu_msg.linear_acceleration.y = (lg.var.acceleration_y_raw as f64) * (100.0 / (2u32.pow(15) as f64));
 			imu_msg.linear_acceleration.z = (lg.var.acceleration_z_raw as f64) * (100.0 / (2u32.pow(15) as f64));
 
-			imu_msg.orientation.x = 0.0;
-			imu_msg.orientation.y = 0.0;
-			imu_msg.orientation.z = 0.0;
+			imu_msg.orientation.i = 0.0;
+			imu_msg.orientation.j = 0.0;
+			imu_msg.orientation.k = 0.0;
 			imu_msg.orientation.w = 1.0;
 		}
 	}

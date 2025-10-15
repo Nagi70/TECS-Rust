@@ -15,10 +15,6 @@ impl SEkfLocalizer for EReactorForTEkfLocalizer{
 	fn main(&'static self, twist: &TwistWithCovarianceStamped) {
 		let mut lg = self.cell.get_cell_ref();
 
-		if twist.twist.twist.linear.x.abs() < lg.threshold_linear_velocity_mps {
-			twist.twist.covariance[0] = 10000.0;
-		}
-
 		lg.c_twist_with_covariance_queue.push(twist);
 	}
 }

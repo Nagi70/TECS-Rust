@@ -60,7 +60,7 @@ impl SEkfLocalizerTimer for EReactorForTEkfLocalizerTimer{
 		let _ = kinematic_state.child_frame_id.push_str("base_link");
 
 		// Pose / Twist 値を反映
-		kinematic_state.pose.pose = pose_out.pose;
+		kinematic_state.pose.pose = pose_out.pose.pose;
 		kinematic_state.twist.twist = tw_out.twist.twist;
 
 		// 共分散を反映

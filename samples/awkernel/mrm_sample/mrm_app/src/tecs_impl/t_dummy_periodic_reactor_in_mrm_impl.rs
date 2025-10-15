@@ -32,10 +32,10 @@ impl SDummyPeriodicReactorInMrm for EReactorForTDummyPeriodicReactorInMrm{
 
 		imu.header.time_stamp = awkernel_lib::time::Time::now();
 
-		velocity_status.header.frame_id = heapless::String::from("base_link").unwrap();
-		velocity_status.longitudinal_velocity = lg.var.i as f64;
-		velocity_status.lateral_velocity = (lg.var.i as f64) * 2.0;
-		velocity_status.yaw_rate = (lg.var.i as f64) * 3.0;
+		velocity_status.header.frame_id = heapless::String::from("base_link").unwrapped_as();
+		velocity_status.longitudinal_velocity = lg.var.i;
+		velocity_status.lateral_velocity = (lg.var.i.into()) * 2.0;
+		velocity_status.heading_rate = (lg.var.i.into()) * 3.0;
 
 		velocity_status.header.time_stamp = awkernel_lib::time::Time::now();
 	}

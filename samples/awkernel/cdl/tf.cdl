@@ -1,6 +1,6 @@
 signature sTf {
 	PLType("nalgebra::Matrix3<f64>") transformCovariance([in] PLType("nalgebra::Matrix3<f64>") cov);
-	PLType("nalgebra::Vector3<f64>") transformVector3([out] PLType("nalgebra::Vector3<f64>")* vec);
+	PLType("nalgebra::Vector3<f64>") transformVector3([in] PLType("nalgebra::Vector3<f64>") vec);
 };
 
 [generate(RustAWKPlugin, "")]

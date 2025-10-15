@@ -14,10 +14,10 @@ impl SMeasurement for EMeasureForTMeasurement{
 	fn twist_measurement_covariance(&'static self, covariance: &nalgebra::Matrix6<f64>, smoothing_step: &u32) -> nalgebra::Matrix2<f64>{
 		// Extract the relevant 2x2 block from XYZRPY 6x6 covariance (x index = 0, yaw index = 5)
 		let mut r = nalgebra::Matrix2::<f64>::zeros();
-		r[(0, 0)] = covariance[(IDX_X, IDX_X)];
-		r[(0, 1)] = covariance[(IDX_X, IDX_YAW)];
-		r[(1, 0)] = covariance[(IDX_YAW, IDX_X)];
-		r[(1, 1)] = covariance[(IDX_YAW, IDX_YAW)];
+		r[(0, 0)] = covariance[(IDX_X as usize, IDX_X as usize)];
+		r[(0, 1)] = covariance[(IDX_X as usize, IDX_YAW as usize)];
+		r[(1, 0)] = covariance[(IDX_YAW as usize, IDX_X as usize)];
+		r[(1, 1)] = covariance[(IDX_YAW as usize, IDX_YAW as usize)];
 		r * (*smoothing_step as f64)
 	}
 }

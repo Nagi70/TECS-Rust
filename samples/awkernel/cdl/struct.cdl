@@ -48,9 +48,9 @@ struct TwistWithCovarianceStamped {
 
 struct VelocityReport {
     struct Header header;
-    float32_t longitudinal_velocity;
-    float32_t lateral_velocity;
-    float32_t heading_rate;
+    double64_t longitudinal_velocity;
+    double64_t lateral_velocity;
+    double64_t heading_rate;
 };
 
 struct Pose {

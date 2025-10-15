@@ -5,7 +5,7 @@ use awkernel_lib::sync::mutex::MCSNode;
 impl SStateTransition for EStateForTStateTransition{
 
 	fn normalize_yaw(&'static self, yaw: &f64) -> f64{
-		(yaw.sin()).atan2(yaw.cos())
+		libm::atan2(libm::sin(*yaw), libm::cos(*yaw))
 	}
 	fn predict_next_state(&'static self, x_curr: &nalgebra::Matrix6x1<f64>, dt: &f64) -> nalgebra::Vector6<f64>{
 		let x = x_curr[(IDX_X as usize, 0)];
@@ -17,8 +17,8 @@ impl SStateTransition for EStateForTStateTransition{
 
 		let mut x_next = nalgebra::Vector6::<f64>::zeros();
 		let yaw_b = yaw + yaw_bias;
-		x_next[(IDX_X as usize, 0)] = x + vx * (yaw_b).cos() * (*dt);
-		x_next[(IDX_Y as usize, 0)] = y + vx * (yaw_b).sin() * (*dt);
+		x_next[(IDX_X as usize, 0)] = x + vx * libm::cos(yaw_b) * (*dt);
+		x_next[(IDX_Y as usize, 0)] = y + vx * libm::sin(yaw_b) * (*dt);
 		x_next[(IDX_YAW as usize, 0)] = self.normalize_yaw(&(yaw + wz * (*dt)));
 		x_next[(IDX_YAWB as usize, 0)] = yaw_bias;
 		x_next[(IDX_VX as usize, 0)] = vx;
@@ -32,12 +32,12 @@ impl SStateTransition for EStateForTStateTransition{
 
 		let mut a = nalgebra::Matrix6::<f64>::identity();
 		let yaw_b = yaw + yaw_bias;
-		a[(IDX_X as usize, IDX_YAW as usize)] = -vx * (yaw_b).sin() * (*dt);
-		a[(IDX_X as usize, IDX_YAWB as usize)] = -vx * (yaw_b).sin() * (*dt);
-		a[(IDX_X as usize, IDX_VX as usize)] = (yaw_b).cos() * (*dt);
-		a[(IDX_Y as usize, IDX_YAW as usize)] = vx * (yaw_b).cos() * (*dt);
-		a[(IDX_Y as usize, IDX_YAWB as usize)] = vx * (yaw_b).cos() * (*dt);
-		a[(IDX_Y as usize, IDX_VX as usize)] = (yaw_b).sin() * (*dt);
+		a[(IDX_X as usize, IDX_YAW as usize)] = -vx * libm::sin(yaw_b) * (*dt);
+		a[(IDX_X as usize, IDX_YAWB as usize)] = -vx * libm::sin(yaw_b) * (*dt);
+		a[(IDX_X as usize, IDX_VX as usize)] = libm::cos(yaw_b) * (*dt);
+		a[(IDX_Y as usize, IDX_YAW as usize)] = vx * libm::cos(yaw_b) * (*dt);
+		a[(IDX_Y as usize, IDX_YAWB as usize)] = vx * libm::cos(yaw_b) * (*dt);
+		a[(IDX_Y as usize, IDX_VX as usize)] = libm::sin(yaw_b) * (*dt);
 		a[(IDX_YAW as usize, IDX_WZ as usize)] = *dt;
 		a
 	}

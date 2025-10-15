@@ -20,7 +20,7 @@ impl STf for ETfForTTf{
         
         cov_transformed
 	}
-	fn transform_vector3(&'static self, vec: &mut nalgebra::Vector3<f64>) -> nalgebra::Vector3<f64> {
+	fn transform_vector3(&'static self, vec: &nalgebra::Vector3<f64>) -> nalgebra::Vector3<f64> {
 		let mut lg = self.cell.get_cell_ref();
 
 		lg.transform * *vec

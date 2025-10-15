@@ -21,15 +21,15 @@ impl SVehicleVelocityConverter for EReactorForTVehicleVelocityConverter{
 		}
 
 		twist_with_covariance.header = velocity_status.header.clone();
-		twist_with_covariance.twist.twist.linear.x = velocity_status.longitudinal_velocity * lg.speed_scale_factor;
+		twist_with_covariance.twist.twist.linear.x = velocity_status.longitudinal_velocity * *lg.speed_scale_factor;
 		twist_with_covariance.twist.twist.linear.y = velocity_status.lateral_velocity;
 		twist_with_covariance.twist.twist.angular.z = velocity_status.heading_rate;
-		twist_with_covariance.twist.covariance[0] = lg.velocity_stddev_xx * lg.velocity_stddev_xx;
+		twist_with_covariance.twist.covariance[0] = *lg.velocity_stddev_xx * *lg.velocity_stddev_xx;
 		twist_with_covariance.twist.covariance[7] = 10000.0;
 		twist_with_covariance.twist.covariance[14] = 10000.0;
 		twist_with_covariance.twist.covariance[21] = 10000.0;
 		twist_with_covariance.twist.covariance[28] = 10000.0;
-		twist_with_covariance.twist.covariance[35] = lg.angular_velocity_stddev_zz * lg.angular_velocity_stddev_zz;
+		twist_with_covariance.twist.covariance[35] = *lg.angular_velocity_stddev_zz * *lg.angular_velocity_stddev_zz;
 	}
 }
 

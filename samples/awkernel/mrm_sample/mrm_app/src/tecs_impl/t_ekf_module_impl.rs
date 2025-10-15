@@ -19,7 +19,7 @@ impl SEkfModule for EEkfModuleForTEkfModule{
 		x0[(IDX_Y as usize, 0)] = pose0.pose.point[1] + tf.translation[1];
 		// yaw from quaternions (pose + tf)
 		let rpy_pose = lg.c_utils.get_rpy(&pose0.pose.orientation);
-		let rpy_tf = lg.c_utils.get_rpy(&tf.rotatoin);
+		let rpy_tf = lg.c_utils.get_rpy(&tf.rotation);
 		let yaw0 = rpy_pose[2] + rpy_tf[2];
 		x0[(IDX_YAW as usize, 0)] = yaw0;
 		// yaw bias, velocities
@@ -103,9 +103,9 @@ impl SEkfModule for EEkfModuleForTEkfModule{
 		let mut node = MCSNode::new();
 		let mut lg = self.cell.get_cell_ref(&mut node);
 		let x_curr = lg.c_kalman.get_latest_x();
-		let proc_cov_vx_d = (*lg.proc_stddev_vx_c * *dt).powi(2);
-		let proc_cov_wz_d = (*lg.proc_stddev_wz_c * *dt).powi(2);
-		let proc_cov_yaw_d = (*lg.proc_stddev_yaw_c * *dt).powi(2);
+		let proc_cov_vx_d =  libm::pow(*lg.proc_stddev_vx_c * *dt, 2.0);
+		let proc_cov_wz_d = libm::pow(*lg.proc_stddev_wz_c * *dt, 2.0);
+		let proc_cov_yaw_d = libm::pow(*lg.proc_stddev_yaw_c * *dt, 2.0);
 		let x_next = lg.c_state.predict_next_state(&x_curr, dt);
 		let a = lg.c_state.create_state_transition_matrix(&x_curr, dt);
 		let q = lg.c_state.process_noise_covariance(&proc_cov_yaw_d, &proc_cov_vx_d, &proc_cov_wz_d);

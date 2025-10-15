@@ -28,9 +28,6 @@ celltype tEkfLocalizer {
 
     // ----- 属性定義 (不変パラメータ) -----
     attr {
-
-        double64_t threshold_observable_velocity_mps = 0.1;
-
         // --- awkernel リアクター用属性 ---
         [omit] PLType("Cow") reactorName = PL_EXP("EkfLocalizer");
         [omit] PLType("SchedulerType") schedType = PL_EXP("SchedulerType::PrioritizedFIFO(7)");
@@ -45,10 +42,7 @@ celltype tTwistWithCovarianceAgedObjectQueue {
     entry sTwistWithCovarianceGet eGet;
 
     attr {
-        // キュー内のオブジェクトが生存できる最大のage
-        int32_t max_age = 10; // デフォルト値
-        // 配列のサイズを属性として定義しておくと便利
-        //int32_t capacity = 32;
+        double64_t threshold_observable_velocity_mps = 0.1;
     };
 
     var {
