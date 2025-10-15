@@ -59,7 +59,6 @@ class RustGenCelltypePlugin < CelltypePlugin
     @@struct_type_list = []
     # tecs_global.rs を 1 度だけ生成したかどうかを示すフラグ
     @@global_generated = false
-    @@default_impled_custom_struct_list = Hash.new { |hash, key| hash[key] = [] }
 
     @@gen_heapless_crate_dependency = false
     @@const_init_catalog_loaded = false
@@ -260,9 +259,10 @@ class RustGenCelltypePlugin < CelltypePlugin
             gen_use_mutex file
         end
 
-        if @gen_use_global then
+        # TODO: 必要な時だけ use するようにする
+        # if @gen_use_global then
             file.print "use crate::tecs_global::*;\n"
-        end
+        # end
 
         if @mod_signatures_list.length == 1 then
             file.print "use crate::tecs_signature::#{@mod_signatures_list[0]}::*;\n"
@@ -371,25 +371,11 @@ class RustGenCelltypePlugin < CelltypePlugin
             str = c_type.get_name.to_s
             # TODO: 構造体の定義がある場合は、その構造体の定義を生成する。
             # すべてのオリジナル構造体の定義を tecs_global.rs に生成する
-            @@struct_type_list.push(c_type)
+            # @@struct_type_list.push(c_type)
 
-            # まだチェックされていない構造体の場合は、チェックを行う
-            if @@default_impled_custom_struct_list.key?(str) == false then
-                # 構造体のメンバの型にdefaultが実装されていないものがあるかどうかをチェックする
-                c_type.get_members_decl.get_items.each do |m|
-                    # defaultが実装されていない型をフィールドに持つ場合は、#[derive(Default)]を付与しない
-                    if !@@default_type_checker.default_impl?(c_type_to_rust_type(m.get_type)) then
-                        # ここに到達するまでに、mの型にdefaultが実装されているかどうかはチェックされている
-                        if @@default_impled_custom_struct_list[c_type_to_rust_type(m.get_type)] != true then
-                            @@default_impled_custom_struct_list[str] = false
-                            break
-                        end
-                    end
-                    @@default_impled_custom_struct_list[str] = true
-                end
-            end
 
-            @gen_use_global = true
+
+            # @gen_use_global = true
         elsif c_type.kind_of?( PtrType ) then
             if c_type.get_string != nil then
                 # str = "#{c_type.has_sized_pointer?}"
@@ -438,6 +424,9 @@ class RustGenCelltypePlugin < CelltypePlugin
             end
         elsif c_type.kind_of?( RTypeType ) then
             str = c_type.get_type_str_inner
+            # RTypeType の中でカスタム構造体を利用するケースがあるため、tecs_global を use する
+            # TODO: str の中にカスタム構造体が含まれているかどうかをチェックする
+            @gen_use_global = true
         else
             str = c_type.get_type_str
             str = convert_rust_type_string(str)
@@ -488,10 +477,26 @@ class RustGenCelltypePlugin < CelltypePlugin
         # return if @@struct_type_list.empty?
 
         # 重複を除去（同じタグ名で比較）
-        uniq_list = {}
-        @@struct_type_list.each do |st|
-            uniq_list[st.get_name] = st unless uniq_list.key?(st.get_name)
+        # uniq_list = {}
+        # @@struct_type_list.each do |st|
+        #     uniq_list[st.get_name] = st unless uniq_list.key?(st.get_name)
+        # end
+
+        get_diff_between_gen_and_src "tecs_global.rs", nil
+
+        root = Namespace.get_root
+        structs = []  # Array<StructType>
+
+        traverse = lambda do |ns|
+            decls = ns.instance_variable_get(:@decl_list) || []
+            decls.each do |d|
+                structs << d if d.kind_of?(StructType)
+            end
+            ns.get_namespace_list.each { |child| traverse.call(child) }
         end
+
+        traverse.call(root)
+        # typedef経由や無名struct由来も含めて拾いやすい
 
         # ファイルを生成
         require 'fileutils'
@@ -514,12 +519,35 @@ class RustGenCelltypePlugin < CelltypePlugin
             end
         end
 
-        uniq_list.each_value do |st|
+        default_impled_custom_struct_list = Hash.new { |hash, key| hash[key] = [] }
+
+        # default を実装できるかのチェック
+        structs.each do |st|
+            rust_name = camel_case(snake_case(st.get_name.to_s.sub(/^_+/, "")))
+
+            # まだチェックされていない構造体の場合は、チェックを行う
+            if default_impled_custom_struct_list.key?(rust_name) == false then
+                # 構造体のメンバの型にdefaultが実装されていないものがあるかどうかをチェックする
+                st.get_members_decl.get_items.each do |m|
+                    # defaultが実装されていない型をフィールドに持つ場合は、#[derive(Default)]を付与しない
+                    if !@@default_type_checker.default_impl?(c_type_to_rust_type(m.get_type)) then
+                        # ここに到達するまでに、mの型にdefaultが実装されているかどうかはチェックされている
+                        if default_impled_custom_struct_list[c_type_to_rust_type(m.get_type)] != true then
+                            default_impled_custom_struct_list[rust_name] = false
+                            break
+                        end
+                    end
+                    default_impled_custom_struct_list[rust_name] = true
+                end
+            end
+        end
+
+        structs.each do |st|
             rust_name = camel_case(snake_case(st.get_name.to_s.sub(/^_+/, "")))
 
             # derive(Default)を付与するかどうかをチェックする
             # メッセージ型にはCloneが必須であるため、Cloneを付与する
-            if @@default_impled_custom_struct_list[rust_name] == true then
+            if default_impled_custom_struct_list[rust_name] == true then
                 file.print("#[derive(Default, Clone)]\n")
             else
                 file.print("#[derive(Clone)]\n")
@@ -535,7 +563,7 @@ class RustGenCelltypePlugin < CelltypePlugin
 
             file.print("}\n\n")
 
-            if @@default_impled_custom_struct_list[rust_name] == false then
+            if default_impled_custom_struct_list[rust_name] == false then
                 gen_default_impl_for_custom_struct file, st
             end
 
@@ -577,7 +605,7 @@ class RustGenCelltypePlugin < CelltypePlugin
 
         file.close
 
-        # Cargo プロジェクトへコピー（トップレベルなので file_type=nil）
+        # Cargo プロジェクトへコピー
         copy_gen_files_to_cargo "tecs_global.rs", nil
     end
 
@@ -975,6 +1003,20 @@ class RustGenCelltypePlugin < CelltypePlugin
                     @pointer_array.push([name, type, size, attr_array])
                     file.print "\t#{attr.get_name.to_s}: &#{name},\n"
                     array_number += 1
+                elsif attr.get_type.kind_of?( StructType ) then
+                    # 構造体属性: 初期化子が配列ならフィールドごとに割当、
+                    # それ以外（PL_EXP/C_EXP など式）の場合は式をそのまま出力する
+                    if attr_array.is_a?(Array) then
+                        file.print "\t#{attr.get_name.to_s}: #{c_type_to_rust_type(attr.get_type)} {\n"
+                        struct_field_name = attr.get_type.get_members_decl.get_items
+                        struct_field_name.zip(attr_array).each{ |field, value|
+                            file.print "\t\t#{snake_case(field.get_name.to_s)}: #{value},\n"
+                        }
+                        file.print("},\n")
+                    else
+                        # 非配列（C_EXP 等）: そのまま式を埋め込む
+                        file.print "\t#{attr.get_name.to_s}: #{cell.get_attr_initializer(attr_symbol).to_s},\n"
+                    end
                 # 属性が配列であるときに対応
                 elsif attr_array.is_a?(Array) then 
                     file.print "\t#{attr.get_name.to_s}: ["
@@ -1026,23 +1068,35 @@ class RustGenCelltypePlugin < CelltypePlugin
                 size = cell.get_attr_initializer(var.get_type.get_size.to_s.to_sym)
                 name = "mut #{cell.get_global_name.upcase}VARARRAY#{array_number}"
                 @pointer_array.push([name, type, size, var_array])
-                file.print "\t\t#{var.get_name.to_s}: unsafe{ &mut *core::ptr::addr_of_mut!(#{name}) },\n"
+                file.print "\t\t#{var.get_name.to_s}: unsafe{ &mut *core::ptr::addr_of_mut!(#{cell.get_global_name.upcase}VARARRAY#{array_number}) },\n"
                 array_number += 1
-            else
-                # 属性が配列であるときに対応
+            elsif var.get_type.kind_of?( StructType ) then
+                # 構造体属性: 初期化子が配列ならフィールドごとに割当、
+                # それ以外（PL_EXP/C_EXP など式）の場合は式をそのまま出力する
                 if var_array.is_a?(Array) then
-                    file.print "\t#{var.get_name}: ["
-                    var_array.each{ |var_array_item|
-                        if var_array_item == var_array.last then
-                            file.print "#{var_array_item.to_s}"
-                        else
-                            file.print "#{var_array_item.to_s}, "
-                        end
+                    file.print "\t#{var.get_name.to_s}: #{c_type_to_rust_type(var.get_type)} {\n"
+                    struct_field_name = var.get_type.get_members_decl.get_items
+                    struct_field_name.zip(var_array).each{ |field, value|
+                        file.print "\t\t#{snake_case(field.get_name.to_s)}: #{value},\n"
                     }
-                    file.print "],\n"
+                    file.print("\t},\n")
                 else
+                    # 非配列（C_EXP 等）: そのまま式を埋め込む
                     file.print "\t#{var.get_name}: #{var.get_initializer},\n"
                 end
+            elsif var_array.is_a?(Array) then
+                # 属性が配列であるときに対応
+                file.print "\t#{var.get_name}: ["
+                var_array.each{ |var_array_item|
+                    if var_array_item == var_array.last then
+                        file.print "#{var_array_item.to_s}"
+                    else
+                        file.print "#{var_array_item.to_s}, "
+                    end
+                }
+                file.print "],\n"
+            else
+                file.print "\t#{var.get_name}: #{var.get_initializer},\n"
             end
         }
     end
@@ -1062,26 +1116,26 @@ class RustGenCelltypePlugin < CelltypePlugin
                 # 受け口を持っているセルの参照をフィールドとして生成
                 file.print "\tpub cell: &'static #{get_rust_celltype_name(celltype)}"
                 
-                return if check_only_entryport_celltype(celltype)
-
-                # セルタイプ構造体にライフタイムアノテーションが必要かどうか <- 'static にするので、アノテーションは不要
-                # check_lifetime_annotation_for_celltype_structure は削除
-                first = true
-                callport_list.each{ |cport|
-                    if check_gen_dyn_for_port(cport) == nil then
-                        # entryport_name = camel_case(snake_case(cell.get_join_list.get_item(port.get_name).get_port_name.to_s))
-                        entryport_name = camel_case(snake_case(cport.get_real_callee_port.get_name.to_s))
-                        # call_celltype_name = camel_case(snake_case(cell.get_join_list.get_item(port.get_name).get_celltype.get_global_name.to_s))
-                        call_celltype_name = camel_case(snake_case(cport.get_real_callee_cell.get_celltype.get_global_name.to_s))
-                        if first then
-                            file.print "<#{entryport_name}For#{call_celltype_name}"
-                            first = false
-                        else
-                            file.print ", #{entryport_name}For#{call_celltype_name}"
-                        end
-                    end   
-                }
-                file.print ">" if first == false
+                if check_only_entryport_celltype(celltype) == false then
+                    # セルタイプ構造体にライフタイムアノテーションが必要かどうか <- 'static にするので、アノテーションは不要
+                    # check_lifetime_annotation_for_celltype_structure は削除
+                    first = true
+                    callport_list.each{ |cport|
+                        if check_gen_dyn_for_port(cport) == nil then
+                            # entryport_name = camel_case(snake_case(cell.get_join_list.get_item(port.get_name).get_port_name.to_s))
+                            entryport_name = camel_case(snake_case(cport.get_real_callee_port.get_name.to_s))
+                            # call_celltype_name = camel_case(snake_case(cell.get_join_list.get_item(port.get_name).get_celltype.get_global_name.to_s))
+                            call_celltype_name = camel_case(snake_case(cport.get_real_callee_cell.get_celltype.get_global_name.to_s))
+                            if first then
+                                file.print "<#{entryport_name}For#{call_celltype_name}"
+                                first = false
+                            else
+                                file.print ", #{entryport_name}For#{call_celltype_name}"
+                            end
+                        end   
+                    }
+                    file.print ">" if first == false
+                end
                 file.print ",\n"
                 file.print "}\n\n"
             end
@@ -1212,8 +1266,8 @@ class RustGenCelltypePlugin < CelltypePlugin
                 return false
             end
         }
-        celltype.get_var_list.each{ |var|
-            next if var.is_omit?
+        celltype.get_attribute_list.each{ |attr|
+            next if attr.is_omit?
             return false
         }
         if celltype.get_var_list.length != 0 then
@@ -1957,25 +2011,109 @@ class RustGenCelltypePlugin < CelltypePlugin
         # puts "src_file: #{src_file}"
 
         if File.exist?(src_file) && File.exist?(gen_file) then
-            src_line = File.readlines(src_file)
-            gen_line = File.readlines(gen_file)
+            src_text = File.read(src_file)
+            gen_text = File.read(gen_file)
 
-            # src のみに存在する行を取得
-            diff_src = src_line - gen_line
+            # use / mod の行単位差分を収集（トップレベル宣言のみ）
+            src_use_mod = File.readlines(src_file).select { |line| (s = line.strip) && (s.start_with?("use ") || s.start_with?("mod ")) }
+            gen_use_mod = File.readlines(gen_file).select { |line| (s = line.strip) && (s.start_with?("use ") || s.start_with?("mod ")) }
+            use_mod_diff = src_use_mod - gen_use_mod
 
-            # puts "diff_src: #{diff_src}"
+            enum_blocks = extract_enum_blocks(src_text)
+            # gen に存在しない enum ブロックのみ保持
+            enum_blocks.reject! { |blk| gen_text.include?(blk) }
 
-            # 既にハッシュの中に値がある場合は、差分を追加しない（一度の差分取得で十分）
+            puts "enum_blocks: #{enum_blocks}"
+
             if @@diff_src_and_gen[file_name].empty? then
-                @@diff_src_and_gen[file_name].concat(diff_src)
+                @@diff_src_and_gen[file_name].concat(use_mod_diff)
+                @@diff_src_and_gen[file_name].concat(enum_blocks)
             end
 
             # puts "diff_src_and_gen: #{@@diff_src_and_gen}"
         elsif File.exist?(src_file) && File.exist?(gen_file) == false then # Cargo を残したまま、make cleanするケース
-            src_line = File.readlines(src_file)
-            src_line = src_line.select { |line| line.strip.start_with?("mod ", "use ") }
-            @@diff_src_and_gen[file_name].concat(src_line)
+            # 生成物に対して保持したいトップレベル宣言（use/mod 行と enum ブロック）を抽出
+            src_use_mod = File.readlines(src_file).select { |line| (s = line.strip) && (s.start_with?("use ") || s.start_with?("mod ")) }
+            src_text = File.read(src_file)
+            enum_blocks = extract_enum_blocks(src_text)
+            @@diff_src_and_gen[file_name].concat(src_use_mod)
+            @@diff_src_and_gen[file_name].concat(enum_blocks)
         end
+    end
+
+    # Rust の enum（および pub enum）定義を、開始行（enum/pub enum）から
+    # 最初に対応が取れる閉じ波括弧 '}' までを一塊のテキストとして抽出する
+    def extract_enum_blocks(text)
+        lines = text.lines
+        blocks = []
+        i = 0
+        while i < lines.length
+            line = lines[i]
+            stripped = line.lstrip
+            if stripped.start_with?("enum ") || stripped.start_with?("pub enum ")
+                # ブロック開始を検出。ここから波括弧の対応を追う
+                start_idx = i
+                # 直前に連続する属性やドキュメントコメントを含める
+                k = i - 1
+                while k >= 0
+                    prev = lines[k].rstrip
+                    # 空行で打ち切り
+                    break if prev.strip.empty?
+                    prev_stripped = prev.lstrip
+                    if prev_stripped.start_with?("#") || prev_stripped.start_with?("///") || prev_stripped.start_with?("//!")
+                        start_idx = k
+                        k -= 1
+                        next
+                    end
+                    break
+                end
+
+                depth = 0
+                started = false
+                j = i
+                while j < lines.length
+                    cur = lines[j]
+                    cur_stripped = cur.lstrip
+                    # もし開き波括弧が見つかる前に別の enum 宣言が出現した場合、
+                    # 先頭の enum 行が不完全と判断して開始位置をリセットする
+                    if !started && (cur_stripped.start_with?("enum ") || cur_stripped.start_with?("pub enum "))
+                        start_idx = j
+                        # 直前の属性/ドキュメントを再収集
+                        kk = j - 1
+                        while kk >= 0
+                            prev2 = lines[kk].rstrip
+                            break if prev2.strip.empty?
+                            prev2s = prev2.lstrip
+                            if prev2s.start_with?("#") || prev2s.start_with?("///") || prev2s.start_with?("//!")
+                                start_idx = kk
+                                next
+                            end
+                            break
+                        end
+                    end
+                    # シンプルに { と } の数を数える（文字列/コメントは考慮しない前提）
+                    cur.each_char do |ch|
+                        if ch == '{'
+                            depth += 1
+                            started = true
+                        elsif ch == '}'
+                            depth -= 1 if depth > 0
+                        end
+                    end
+                    if started && depth == 0
+                        # ブロック終端
+                        block = lines[start_idx..j].join
+                        block << "\n" unless block.end_with?("\n")
+                        blocks << block
+                        i = j # 外側の while の次で +1 される
+                        break
+                    end
+                    j += 1
+                end
+            end
+            i += 1
+        end
+        blocks
     end
 
     # 差分を Cargo の新しい生成ファイルに追加するため、この関数は Cargo へのコピー後に呼び出す
@@ -2007,24 +2145,27 @@ class RustGenCelltypePlugin < CelltypePlugin
                 # 既に src ファイルに差分がある場合、追加しない
                 next if src_file.include?(diff)
 
-                # 差分が use か mod かを判定
+                # 差分が use / mod かを判定（enum はブロック想定）
                 # TODO: もう少し厳格な判定をしてもいいかもしれない
-                if diff.include?("use ") then
+                if diff.lstrip.start_with?("use ") then
                     # src ファイルの最後の use 文を取得
                     last_line = src_file.rindex(/^use\s+[\w:]+(\s*\*|);/)
-                elsif diff.include?("mod ") then
+                elsif diff.lstrip.start_with?("mod ") then
                     # src ファイルの最後の mod 文を取得
                     last_line = src_file.rindex(/^mod\s+[\w:]+(\s*\*|);/)
+                elsif diff.lstrip.start_with?("enum ") || diff.lstrip.start_with?("pub enum ") then
+                    # next させないための if
                 else
-                    # TODO: use と mod 以外の差分にも操作する場合は、ここに追加
+                    # TODO: use / mod 以外の差分にも操作する場合は、ここに追加
+                    # use / mod / enum 以外の場合は、追記しないため next
                     next
                 end
 
                 if last_line == nil then
-                    # src ファイルに use や mod がない場合、差分を先頭に追加
+                    # src ファイルに対象の宣言がない場合、差分を先頭に追加
                     src_file = "#{diff}\n#{src_file}"
                 else
-                    # src ファイルに use や mod がある場合、差分を挿入
+                    # src ファイルに対象の宣言がある場合、差分を挿入
                     insert_position = last_line + src_file[last_line..].index("\n") + 1
                     src_file.insert(insert_position, "#{diff}")
                 end
@@ -2049,6 +2190,11 @@ class RustGenCelltypePlugin < CelltypePlugin
         makefile.print( "RUST_PLUGIN_SRCS = \\\n" )
 
         makefile.print( "\t$(GEN_DIR)/../$(APPLNAME)/src/#{check_option_main_or_lib}.rs \\\n" )
+        makefile.print( "\t$(GEN_DIR)/../$(APPLNAME)/src/tecs_global.rs \\\n" )
+        makefile.print( "\t$(GEN_DIR)/../$(APPLNAME)/src/tecs_celltype.rs \\\n" )
+        makefile.print( "\t$(GEN_DIR)/../$(APPLNAME)/src/tecs_signature.rs \\\n" )
+        makefile.print( "\t$(GEN_DIR)/../$(APPLNAME)/src/tecs_impl.rs \\\n" )
+        makefile.print( "\t$(GEN_DIR)/../$(APPLNAME)/src/tecs_variable.rs \\\n" )
 
         gen_extra_rust_plugin_tecsgen_srcs_for_makefile makefile
 
@@ -2075,11 +2221,19 @@ class RustGenCelltypePlugin < CelltypePlugin
 
             # 未初期化の場合 0 で埋める
             if initializer.nil? then
-                file.print "[0; #{size}];\n"
+                if type == "f32" || type == "f64" then
+                    file.print "[0.0; #{size}];\n"
+                else
+                    file.print "[0; #{size}];\n"
+                end
             elsif initializer.is_a?(Array) then
                 # 初期化子の数が配列のサイズと異なる場合、0で埋める
                 if initializer.length != size then
-                    file.print "[0; #{size}];\n"
+                    if type == "f32" || type == "f64" then
+                        file.print "[0.0; #{size}];\n"
+                    else
+                        file.print "[0; #{size}];\n"
+                    end
                 else
                     file.print "["
                     initializer.each{ |item|
