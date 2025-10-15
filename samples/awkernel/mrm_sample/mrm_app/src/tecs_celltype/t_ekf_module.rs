@@ -102,8 +102,8 @@ static EKFMODULE: TEkfModule<EKalmanForTTimeDelayKalmanFilter, EStateForTStateTr
 	twist_gate_dist: 46.1,
 	twist_smoothing_steps: 2,
 	twist_additional_delay: 0.0,
-	initial_pose: PoseWithCovariance { pose: Pose { point: nalgebra::Vector3::new(1, 1, 1), orientation: nalgebra::Quaternion::new(1, 2, 3, 4), }, covariance: nalgebra::Matrix6::new( 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 ) };,
-	tf: Transform { translation: nalgebra::Vector3::new(1, 1, 1), rotation: nalgebra::Quaternion::new(1, 2, 3, 4), };,
+	initial_pose: PoseWithCovariance { pose: Pose { point: nalgebra::Vector3::new(1.0, 1.0, 1.0), orientation: nalgebra::Quaternion::new(1.0, 2.0, 3.0, 4.0), }, covariance: nalgebra::Matrix6::new( 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0) };,
+	tf: Transform { translation: nalgebra::Vector3::new(1.0, 1.0, 1.0), rotation: nalgebra::Quaternion::new(1.0, 2.0, 3.0, 4.0), };,
 	variable: &EKFMODULEVAR,
 };
 
@@ -112,7 +112,7 @@ static EKFMODULEVAR: TECSVariable<TEkfModuleVar> = TECSVariable::Mutexed(awkerne
 /// This UnsafeCell is accessed by multiple tasks, but is safe because it is operated exclusively by the mutex object.
 		accumulated_delay_times: unsafe{ &mut *core::ptr::addr_of_mut!(mut EKFMODULEVARARRAY1) },
 	ekf_dt: 0.0,
-	last_angular_velocity: Default::default(),
+	last_angular_velocity: nalgebra::Vector3::new(0.0, 0.0, 0.0),
 	z_filter: [0.0, 0.0],
 	roll_filter: [0.0, 0.0],
 	pitch_filter: [0.0, 0.0],
@@ -122,7 +122,7 @@ pub static EEKFMODULEFOREKFMODULE: EEkfModuleForTEkfModule = EEkfModuleForTEkfMo
 	cell: &EKFMODULE,
 };
 
-static mut EKFMODULEVARARRAY1: [f64; 50] = [0; 50];
+static mut EKFMODULEVARARRAY1: [f64; 50] = [0.0; 50];
 
 impl<T: STimeDelayKalmanFilter, U: SStateTransition, V: SMeasurement, W: SMahalanobis, X: SCovariance, Y: SUtilsGeometry> TEkfModule<T, U, V, W, X, Y> {
 	#[inline]

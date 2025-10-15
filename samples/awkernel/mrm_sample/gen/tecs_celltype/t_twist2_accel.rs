@@ -65,7 +65,7 @@ static TWIST2ACCEL: TTwist2Accel<EFilterForTLowpassFilter1D, EFilterForTLowpassF
 static TWIST2ACCELVAR: TECSVariable<TTwist2AccelVar> = TECSVariable::Mutexed(awkernel_lib::sync::mutex::Mutex::new(
 	TTwist2AccelVar {
 /// This UnsafeCell is accessed by multiple tasks, but is safe because it is operated exclusively by the mutex object.
-	prev_twist: Default::default(),
+	prev_twist: TwistStamped::const_init(),
 	}
 ));
 pub static EKINEMATICSTATEFORTWIST2ACCEL: EKinematicStateForTTwist2Accel = EKinematicStateForTTwist2Accel {

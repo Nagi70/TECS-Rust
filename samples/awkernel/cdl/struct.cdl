@@ -98,7 +98,7 @@ struct KinematicState {
 
 struct Transform {
     PLType("nalgebra::Vector3<f64>") translation;
-    PLType("nalgebra::Quaternion<f64>") rotatoin;
+    PLType("nalgebra::Quaternion<f64>") rotation;
 };
 
 /* Trajectory（autoware_planning_msgs/Trajectory の最小部分） */

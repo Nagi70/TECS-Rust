@@ -35,6 +35,10 @@ celltype tGyroOdometer {
     };
 
     var {
-        PLType("nalgebra::Matrix3<f64>") imu_covariance = PL_EXP("Default::default");
+        PLType("nalgebra::Matrix3<f64>") imu_covariance = PL_EXP("nalgebra::Matrix3::new("
+            "0.0, 0.0, 0.0,"
+            "0.0, 0.0, 0.0,"
+            "0.0, 0.0, 0.0)"
+        );
     };
 };

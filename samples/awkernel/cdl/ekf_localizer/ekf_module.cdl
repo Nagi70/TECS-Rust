@@ -56,10 +56,28 @@ celltype tEkfModule {
         double64_t  twist_additional_delay = 0.0;
 
         // 初期位置情報 (下記のtfをあらかじめ加味してもいい)
-        struct PoseWithCovariance initial_pose = PL_EXP("PoseWithCovariance { pose: Pose { point: nalgebra::Vector3::new(1, 1, 1), orientation: nalgebra::Quaternion::new(1, 2, 3, 4), }, covariance: nalgebra::Matrix6::new( 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 ) };");
+        struct PoseWithCovariance initial_pose = PL_EXP("PoseWithCovariance "
+            "{ "
+                "pose: Pose { "
+                    "point: nalgebra::Vector3::new(1.0, 1.0, 1.0), "
+                    "orientation: nalgebra::Quaternion::new(1.0, 2.0, 3.0, 4.0), }, "
+                    "covariance: nalgebra::Matrix6::new( "
+                    "1.0, 1.0, 1.0, 1.0, 1.0, 1.0, "
+                    "1.0, 1.0, 1.0, 1.0, 1.0, 1.0, "
+                    "1.0, 1.0, 1.0, 1.0, 1.0, 1.0, "
+                    "1.0, 1.0, 1.0, 1.0, 1.0, 1.0, "
+                    "1.0, 1.0, 1.0, 1.0, 1.0, 1.0, "
+                    "1.0, 1.0, 1.0, 1.0, 1.0, 1.0) "
+            "}"
+        );
 
         // mapへの変換tf (マップと初期位置が固定ならおそらくTFも固定)
-        struct Transform tf = PL_EXP("Transform { translation: nalgebra::Vector3::new(1, 1, 1), rotation: nalgebra::Quaternion::new(1, 2, 3, 4), };");
+        struct Transform tf = PL_EXP("Transform { "
+            "translation: "
+                "nalgebra::Vector3::new(1.0, 1.0, 1.0), "
+                "rotation: nalgebra::Quaternion::new(1.0, 2.0, 3.0, 4.0), "
+            "}"
+        );
     };
 
     var {
@@ -67,7 +85,9 @@ celltype tEkfModule {
         double64_t *accumulated_delay_times;
         double64_t ekf_dt = 0.0;
         /* DRでは角速度の履歴だけ最小保持（必要に応じて） */
-        PLType("nalgebra::Vector3<f64>") last_angular_velocity = PL_EXP("Default::default()");
+        PLType("nalgebra::Vector3<f64>") last_angular_velocity = PL_EXP("nalgebra::Vector3::new("
+            "0.0, 0.0, 0.0)"
+        );
         struct Simple1DFilter z_filter = {0.0, 0.0};
         struct Simple1DFilter roll_filter = {0.0, 0.0};
         struct Simple1DFilter pitch_filter = {0.0, 0.0};

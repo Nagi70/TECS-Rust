@@ -65,8 +65,8 @@ static IMUCORRECTOR: TImuCorrector<ETfForTTf> = TImuCorrector {
 static IMUCORRECTORVAR: TECSVariable<TImuCorrectorVar> = TECSVariable::Mutexed(awkernel_lib::sync::mutex::Mutex::new(
 	TImuCorrectorVar {
 /// This UnsafeCell is accessed by multiple tasks, but is safe because it is operated exclusively by the mutex object.
-	linear_acceleration_covariance: nalgebra::Matrix3::default(),
-	angular_velocity_covariance: nalgebra::Matrix3::default(),
+	linear_acceleration_covariance: nalgebra::Matrix3::new(0.0, 0.0, 0.0,0.0, 0.0, 0.0,0.0, 0.0, 0.0),
+	angular_velocity_covariance: nalgebra::Matrix3::new(0.0, 0.0, 0.0,0.0, 0.0, 0.0,0.0, 0.0, 0.0),
 	}
 ));
 pub static EIMURAWFORIMUCORRECTOR: EImuRawForTImuCorrector = EImuRawForTImuCorrector {

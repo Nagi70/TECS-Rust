@@ -139,7 +139,7 @@ extern "C" {
 
 /* CB initialize macro #_CIM_# */
 #define INITIALIZE_CB(p_that)\
-	(p_that)->x = Default::default();
+	(p_that)->x = None;
 #define SET_CB_INIB_POINTER(i,p_that)\
 	(p_that)->_inib = &tLowpassFilter1D_INIB_tab[(i)];
 

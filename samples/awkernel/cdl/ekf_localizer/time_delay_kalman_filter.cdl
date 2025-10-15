@@ -41,7 +41,7 @@ celltype tTimeDelayKalmanFilter {
     /* 変化する値（実行中に更新） */
     var {
         /* 拡張状態・拡張共分散（先頭が最新スロット） */
-        PLType("nalgebra::SMatrix<f64, 300, 1>") x = PL_EXP("Default::default()");
-        PLType("nalgebra::SMatrix<f64, 300, 300>") p = PL_EXP("Default::default()");
+        PLType("nalgebra::SMatrix<f64, 300, 1>") x = PL_EXP("nalgebra::SMatrix::from_row_slice(&[0.0; 300])");
+        PLType("nalgebra::SMatrix<f64, 300, 300>") p = PL_EXP("nalgebra::SMatrix::from_row_slice(&[0.0; 90000])");
     };
 };

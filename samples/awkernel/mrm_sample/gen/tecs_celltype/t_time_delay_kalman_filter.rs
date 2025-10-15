@@ -38,8 +38,8 @@ static TIMEDELAYKALMANFILTER: TTimeDelayKalmanFilter = TTimeDelayKalmanFilter {
 static TIMEDELAYKALMANFILTERVAR: TECSVariable<TTimeDelayKalmanFilterVar> = TECSVariable::Mutexed(awkernel_lib::sync::mutex::Mutex::new(
 	TTimeDelayKalmanFilterVar {
 /// This UnsafeCell is accessed by multiple tasks, but is safe because it is operated exclusively by the mutex object.
-	x: Default::default(),
-	p: Default::default(),
+	x: nalgebra::SMatrix::from_row_slice(&[0.0; 300]),
+	p: nalgebra::SMatrix::from_row_slice(&[0.0; 90000]),
 	}
 ));
 pub static EKALMANFORTIMEDELAYKALMANFILTER: EKalmanForTTimeDelayKalmanFilter = EKalmanForTTimeDelayKalmanFilter {

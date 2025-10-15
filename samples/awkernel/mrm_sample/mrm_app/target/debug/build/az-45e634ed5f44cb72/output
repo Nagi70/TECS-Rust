@@ -1,0 +1,6 @@
+$ mkdir -p "/home/yosshy/research/tecsgen-V1.9.0-Beta5/tecsgen/samples/awkernel/mrm_sample/mrm_app/target/debug/build/az-45e634ed5f44cb72/out/try_track_caller"
+$ cd "/home/yosshy/research/tecsgen-V1.9.0-Beta5/tecsgen/samples/awkernel/mrm_sample/mrm_app/target/debug/build/az-45e634ed5f44cb72/out/try_track_caller"
+$ printf '%s' "// try_tra"... > "/home/yosshy/research/tecsgen-V1.9.0-Beta5/tecsgen/samples/awkernel/mrm_sample/mrm_app/target/debug/build/az-45e634ed5f44cb72/out/try_track_caller/try_track_caller.rs"
+$ cd "/home/yosshy/research/tecsgen-V1.9.0-Beta5/tecsgen/samples/awkernel/mrm_sample/mrm_app/target/debug/build/az-45e634ed5f44cb72/out/try_track_caller" && "/home/yosshy/.rustup/toolchains/nightly-2025-05-22-x86_64-unknown-linux-gnu/bin/rustc" "try_track_caller.rs" "--emit=dep-info,metadata" >& /dev/null
+cargo:rustc-cfg=track_caller
+$ rm -r "/home/yosshy/research/tecsgen-V1.9.0-Beta5/tecsgen/samples/awkernel/mrm_sample/mrm_app/target/debug/build/az-45e634ed5f44cb72/out/try_track_caller"

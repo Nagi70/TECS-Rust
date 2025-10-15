@@ -47,7 +47,7 @@ static GYROODOMETER: TGyroOdometer<ETfForTTf> = TGyroOdometer {
 static GYROODOMETERVAR: TECSVariable<TGyroOdometerVar> = TECSVariable::Mutexed(awkernel_lib::sync::mutex::Mutex::new(
 	TGyroOdometerVar {
 /// This UnsafeCell is accessed by multiple tasks, but is safe because it is operated exclusively by the mutex object.
-	imu_covariance: Default::default,
+	imu_covariance: nalgebra::Matrix3::new(0.0, 0.0, 0.0,0.0, 0.0, 0.0,0.0, 0.0, 0.0),
 	}
 ));
 pub static ETWISTWITHCOVARIANCEVFORGYROODOMETER: ETwistWithCovarianceVForTGyroOdometer = ETwistWithCovarianceVForTGyroOdometer {

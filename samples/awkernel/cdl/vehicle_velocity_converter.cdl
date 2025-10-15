@@ -16,9 +16,9 @@ celltype tVehicleVelocityConverter {
     // 属性定義 (パラメータ)
     attr {
         PLType("&'static str") frame_id  = PL_EXP("\"base_link\"");
-        double64_t velocity_stddev_xx = 0.2;
-        double64_t angular_velocity_stddev_zz = 0.1;
-        double64_t speed_scale_factor = 1.0;
+        float32_t velocity_stddev_xx = 0.2;
+        float32_t angular_velocity_stddev_zz = 0.1;
+        float32_t speed_scale_factor = 1.0;
 
         // プラグインに指定するオプションがDAG_REACTOR_BODYの場合は、reactorName、schedType、subscribeTopicNames、publishTopicNamesの属性が必須
         [omit] PLType("Cow") reactorName  = PL_EXP("VehicleVelocityConverter");

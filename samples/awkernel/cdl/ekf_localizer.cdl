@@ -7,7 +7,7 @@ signature sEkfLocalizer {
 };
 
 signature sTwistWithCovarianceSet {
-    PLType("Result<(), ()>") push( [in] struct TwistWithCovarianceStamped twist );
+    PLType("core::result::Result<(), ()>") push( [in] struct TwistWithCovarianceStamped twist );
 };
 
 signature sTwistWithCovarianceGet {
@@ -15,7 +15,7 @@ signature sTwistWithCovarianceGet {
     PLType("Option<TwistWithCovarianceStamped>") popIncrementAge( void );
 };
 
-[generate(RustAWKPlugin, "SINK_REACTOR_BODY")]
+[generate(RustAWKPlugin, "DAG_SINK_REACTOR_BODY")]
 celltype tEkfLocalizer {
 
     call sTwistWithCovarianceSet cTwistWithCovarianceQueue;
@@ -52,19 +52,6 @@ celltype tTwistWithCovarianceAgedObjectQueue {
     };
 
     var {
-        // オブジェクトを保持する固定長配列
-        //[size_is(capacity)]
-        //struct TwistWithCovarianceStamped* objects = PL_EXP("Default::default()"); // capacityと同じサイズ
-
-        // ageを保持する固定長配列
-        //[size_is(capacity)]
-        //int32_t* ages = PL_EXP("Default::default()"); // capacityと同じサイズ
-
-        // リングバッファを管理するための追加の変数
-        //int32_t head = 0;     // 次にデータを取り出す位置（先頭）
-        //int32_t tail = 0;     // 次にデータを書き込む位置（末尾）
-        //int32_t count = 0;    // 現在の要素数
-
         PLType("heapless::spsc::Queue<(TwistWithCovarianceStamped, i32), 128>") queue = PL_EXP("heapless::spsc::Queue::new()");
     };
 };
@@ -98,7 +85,7 @@ celltype tEkfLocalizerTimer{
     };
 
     var {
-        double64_t ekf_dt = 0;
+        double64_t ekf_dt = 0.0;
         PLType("awkernel_lib::time::Time") last_predict_time = PL_EXP("awkernel_lib::time::Time::zero()");
     };
 };

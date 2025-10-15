@@ -41,7 +41,7 @@ celltype tTrajectoryFollower {
         double64_t acc_lim         = 2.0;
 
         // ここの初期化は考える必要がある
-        PLType("heapless::Vec<TrajectoryPoint, 10>") fix_points = PL_EXP("Default::default()");
+        PLType("heapless::Vec<TrajectoryPoint, 10>") fix_points = PL_EXP("heapless::Vec::new()");
 
         /* REACTOR_BODY で必須のメタ属性 */
         [omit] PLType("Cow") reactorName          = PL_EXP("TrajectoryFollower");

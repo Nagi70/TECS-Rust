@@ -16,13 +16,14 @@ signature sLowpass1d {
 // Celltype definitions
 // ------------------------------
 // 1D low-pass filter component corresponding to signal_processing::LowpassFilter1d
+[generate(RustAWKPlugin, "")]
 celltype tLowpassFilter1D {
     entry sLowpass1d eFilter;
     attr {
         double64_t gain = 0.9; // accel_lowpass_gain parameter
     };
     var {
-        PLType("Option<f64>") x = PL_EXP("Default::default()");
+        PLType("Option<f64>") x = PL_EXP("None");
     };
 };
 
@@ -53,6 +54,6 @@ celltype tTwist2Accel {
 
     var {
         // Previous twist for finite difference; None before first message
-        struct TwistStamped prev_twist = PL_EXP("Default::default()");
+        struct TwistStamped prev_twist = PL_EXP("TwistStamped::const_init()");
     };
 };

@@ -65,7 +65,7 @@ static TRAJECTORYFOLLOWER: TTrajectoryFollower<EUtilsForTUtilsTrajectory, EUtils
 	steer_lim: 0.6,
 	kp_longitudinal: 0.5,
 	acc_lim: 2.0,
-	fix_points: Default::default(),
+	fix_points: heapless::Vec::new(),
 };
 
 pub static EKINEMATICSTATESFFORTRAJECTORYFOLLOWER: EKinematicStateSfForTTrajectoryFollower = EKinematicStateSfForTTrajectoryFollower {
