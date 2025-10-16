@@ -1,12 +1,13 @@
+use crate::tecs_global::*;
 pub struct TDummy{
 }
 
-pub struct EReactorForTDummy<'a>{
-	pub cell: &'a TDummy,
+pub struct EReactorForTDummy {
+	pub cell: &'static TDummy,
 }
 
-pub struct EIntForTDummy<'a>{
-	pub cell: &'a TDummy,
+pub struct EIntForTDummy {
+	pub cell: &'static TDummy,
 }
 
 static DUMMY: TDummy = TDummy {

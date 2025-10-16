@@ -1,4 +1,4 @@
 use crate::tecs_global::*;
 pub trait SDummy {
-	fn main(&'static self, value: &i32);
+	fn main(&self, value: &i32);
 }

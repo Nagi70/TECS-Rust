@@ -30,7 +30,7 @@ celltype tDagPeriodicReactor {
     attr{
         [omit] Cow name = PL_EXP("task_id");
         [omit] Cow publishTopicNames = PL_EXP("Topic1, Topic2");
-        [omit] SchedulerType schedType = PL_EXP("SchedulerType::FIFO");
+        [omit] SchedulerType schedType = PL_EXP("SchedulerType::PrioritizedFIFO(7)");
         [omit] RType("Duration") period = PL_EXP("Duration::from_sec(1)");
     };
 };
@@ -51,7 +51,7 @@ celltype tDagReactor {
         [omit] Cow name = PL_EXP("task_id");
         [omit] Cow subscribeTopicNames = PL_EXP("Topic1, Topic2");
         [omit] Cow publishTopicNames = PL_EXP("Topic3, Topic4");
-        [omit] SchedulerType schedType = PL_EXP("SchedulerType::FIFO");
+        [omit] SchedulerType schedType = PL_EXP("SchedulerType::PrioritizedFIFO(7)");
     };
 };
 //*** ***//
@@ -70,7 +70,7 @@ celltype tDagSinkReactor {
     attr{
         [omit] Cow name = PL_EXP("task_id");
         [omit] Cow subscribeTopicNames = PL_EXP("Topic3, Topic4");
-        [omit] SchedulerType schedType = PL_EXP("SchedulerType::FIFO");
+        [omit] SchedulerType schedType = PL_EXP("SchedulerType::PrioritizedFIFO(7)");
         [omit] Duration relative_deadline = PL_EXP("Duration::from_sec(1)");
     };
 };

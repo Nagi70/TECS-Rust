@@ -1,24 +1,25 @@
+use crate::tecs_global::*;
 use crate::tecs_signature::{s_array::*, s_int::*};
 
 use crate::tecs_celltype::{t_array::*, t_dummy::*};
 
-pub struct TArrayTest<'a, T, U>
+pub struct TArrayTest<T, U>
 where
-	T: SArray,
-	U: SArray,
+	T: SArray + 'static,
+	U: SArray + 'static,
 {
-	c_array1: &'a T,
-	c_array2: &'a U,
+	c_array1: &'static T,
+	c_array2: &'static U,
 }
 
-pub struct EReactorForTArrayTest<'a>{
-	pub cell: &'a TArrayTest<'a, EArrayForTArray<'a>, EArrayForTArray<'a>>,
+pub struct EReactorForTArrayTest {
+	pub cell: &'static TArrayTest<EArrayForTArray, EArrayForTArray>,
 }
 
 pub struct LockGuardForTArrayTest<'a, T, U>
 where
-	T: SArray,
-	U: SArray,
+	T: SArray + 'static,
+	U: SArray + 'static,
 {
 	pub c_array1: &'a T,
 	pub c_array2: &'a U,
@@ -33,9 +34,9 @@ pub static EREACTORFORARRAYTEST: EReactorForTArrayTest = EReactorForTArrayTest {
 	cell: &ARRAYTEST,
 };
 
-impl<'a, T: SArray, U: SArray> TArrayTest<'a, T, U> {
+impl<T: SArray, U: SArray> TArrayTest<T, U> {
 	#[inline]
-	pub fn get_cell_ref(&'a self) -> LockGuardForTArrayTest<'_, T, U>	{
+	pub fn get_cell_ref(&'static self) -> LockGuardForTArrayTest<T, U> {
 		LockGuardForTArrayTest {
 			c_array1: self.c_array1,
 			c_array2: self.c_array2,

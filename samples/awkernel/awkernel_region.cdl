@@ -19,7 +19,7 @@ celltype tPeriodicReactor {
     
     attr{
         [omit] Cow name = C_EXP("task_id");
-        [omit] SchedulerType schedType = C_EXP("SchedulerType::FIFO");
+        [omit] SchedulerType schedType = C_EXP("SchedulerType::PrioritizedFIFO(7)");
         [omit] Duration period = C_EXP("Duration::from_sec(1)")
     };
 };
@@ -38,7 +38,7 @@ celltype tReactor {
     
     attr{
         [omit] Cow name = C_EXP("task_id");
-        [omit] SchedulerType schedType = C_EXP("SchedulerType::FIFO");
+        [omit] SchedulerType schedType = C_EXP("SchedulerType::PrioritizedFIFO(7)");
     };
 };
 //*** ***//
@@ -56,7 +56,7 @@ celltype tSinkReactor {
     
     attr{
         [omit] Cow name = C_EXP("task_id");
-        [omit] SchedulerType schedType = C_EXP("SchedulerType::FIFO");
+        [omit] SchedulerType schedType = C_EXP("SchedulerType::PrioritizedFIFO(7)");
         [omit] Duration relative_deadline = C_EXP("Duration::from_sec(1)");
     };
 };

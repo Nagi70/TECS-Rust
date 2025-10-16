@@ -1,15 +1,16 @@
+use crate::tecs_global::*;
 use crate::tecs_signature::s_dummy::*;
 use crate::tecs_celltype::t_dummy::*;
-pub struct TDummyDagSinkReactor<'a, T>
+pub struct TDummyDagSinkReactor<T>
 where
-	T: SDummy,
+	T: SDummy + 'static,
 {
-	pub c_dag_sink_reactor: &'a T,
+	pub c_dag_sink_reactor: &'static T,
 }
 
 pub struct LockGuardForTDummyDagSinkReactor<'a, T>
 where
-	T: SDummy,
+	T: SDummy + 'static,
 {
 	pub c_dag_sink_reactor: &'a T,
 }

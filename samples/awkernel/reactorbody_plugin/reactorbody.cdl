@@ -28,7 +28,7 @@ celltype tDummyImubody{
     
 	  attr{
 	    [omit] PLType("Cow") reactorName  = PL_EXP("DummyImu");
-	    [omit] PLType("SchedulerType") schedType = PL_EXP("SchedulerType::FIFO");
+	    [omit] PLType("SchedulerType") schedType = PL_EXP("SchedulerType::PrioritizedFIFO(7)");
 	    [omit] PLType("Duration") period = PL_EXP("Duration::from_millis(50)");
 	      
         [omit] PLType("Cow") publishTopicNames = PL_EXP("Imu");
@@ -49,7 +49,7 @@ celltype tImuDriverbody {
     /* ユーザがリアクターAPIに必要な情報を属性として用意し、初期値として与える */
 	  attr{
 	    [omit] PLType("Cow") reactorName  = PL_EXP("ImuDriver");
-	    [omit] PLType("SchedulerType") schedType = PL_EXP("SchedulerType::FIFO");
+	    [omit] PLType("SchedulerType") schedType = PL_EXP("SchedulerType::PrioritizedFIFO(7)");
 	      
         [omit] PLType("Cow") subscribeTopicNames = PL_EXP("Imu");
         [omit] PLType("Cow") publishTopicNames = PL_EXP("ImuRaw");
@@ -64,7 +64,7 @@ celltype tDummyImuCorrectorbody{
     
 	  attr{
 	    [omit] PLType("Cow") reactorName  = PL_EXP("DummyImuCorrector");
-	    [omit] PLType("SchedulerType") schedType = PL_EXP("SchedulerType::FIFO");
+	    [omit] PLType("SchedulerType") schedType = PL_EXP("SchedulerType::PrioritizedFIFO(7)");
 	    [omit] PLType("Duration") relativeDeadline = PL_EXP("Duration::from_secs(1)");
 	      
         [omit] PLType("Cow") subscribeTopicNames = PL_EXP("ImuRaw");
