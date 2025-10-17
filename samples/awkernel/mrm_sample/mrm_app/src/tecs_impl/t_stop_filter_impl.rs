@@ -4,7 +4,7 @@ use crate::tecs_signature::{s_kinematic_state::*, s_stop_filter::*};
 use awkernel_lib::sync::mutex::MCSNode;
 impl SKinematicState for EKinematicStateForTStopFilter{
 
-	fn send(&'static self, kinematic_state: &KinematicState) {
+	fn send(&self, kinematic_state: &KinematicState) {
 		let mut lg = self.cell.get_cell_ref();
 
 	}
@@ -12,7 +12,7 @@ impl SKinematicState for EKinematicStateForTStopFilter{
 
 impl SStopFilter for EReactorForTStopFilter{
 
-	fn main(&'static self, odom_in: &KinematicState, odom_out: &mut KinematicState) {
+	fn main(&self, odom_in: &KinematicState, odom_out: &mut KinematicState) {
 		let mut lg = self.cell.get_cell_ref();
 
         // 停止判定: |vx| < vx_threshold かつ |wz| < wz_threshold

@@ -43,6 +43,7 @@ celltype tTwistWithCovarianceAgedObjectQueue {
 
     attr {
         double64_t threshold_observable_velocity_mps = 0.1;
+        int32_t max_age = 10;
     };
 
     var {

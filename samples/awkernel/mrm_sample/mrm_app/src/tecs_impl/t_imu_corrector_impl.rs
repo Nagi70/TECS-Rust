@@ -4,7 +4,7 @@ use crate::tecs_signature::{s_imu_data::*, s_imu_raw::*, s_imu_corrector::*, s_t
 use awkernel_lib::sync::mutex::MCSNode;
 impl SImuRaw for EImuRawForTImuCorrector{
 
-	fn send(&'static self, imu_raw: &ImuMsg) {
+	fn send(&self, imu_raw: &ImuMsg) {
 		let mut node = MCSNode::new();
 		let mut lg = self.cell.get_cell_ref(&mut node);
 
@@ -13,7 +13,7 @@ impl SImuRaw for EImuRawForTImuCorrector{
 
 impl SImuCorrector for EReactorForTImuCorrector{
 
-	fn main(&'static self, imu_raw: &ImuMsg, imu_data: &mut ImuMsg) {
+	fn main(&self, imu_raw: &ImuMsg, imu_data: &mut ImuMsg) {
 		let mut node = MCSNode::new();
 		let mut lg = self.cell.get_cell_ref(&mut node);
 

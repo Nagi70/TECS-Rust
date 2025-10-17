@@ -21,5 +21,6 @@ celltype tDummyPeriodicReactorInMrm{
 
     var {
         int32_t i = 0;
+        double64_t j = 0.0;
     };
 };

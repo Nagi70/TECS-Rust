@@ -4,7 +4,7 @@ use crate::tecs_signature::{s_kinematic_state::*, s_ekf_module::*, s_twist_with_
 use awkernel_lib::sync::mutex::MCSNode;
 impl SEkfLocalizerTimer for EReactorForTEkfLocalizerTimer{
 
-	fn main(&'static self, kinematic_state: &mut KinematicState) {
+	fn main(&self, kinematic_state: &mut KinematicState) {
 		let mut node = MCSNode::new();
 		let mut lg = self.cell.get_cell_ref(&mut node);
 		// 現在時刻取得

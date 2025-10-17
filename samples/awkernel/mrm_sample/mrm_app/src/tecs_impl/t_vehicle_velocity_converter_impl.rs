@@ -4,7 +4,7 @@ use crate::tecs_signature::{s_twist_with_covariance_stamped::*, s_velocity_statu
 use awkernel_lib::sync::mutex::MCSNode;
 impl SVelocityStatus for EVelocityStatusForTVehicleVelocityConverter{
 
-	fn send(&'static self, velocity_status: &VelocityReport) {
+	fn send(&self, velocity_status: &VelocityReport) {
 		let mut lg = self.cell.get_cell_ref();
 
 	}
@@ -12,7 +12,7 @@ impl SVelocityStatus for EVelocityStatusForTVehicleVelocityConverter{
 
 impl SVehicleVelocityConverter for EReactorForTVehicleVelocityConverter{
 
-	fn main(&'static self, velocity_status: &VelocityReport, twist_with_covariance: &mut TwistWithCovarianceStamped) {
+	fn main(&self, velocity_status: &VelocityReport, twist_with_covariance: &mut TwistWithCovarianceStamped) {
 		let mut lg = self.cell.get_cell_ref();
 
 		if velocity_status.header.frame_id != *lg.frame_id {

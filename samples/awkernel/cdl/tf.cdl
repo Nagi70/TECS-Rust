@@ -8,8 +8,8 @@ celltype tTf {
     entry sTf eTf;
     attr {
         // tf の値 (imu->base)
-        PLType("nalgebra::Quaternion<f64>") transform = PL_EXP("nalgebra::Quaternion::new("
-            "0.0, 0.0, 0.0, 0.0)"
+        PLType("nalgebra::Unit<nalgebra::Quaternion<f64>>") transform = PL_EXP("nalgebra::Unit::new_unchecked(nalgebra::Quaternion::new("
+            "0.0, 0.0, 0.0, 0.0))"
         );
     };
 };

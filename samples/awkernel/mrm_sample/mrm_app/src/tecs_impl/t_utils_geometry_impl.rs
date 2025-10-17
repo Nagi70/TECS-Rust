@@ -4,7 +4,7 @@ use crate::tecs_signature::s_utils_geometry::*;
 use awkernel_lib::sync::mutex::MCSNode;
 impl SUtilsGeometry for EUtilsForTUtilsGeometry{
 
-	fn get_rpy(&'static self, quat: &nalgebra::Quaternion<f64>) -> nalgebra::Vector3<f64>{
+	fn get_rpy(&self, quat: &nalgebra::Quaternion<f64>) -> nalgebra::Vector3<f64> {
 		// Exactly mirror tf2::Matrix3x3(q).getEulerYPR (ZYX / fixed-axes RPY) including gimbal lock handling
 		let (mut w, mut x, mut y, mut z) = (quat.w, quat.i, quat.j, quat.k);
 		// Normalize quaternion to unit length
@@ -42,7 +42,7 @@ impl SUtilsGeometry for EUtilsForTUtilsGeometry{
 		let yaw = libm::atan2(r21 / c, r11 / c);
 		nalgebra::Vector3::new(roll, pitch, yaw)
 	}
-	fn create_quaternion_from_rpy(&'static self, roll: &f64, pitch: &f64, yaw: &f64) -> nalgebra::Quaternion<f64>{
+	fn create_quaternion_from_rpy(&self, roll: &f64, pitch: &f64, yaw: &f64) -> nalgebra::Quaternion<f64> {
 		// Create quaternion from roll-pitch-yaw (ZYX), matching tf2::Quaternion::setRPY
 		let (hr, hp, hy) = (0.5 * *roll, 0.5 * *pitch, 0.5 * *yaw);
 		let (cr, sr) = (libm::cos(hr), libm::sin(hr));

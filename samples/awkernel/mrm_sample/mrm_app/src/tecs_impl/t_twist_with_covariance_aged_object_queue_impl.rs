@@ -4,7 +4,7 @@ use crate::tecs_signature::{s_twist_with_covariance_set::*, s_twist_with_covaria
 use awkernel_lib::sync::mutex::MCSNode;
 impl STwistWithCovarianceSet for ESetForTTwistWithCovarianceAgedObjectQueue{
 
-	fn push(&'static self, twist: &TwistWithCovarianceStamped) -> core::result::Result<(), ()> {
+	fn push(&self, twist: &TwistWithCovarianceStamped) -> core::result::Result<(), ()> {
 		let mut node = MCSNode::new();
 		let mut lg = self.cell.get_cell_ref(&mut node);
 
@@ -20,14 +20,14 @@ impl STwistWithCovarianceSet for ESetForTTwistWithCovarianceAgedObjectQueue{
 
 impl STwistWithCovarianceGet for EGetForTTwistWithCovarianceAgedObjectQueue{
 
-	fn pop(&'static self) -> Option<TwistWithCovarianceStamped>{
+	fn pop(&self) -> Option<TwistWithCovarianceStamped> {
 		let mut node = MCSNode::new();
 		let mut lg = self.cell.get_cell_ref(&mut node);
 
 		// C++のAgedObjectQueue::pop()に相当: 先頭を取り出して返す（再キューなし）
 		lg.var.queue.dequeue().map(|(twist, _age)| twist)
 	}
-	fn pop_increment_age(&'static self) -> Option<TwistWithCovarianceStamped>{
+	fn pop_increment_age(&self) -> Option<TwistWithCovarianceStamped> {
 		let mut node = MCSNode::new();
 		let mut lg = self.cell.get_cell_ref(&mut node);
 

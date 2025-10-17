@@ -4,7 +4,7 @@ use crate::tecs_signature::s_lowpass1d::*;
 use awkernel_lib::sync::mutex::MCSNode;
 impl SLowpass1d for EFilterForTLowpassFilter1D{
 
-	fn filter(&'static self, value: &f64, filtered: &mut f64) {
+	fn filter(&self, value: &f64, filtered: &mut f64) {
 		let mut node = MCSNode::new();
 		let mut lg = self.cell.get_cell_ref(&mut node);
 

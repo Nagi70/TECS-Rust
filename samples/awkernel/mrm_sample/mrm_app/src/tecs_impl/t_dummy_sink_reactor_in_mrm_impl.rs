@@ -4,14 +4,14 @@ use crate::tecs_signature::{s_control::*, s_dummy_sink_reactor_in_mrm::*};
 use awkernel_lib::sync::mutex::MCSNode;
 impl SControl for EControlForTDummySinkReactorInMrm{
 
-	fn send(&'static self, control: &Control) {
+	fn send(&self, control: &Control) {
 
 	}
 }
 
 impl SDummySinkReactorInMrm for EReactorForTDummySinkReactorInMrm{
 
-	fn main(&'static self, control: &Control) {
+	fn main(&self, control: &Control) {
 
 	}
 }

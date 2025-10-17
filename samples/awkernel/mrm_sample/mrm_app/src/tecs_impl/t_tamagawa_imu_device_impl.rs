@@ -4,7 +4,7 @@ use crate::tecs_signature::s_imu_device::*;
 use awkernel_lib::sync::mutex::MCSNode;
 impl SImuDevice for EImuDeviceForTTamagawaImuDevice{
 
-	fn read(&'static self, msg: &Frame, imu_msg: &mut ImuMsg) {
+	fn read(&self, msg: &Frame, imu_msg: &mut ImuMsg) {
 		let mut node = MCSNode::new();
 		let mut lg = self.cell.get_cell_ref(&mut node);
 		

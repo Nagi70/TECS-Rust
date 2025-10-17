@@ -4,7 +4,7 @@ use crate::tecs_signature::s_tf::*;
 use awkernel_lib::sync::mutex::MCSNode;
 impl STf for ETfForTTf{
 
-	fn transform_covariance(&'static self, cov: &nalgebra::Matrix3<f64>) -> nalgebra::Matrix3<f64>{
+	fn transform_covariance(&self, cov: &nalgebra::Matrix3<f64>) -> nalgebra::Matrix3<f64> {
 		let mut lg = self.cell.get_cell_ref();
 
 		// 対角成分から最大値を見つける
@@ -20,10 +20,10 @@ impl STf for ETfForTTf{
         
         cov_transformed
 	}
-	fn transform_vector3(&'static self, vec: &nalgebra::Vector3<f64>) -> nalgebra::Vector3<f64> {
+	fn transform_vector3(&self, vec: &nalgebra::Vector3<f64>) -> nalgebra::Vector3<f64> {
 		let mut lg = self.cell.get_cell_ref();
 
-		lg.transform * *vec
+		*lg.transform * *vec
 	}
 }
 

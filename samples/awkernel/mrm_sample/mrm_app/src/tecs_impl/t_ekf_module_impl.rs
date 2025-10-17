@@ -4,7 +4,7 @@ use crate::tecs_signature::{s_time_delay_kalman_filter::*, s_state_transition::*
 use awkernel_lib::sync::mutex::MCSNode;
 impl SEkfModule for EEkfModuleForTEkfModule{
 
-	fn init(&'static self) {
+	fn init(&self) {
 		let mut node = MCSNode::new();
 		let mut lg = self.cell.get_cell_ref(&mut node);
 
@@ -57,7 +57,7 @@ impl SEkfModule for EEkfModuleForTEkfModule{
 		lg.var.last_angular_velocity = nalgebra::Vector3::new(0.0, 0.0, 0.0);
 	}
 
-	fn accumulate_delay_time(&'static self, dt: &f64) {
+	fn accumulate_delay_time(&self, dt: &f64) {
 		let mut node = MCSNode::new();
 		let mut lg = self.cell.get_cell_ref(&mut node);
 
@@ -68,7 +68,7 @@ impl SEkfModule for EEkfModuleForTEkfModule{
 		for i in 1..n { lg.var.accumulated_delay_times[i] += *dt; }
 	}
 
-	fn find_closest_delay_time_index(&'static self, target_value: &f64) -> i32{
+	fn find_closest_delay_time_index(&self, target_value: &f64) -> i32 {
 		let mut node = MCSNode::new();
 		let mut lg = self.cell.get_cell_ref(&mut node);
 
@@ -99,7 +99,7 @@ impl SEkfModule for EEkfModuleForTEkfModule{
 		(if closer_to_prev { prev } else { lower }) as i32
 	}
 
-	fn predict_with_delay(&'static self, dt: &f64) {
+	fn predict_with_delay(&self, dt: &f64) {
 		let mut node = MCSNode::new();
 		let mut lg = self.cell.get_cell_ref(&mut node);
 		let x_curr = lg.c_kalman.get_latest_x();
@@ -113,7 +113,7 @@ impl SEkfModule for EEkfModuleForTEkfModule{
 		lg.var.ekf_dt = *dt;
 	}
 
-	fn measurement_update_twist(&'static self, twist: &TwistWithCovarianceStamped, current_time: &awkernel_lib::time::Time) -> Result<(), EkfModuleError>{
+	fn measurement_update_twist(&self, twist: &TwistWithCovarianceStamped, current_time: &awkernel_lib::time::Time) -> Result<(), EkfModuleError> {
 		let mut node = MCSNode::new();
 		let mut lg = self.cell.get_cell_ref(&mut node);
 
@@ -142,7 +142,10 @@ impl SEkfModule for EEkfModuleForTEkfModule{
 		}
 
 		let p_curr = lg.c_kalman.get_latest_p();
-		let p_y = p_curr.slice((IDX_VX as usize, IDX_VX as usize), (2, 2)).into_owned();
+		// Avoid dynamic allocation: build a fixed-size 2x2 matrix from the relevant block of P
+		let p_y = nalgebra::Matrix2::<f64>::from_fn(|r, c| {
+			p_curr[(IDX_VX as usize + r, IDX_VX as usize + c)]
+		});
 		let y_ekf = nalgebra::Vector2::<f64>::new(
 			lg.c_kalman.get_xelement(&((delay_step as u32) * (*lg.dim_x as u32) + IDX_VX)),
 			lg.c_kalman.get_xelement(&((delay_step as u32) * (*lg.dim_x as u32) + IDX_WZ)),
@@ -162,7 +165,7 @@ impl SEkfModule for EEkfModuleForTEkfModule{
 		);
 		Ok(())
 	}
-	fn get_current_twist(&'static self, current_time: &awkernel_lib::time::Time, twist: &mut TwistWithCovarianceStamped) {
+	fn get_current_twist(&self, current_time: &awkernel_lib::time::Time, twist: &mut TwistWithCovarianceStamped) {
 		let mut node = MCSNode::new();
 		let mut lg = self.cell.get_cell_ref(&mut node);
 
@@ -176,7 +179,7 @@ impl SEkfModule for EEkfModuleForTEkfModule{
 		twist.twist.twist.angular.z = wz;
 	}
 
-	fn get_current_pose(&'static self, current_time: &awkernel_lib::time::Time, get_biased_yaw: &bool, pose: &mut PoseWithCovarianceStamped) {
+	fn get_current_pose(&self, current_time: &awkernel_lib::time::Time, get_biased_yaw: &bool, pose: &mut PoseWithCovarianceStamped) {
 		let mut node = MCSNode::new();
 		let mut lg = self.cell.get_cell_ref(&mut node);
 
@@ -204,14 +207,14 @@ impl SEkfModule for EEkfModuleForTEkfModule{
 		pose.pose.pose.orientation = q;
 	}
 
-	fn get_current_twist_covariance(&'static self, cov: &mut nalgebra::Matrix6<f64>) {
+	fn get_current_twist_covariance(&self, cov: &mut nalgebra::Matrix6<f64>) {
 		let mut node = MCSNode::new();
 		let mut lg = self.cell.get_cell_ref(&mut node);
 
 		let p = lg.c_kalman.get_latest_p();
 		*cov = lg.c_cov.ekf_covariance_to_twist_message_covariance(&p);
 	}
-	fn get_current_pose_covariance(&'static self, cov: &mut nalgebra::Matrix6<f64>) {
+	fn get_current_pose_covariance(&self, cov: &mut nalgebra::Matrix6<f64>) {
 		let mut node = MCSNode::new();
 		let mut lg = self.cell.get_cell_ref(&mut node);
 

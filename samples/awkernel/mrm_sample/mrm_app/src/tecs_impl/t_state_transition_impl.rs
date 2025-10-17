@@ -4,10 +4,10 @@ use crate::tecs_signature::s_state_transition::*;
 use awkernel_lib::sync::mutex::MCSNode;
 impl SStateTransition for EStateForTStateTransition{
 
-	fn normalize_yaw(&'static self, yaw: &f64) -> f64{
+	fn normalize_yaw(&self, yaw: &f64) -> f64 {
 		libm::atan2(libm::sin(*yaw), libm::cos(*yaw))
 	}
-	fn predict_next_state(&'static self, x_curr: &nalgebra::Matrix6x1<f64>, dt: &f64) -> nalgebra::Vector6<f64>{
+	fn predict_next_state(&self, x_curr: &nalgebra::Matrix6x1<f64>, dt: &f64) -> nalgebra::Vector6<f64> {
 		let x = x_curr[(IDX_X as usize, 0)];
 		let y = x_curr[(IDX_Y as usize, 0)];
 		let yaw = x_curr[(IDX_YAW as usize, 0)];
@@ -25,7 +25,7 @@ impl SStateTransition for EStateForTStateTransition{
 		x_next[(IDX_WZ as usize, 0)] = wz;
 		x_next
 	}
-	fn create_state_transition_matrix(&'static self, x_curr: &nalgebra::Matrix6x1<f64>, dt: &f64) -> nalgebra::Matrix6<f64>{
+	fn create_state_transition_matrix(&self, x_curr: &nalgebra::Matrix6x1<f64>, dt: &f64) -> nalgebra::Matrix6<f64> {
 		let yaw = x_curr[(IDX_YAW as usize, 0)];
 		let yaw_bias = x_curr[(IDX_YAWB as usize, 0)];
 		let vx = x_curr[(IDX_VX as usize, 0)];
@@ -41,7 +41,7 @@ impl SStateTransition for EStateForTStateTransition{
 		a[(IDX_YAW as usize, IDX_WZ as usize)] = *dt;
 		a
 	}
-	fn process_noise_covariance(&'static self, proc_cov_yaw_d: &f64, proc_cov_vx_d: &f64, proc_cov_wz_d: &f64) -> nalgebra::Matrix6<f64>{
+	fn process_noise_covariance(&self, proc_cov_yaw_d: &f64, proc_cov_vx_d: &f64, proc_cov_wz_d: &f64) -> nalgebra::Matrix6<f64> {
 		let mut q = nalgebra::Matrix6::<f64>::zeros();
 		q[(IDX_X as usize, IDX_X as usize)] = 0.0;
 		q[(IDX_Y as usize, IDX_Y as usize)] = 0.0;

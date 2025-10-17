@@ -4,7 +4,7 @@ use crate::tecs_signature::{s_imu_driver::*, s_imu_raw::*, s_imu::*, s_imu_devic
 use awkernel_lib::sync::mutex::MCSNode;
 impl SImuDriver for EReactorForTImuDriver{
 
-	fn main(&'static self, imu: &Frame, imu_raw: &mut ImuMsg) {
+	fn main(&self, imu: &Frame, imu_raw: &mut ImuMsg) {
 		let mut lg = self.cell.get_cell_ref();
 		lg.c_dev.read(imu, imu_raw);
 	}
@@ -12,7 +12,7 @@ impl SImuDriver for EReactorForTImuDriver{
 
 impl SImu for EImuForTImuDriver{
 
-	fn send(&'static self, imu: &Frame) {
+	fn send(&self, imu: &Frame) {
 		let mut lg = self.cell.get_cell_ref();
 
 	}

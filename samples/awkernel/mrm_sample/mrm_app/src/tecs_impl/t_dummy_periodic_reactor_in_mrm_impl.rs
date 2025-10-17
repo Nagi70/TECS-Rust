@@ -4,7 +4,7 @@ use crate::tecs_signature::{s_imu::*, s_velocity_status::*, s_dummy_periodic_rea
 use awkernel_lib::sync::mutex::MCSNode;
 impl SDummyPeriodicReactorInMrm for EReactorForTDummyPeriodicReactorInMrm{
 
-	fn main(&'static self, imu: &mut Frame, velocity_status: &mut VelocityReport) {
+	fn main(&self, imu: &mut Frame, velocity_status: &mut VelocityReport) {
 		let mut node = MCSNode::new();
 		let mut lg = self.cell.get_cell_ref(&mut node);
 
@@ -32,10 +32,13 @@ impl SDummyPeriodicReactorInMrm for EReactorForTDummyPeriodicReactorInMrm{
 
 		imu.header.time_stamp = awkernel_lib::time::Time::now();
 
-		velocity_status.header.frame_id = heapless::String::from("base_link").unwrapped_as();
-		velocity_status.longitudinal_velocity = lg.var.i;
-		velocity_status.lateral_velocity = (lg.var.i.into()) * 2.0;
-		velocity_status.heading_rate = (lg.var.i.into()) * 3.0;
+		velocity_status.header.frame_id.clear();
+		let _ = velocity_status.header.frame_id.push_str("base_link");
+		velocity_status.longitudinal_velocity = lg.var.j;
+		velocity_status.lateral_velocity = lg.var.j * 2.0;
+		velocity_status.heading_rate = lg.var.j * 3.0;
+
+		lg.var.j += 0.1;
 
 		velocity_status.header.time_stamp = awkernel_lib::time::Time::now();
 	}

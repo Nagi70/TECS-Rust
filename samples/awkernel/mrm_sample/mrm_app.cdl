@@ -31,7 +31,7 @@ cell tImuCorrector ImuCorrector {
 };
 
 cell tTf ImuCorrectorTf {
-    transform = PL_EXP("nalgebra::Quaternion::new(1.0, 2.0, 1.0, 2.0)");
+    transform = PL_EXP("nalgebra::Unit::new_unchecked(nalgebra::Quaternion::new(1.0, 2.0, 1.0, 2.0))");
 };
 
 cell tVehicleVelocityConverter VehicleVelocityConverter {
@@ -44,7 +44,7 @@ cell tGyroOdometer GyroOdometer {
 };
 
 cell tTf GyroOdometerTf {
-    transform = PL_EXP("nalgebra::Quaternion::new(2.0, 1.0, 2.0, 1.0)");
+    transform = PL_EXP("nalgebra::Unit::new_unchecked(nalgebra::Quaternion::new(2.0, 1.0, 2.0, 1.0))");
 };
 
 cell tEkfLocalizer EkfLocalizer {

@@ -4,7 +4,7 @@ use crate::tecs_signature::{s_kinematic_state::*, s_accel_with_covariance_stampe
 use awkernel_lib::sync::mutex::MCSNode;
 impl SKinematicState for EKinematicStateSfForTTrajectoryFollower{
 
-	fn send(&'static self, kinematic_state: &KinematicState) {
+	fn send(&self, kinematic_state: &KinematicState) {
 		let mut lg = self.cell.get_cell_ref();
 
 	}
@@ -12,7 +12,7 @@ impl SKinematicState for EKinematicStateSfForTTrajectoryFollower{
 
 impl SAccelWithCovarianceStamped for EAccelForTTrajectoryFollower{
 
-	fn send(&'static self, accel_with_covariance: &AccelWithCovarianceStamped) {
+	fn send(&self, accel_with_covariance: &AccelWithCovarianceStamped) {
 		let mut lg = self.cell.get_cell_ref();
 
 	}
@@ -20,7 +20,7 @@ impl SAccelWithCovarianceStamped for EAccelForTTrajectoryFollower{
 
 impl STrajectoryFollower for EReactorForTTrajectoryFollower{
 
-	fn main(&'static self, kinematic_state: &KinematicState, accel: &AccelWithCovarianceStamped, control: &mut Control) {
+	fn main(&self, kinematic_state: &KinematicState, accel: &AccelWithCovarianceStamped, control: &mut Control) {
 		let mut lg = self.cell.get_cell_ref();
 
 		// 1) Data readiness check: ensure we have a trajectory to follow
@@ -38,7 +38,7 @@ impl STrajectoryFollower for EReactorForTTrajectoryFollower{
 
 		// 2) Find closest trajectory point to current position
 		let ego_pos = &kinematic_state.pose.pose.point;
-		let closest_idx = lg.c_traj.find_nearest_index(lg.fix_points.as_slice(), ego_pos) as usize;
+		let closest_idx = lg.c_traj.find_nearest_index(&lg.fix_points, ego_pos) as usize;
 		let closest_idx = core::cmp::min(closest_idx, lg.fix_points.len() - 1);
 		let closest_traj_point = &lg.fix_points[closest_idx];
 

@@ -4,7 +4,7 @@ use crate::tecs_signature::s_covariance::*;
 use awkernel_lib::sync::mutex::MCSNode;
 impl SCovariance for ECovForTCovariance{
 
-	fn ekf_covariance_to_pose_message_covariance(&'static self, p: &nalgebra::Matrix6<f64>) -> nalgebra::Matrix6<f64>{
+	fn ekf_covariance_to_pose_message_covariance(&self, p: &nalgebra::Matrix6<f64>) -> nalgebra::Matrix6<f64> {
 		let mut cov = nalgebra::Matrix6::<f64>::zeros();
 
 		// Map EKF state covariance P into Pose covariance
@@ -22,7 +22,7 @@ impl SCovariance for ECovForTCovariance{
 
 		cov
 	}
-	fn ekf_covariance_to_twist_message_covariance(&'static self, p: &nalgebra::Matrix6<f64>) -> nalgebra::Matrix6<f64>{
+	fn ekf_covariance_to_twist_message_covariance(&self, p: &nalgebra::Matrix6<f64>) -> nalgebra::Matrix6<f64> {
 		let mut cov = nalgebra::Matrix6::<f64>::zeros();
 
 		// Map EKF state covariance P into Twist covariance

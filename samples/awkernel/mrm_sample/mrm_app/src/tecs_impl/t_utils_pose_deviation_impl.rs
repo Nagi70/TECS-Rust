@@ -4,7 +4,7 @@ use crate::tecs_signature::s_utils_pose_deviation::*;
 use awkernel_lib::sync::mutex::MCSNode;
 impl SUtilsPoseDeviation for EUtilsForTUtilsPoseDeviation{
 
-	fn calc_lateral_deviation(&'static self, base_pose: &Pose, target_point: &nalgebra::Vector3<f64>) -> f64{
+	fn calc_lateral_deviation(&self, base_pose: &Pose, target_point: &nalgebra::Vector3<f64>) -> f64 {
 		// Equivalent to autoware_utils_geometry::calc_lateral_deviation
 		let base_point = &base_pose.point;
 		// Yaw from quaternion: assuming z-up, planar yaw
@@ -21,7 +21,7 @@ impl SUtilsPoseDeviation for EUtilsForTUtilsPoseDeviation{
 		let cross_vec = base_unit_vec.cross(&diff_vec);
 		cross_vec.z
 	}
-	fn calc_yaw_deviation(&'static self, base_pose: &Pose, target_pose: &Pose) -> f64{
+	fn calc_yaw_deviation(&self, base_pose: &Pose, target_pose: &Pose) -> f64 {
 		// Equivalent to autoware_utils_geometry::calc_yaw_deviation with normalization
 		let qb = base_pose.orientation;
 		let qt = target_pose.orientation;
