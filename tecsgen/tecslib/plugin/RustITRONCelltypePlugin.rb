@@ -225,7 +225,7 @@ class RustITRONCelltypePlugin < RustGenCelltypePlugin
         # タスク関数のリストに追加する
         celltype.get_cell_list.each{ |cell|
             @@task_func_list.push(
-                "\n#[no_mangle]\n" +
+                "\n#[unsafe(no_mangle)]\n" +
                 "pub extern \"C\" fn tecs_rust_start_" + snake_case(cell.get_global_name.to_s) + "(_: usize) {\n" +
                 "\t#{cell.get_global_name.to_s.upcase}.c_task_body.main();\n" +
                 "}"
@@ -284,7 +284,7 @@ class RustITRONCelltypePlugin < RustGenCelltypePlugin
 
         celltype.get_cell_list.each{ |cell|
             @@isr_func_list.push(
-                "\n#[no_mangle]\n" +
+                "\n#[unsafe(no_mangle)]\n" +
                 "pub extern \"C\" fn tecs_rust_start_" + snake_case(cell.get_global_name.to_s) + "(_: usize) {\n" +
                 "\t#{cell.get_global_name.to_s.upcase}.ci_isr_body.main();\n" +
                 "}"
@@ -340,13 +340,13 @@ class RustITRONCelltypePlugin < RustGenCelltypePlugin
         # file.print "use tecs_celltype::" + snake_case(celltype.get_global_name.to_s) + "::*;\n"
         # file.print "use tecs_signature::si_routine_body::*;\n"
         @@ini_celltype_list.push("use tecs_celltype::" + snake_case(celltype.get_global_name.to_s) + "::*;")
-        @@ini_signature_list.push("use tecs_signature::si_routine_body::*;")
+        @@ini_signature_list.push("use tecs_signature::s_routine_body::*;")
 
         celltype.get_cell_list.each{ |cell|
             @@ini_func_list.push(
-                "\n#[no_mangle]\n" +
+                "\n#[unsafe(no_mangle)]\n" +
                 "pub extern \"C\" fn tecs_rust_start_" + snake_case(cell.get_global_name.to_s) + "(_: usize) {\n" +
-                "\t#{cell.get_global_name.to_s.upcase}.ci_initialize_routine_body.main();\n" +
+                "\t#{cell.get_global_name.to_s.upcase}.c_initialize_routine_body.main();\n" +
                 "}"
             )
             # 何度も呼び出されるが、重複して静的APIを生成しないように関数内で管理している
@@ -594,6 +594,21 @@ class RustITRONCelltypePlugin < RustGenCelltypePlugin
         end
         
         super(file)
+    end
+
+    # セルの構造体の初期化の先頭部を生成
+    def gen_rust_cell_structure_header_initialize file, cell
+        file.print "#[unsafe(link_section = \".rodata\")]\n"
+
+        plugin_option = @plugin_arg_str.split(",").map(&:strip)
+
+        # セルタイプに async 呼び口がある場合は、pub を付与する
+        # lib.rsから関数を呼び出すため
+        if plugin_option.include?("TASK") || plugin_option.include?("INIT_ROUTINE") || plugin_option.include?("INT_SERVICE_ROUTINE") then
+            file.print "pub "
+        end
+
+        file.print "static #{cell.get_global_name.to_s.upcase}: #{get_rust_celltype_name(cell.get_celltype)}"
     end
 
     # セル構造体の呼び口フィールドの定義を生成
@@ -1094,7 +1109,7 @@ class RustITRONCelltypePlugin < RustGenCelltypePlugin
         return if @celltype.get_var_list.length == 0
         multiple = check_exclusive_control_for_cell cell
         if multiple then
-            file.print "#[link_section = \".rodata\"]\n"
+            file.print "#[unsafe(link_section = \".rodata\")]\n"
             case check_gen_which_ex_ctrl cell
             when "semaphore"
                 file.print "static #{cell.get_global_name.to_s.upcase}_EX_CTRL_REF: TECSSemaphoreRef = TECSSemaphoreRef{\n"
@@ -1553,10 +1568,10 @@ pub struct TECSSemaphoreRef{
 	pub inner: SemaphoreRef<'static>,
 }
 
-#[link_section = ".rodata"]
+#[unsafe(link_section = ".rodata")]
 pub static DUMMY_LOCK_GUARD: TECSDummyLockGuard = 0;
 
-#[link_section = ".rodata"]
+#[unsafe(link_section = ".rodata")]
 pub static DUMMY_EX_CTRL_REF: TECSDummyExCtrlRef = TECSDummyExCtrlRef{};
 
 impl LockManager for TECSDummyExCtrlRef{
@@ -1751,7 +1766,7 @@ impl LockManager for TECSSemaphoreRef{
         # カーネルオブジェクトコンポーネントの ID を生成する
         gen_kernel_object_id_in_kernel_cfg_rs @celltype
 
-        copy_gen_files_to_cargo "kernel_cfg.rs"
+        copy_gen_files_to_cargo "kernel_cfg.rs", nil
     end
 
 end

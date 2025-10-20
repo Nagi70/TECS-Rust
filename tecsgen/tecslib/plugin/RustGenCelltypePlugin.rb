@@ -63,6 +63,7 @@ class RustGenCelltypePlugin < CelltypePlugin
     @@gen_heapless_crate_dependency = false
     @@const_init_catalog_loaded = false
     @@const_init_impled_custom_struct_list = Hash.new { |hash, key| hash[key] = [] }
+    @@used_in_rust_custom_struct_list = Hash.new { |hash, key| hash[key] = [] }
 
     #celltype::     Celltype        セルタイプ（インスタンス）
     def initialize( celltype, option )
@@ -345,6 +346,24 @@ class RustGenCelltypePlugin < CelltypePlugin
         copy_gen_files_to_cargo "tecs_impl.rs", nil
     end
 
+    # get_bit_size の返り値を Rust の型に合わせて変換する
+    # TODO: 厳密な変換にする必要がある
+    def convert_bit_size bit_size
+        if bit_size > 0 then
+            return bit_size
+        end
+        case bit_size
+        when -11 then return 8
+        when -1  then return 8
+        when -2  then return 16
+        when -3  then return 32
+        when -4  then return 64
+        when -5  then return 128
+        else
+            return bit_size.abs
+        end
+    end
+
     # 宣言されている型を Rust の型に変換する
     # 現状として，int8_t, int16_t, int32_t, int64_t のみ対応
     # TODO:他の型への対応
@@ -353,16 +372,22 @@ class RustGenCelltypePlugin < CelltypePlugin
         if c_type.kind_of?( IntType ) then
             # TODO: ここで符号付きかどうかを判断する
             if c_type.get_sign == :SIGNED then
-                str = "i#{c_type.get_bit_size}"
+                str = "i#{convert_bit_size(c_type.get_bit_size)}"
             elsif c_type.get_sign == :UNSIGNED then
-                str = "u#{c_type.get_bit_size}"
+                str = "u#{convert_bit_size(c_type.get_bit_size)}"
             else
-                str = "i#{c_type.get_bit_size}"
+                str = "i#{convert_bit_size(c_type.get_bit_size)}"
             end
         elsif c_type.kind_of?( BoolType ) then
             str = "bool"
         elsif c_type.kind_of?( FloatType ) then
-            str = "f#{c_type.get_bit_size}"
+            case c_type.get_bit_size
+            when 32   then str = "f32"
+            when 64   then str = "f64"
+            when -32  then str = "f32"
+            when -64  then str = "f64"
+            when -128 then str = "f128"
+            end
         elsif c_type.kind_of?( ArrayType ) then
             type = c_type_to_rust_type(c_type.get_type)
             subscript = c_type.get_subscript
@@ -373,7 +398,8 @@ class RustGenCelltypePlugin < CelltypePlugin
             # すべてのオリジナル構造体の定義を tecs_global.rs に生成する
             # @@struct_type_list.push(c_type)
 
-
+            # Rust のコード生成で使用されているオリジナル構造体のリストに追加する
+            @@used_in_rust_custom_struct_list[c_type.get_name.to_s] << c_type
 
             # @gen_use_global = true
         elsif c_type.kind_of?( PtrType ) then
@@ -424,17 +450,133 @@ class RustGenCelltypePlugin < CelltypePlugin
             end
         elsif c_type.kind_of?( RTypeType ) then
             str = c_type.get_type_str_inner
-            # RTypeType の中でカスタム構造体を利用するケースがあるため、tecs_global を use する
-            # TODO: str の中にカスタム構造体が含まれているかどうかをチェックする
-            @gen_use_global = true
+            # str の中にカスタム構造体が含まれているかどうかをチェックする
+
+            root = Namespace.get_root
+            structs = []  # Array<StructType>
+
+            traverse = lambda do |ns|
+                decls = ns.instance_variable_get(:@decl_list) || []
+                decls.each do |d|
+                    structs << d if d.kind_of?(StructType)
+                end
+                ns.get_namespace_list.each { |child| traverse.call(child) }
+            end
+
+            traverse.call(root)
+
+            structs.each do |st|
+                if str.include?(st.get_name.to_s) then
+                    # Rust のコード生成で使用されているオリジナル構造体のリストに追加する
+                    @@used_in_rust_custom_struct_list[st.get_name.to_s] << st
+                end
+            end
         else
             str = c_type.get_type_str
             str = convert_rust_type_string(str)
             if str == "void" then
                 str = "unknown"
             end
+            if c_type.is_const? || c_type.is_volatile? then
+                original_type = c_type.get_original_type
+                str = c_type_to_rust_type(original_type)
+            end
         end
         return str
+    end
+
+    # 指定された TECS の型について、const/volatile 修飾子の有無と数値型の内訳を判定する
+    # 入力: tecs_type => Type (Decl#get_type 等で取得した型オブジェクト)
+    # 戻り値: Hash
+    #   {
+    #     const: true/false,
+    #     volatile: true/false,
+    #     numeric: {
+    #       category: :int | :float | :enum,
+    #       bit_size: Integer,   # IntType/FloatType の bit_size（IntType は抽象幅は負値: -3=int など）
+    #       sign: :SIGNED | :UNSIGNED | nil  # IntType のみ
+    #     } | nil
+    #   }
+    def detect_const_volatile_and_numeric(tecs_type)
+        # 修飾子（const/volatile）は Type のフラグで取得できる
+        is_const = false
+        is_volatile = false
+        begin
+            is_const = tecs_type.is_const?
+            is_volatile = tecs_type.is_volatile?
+        rescue => _
+            # 型が不正でもここでは握りつぶす
+        end
+
+        # typedef を辿って元の型へ。以降の判定は元型に対して行う
+        base = nil
+        begin
+            base = tecs_type.get_original_type
+        rescue => _
+            base = tecs_type
+        end
+
+        numeric = nil
+        if base.kind_of?(IntType)
+            # IntType: bit_size は固定幅(>0)か抽象幅(負値)
+            numeric = {
+                category: :int,
+                bit_size: base.get_bit_size,
+                sign: base.get_sign # :SIGNED | :UNSIGNED | nil
+            }
+        elsif base.kind_of?(FloatType)
+            numeric = {
+                category: :float,
+                bit_size: base.get_bit_size
+            }
+        elsif base.kind_of?(EnumType)
+            numeric = {
+                category: :enum,
+                bit_size: -1
+            }
+        end
+
+        { const: is_const, volatile: is_volatile, numeric: numeric }
+    end
+
+    # detect_const_volatile_and_numeric の numeric 結果から、人間可読な型名（C 風）を作る補助
+    # 例: {category: :int, bit_size: 32, sign: :UNSIGNED} => "uint32_t"
+    #     {category: :int, bit_size: -3, sign: :SIGNED}   => "int"
+    #     {category: :float, bit_size: 64}                => "double64_t"
+    def numeric_type_name(numeric)
+        return nil unless numeric
+        case numeric[:category]
+        when :int
+            bs = numeric[:bit_size]
+            sign = numeric[:sign] == :UNSIGNED ? 'u' : ''
+            if bs && bs > 0
+                return "#{sign}int#{bs}_t"
+            end
+            case bs
+            when -11 then return "#{sign}char"
+            when -1  then return "#{sign}char_t"
+            when -2  then return "#{sign}short"
+            when -3  then return "#{sign}int"
+            when -4  then return "#{sign}long"
+            when -5  then return "#{sign}long long"
+            else
+                return "int"
+            end
+        when :float
+            case numeric[:bit_size]
+            when 32   then return "float32_t"
+            when 64   then return "double64_t"
+            when -32  then return "float"
+            when -64  then return "double"
+            when -128 then return "long double"
+            else
+                return "float"
+            end
+        when :enum
+            return "enum"
+        else
+            nil
+        end
     end
 
     # tecs_global.rs に use 文を生成する
@@ -484,18 +626,19 @@ class RustGenCelltypePlugin < CelltypePlugin
 
         get_diff_between_gen_and_src "tecs_global.rs", nil
 
-        root = Namespace.get_root
-        structs = []  # Array<StructType>
+        # root = Namespace.get_root
+        # structs = []  # Array<StructType>
 
-        traverse = lambda do |ns|
-            decls = ns.instance_variable_get(:@decl_list) || []
-            decls.each do |d|
-                structs << d if d.kind_of?(StructType)
-            end
-            ns.get_namespace_list.each { |child| traverse.call(child) }
-        end
+        # traverse = lambda do |ns|
+        #     decls = ns.instance_variable_get(:@decl_list) || []
+        #     decls.each do |d|
+        #         structs << d if d.kind_of?(StructType)
+        #     end
+        #     ns.get_namespace_list.each { |child| traverse.call(child) }
+        # end
 
-        traverse.call(root)
+        # traverse.call(root)
+
         # typedef経由や無名struct由来も含めて拾いやすい
 
         # ファイルを生成
@@ -522,7 +665,7 @@ class RustGenCelltypePlugin < CelltypePlugin
         default_impled_custom_struct_list = Hash.new { |hash, key| hash[key] = [] }
 
         # default を実装できるかのチェック
-        structs.each do |st|
+        @@used_in_rust_custom_struct_list.each do |struct_name, st|
             rust_name = camel_case(snake_case(st.get_name.to_s.sub(/^_+/, "")))
 
             # まだチェックされていない構造体の場合は、チェックを行う
@@ -542,7 +685,7 @@ class RustGenCelltypePlugin < CelltypePlugin
             end
         end
 
-        structs.each do |st|
+        @@used_in_rust_custom_struct_list.each do |struct_name, st|
             rust_name = camel_case(snake_case(st.get_name.to_s.sub(/^_+/, "")))
 
             # derive(Default)を付与するかどうかをチェックする
@@ -652,7 +795,8 @@ class RustGenCelltypePlugin < CelltypePlugin
                 end
 
                 # 関数の引数部分を生成
-                trait_file.print "(&'static self"
+                # trait_file.print "(&'static self"
+                trait_file.print "(&self"
                 param_list_item = func_head.get_paramlist.get_items
                 num = param_list_item.size
                 num.times do
@@ -945,7 +1089,7 @@ class RustGenCelltypePlugin < CelltypePlugin
 
     # セルの構造体の初期化の先頭部を生成
     def gen_rust_cell_structure_header_initialize file, cell
-        file.print "#[link_section = \".rodata\"]\n"
+        file.print "#[unsafe(link_section = \".rodata\")]\n"
         file.print "static #{cell.get_global_name.to_s.upcase}: #{get_rust_celltype_name(cell.get_celltype)}"
     end
 
@@ -998,7 +1142,16 @@ class RustGenCelltypePlugin < CelltypePlugin
                 # 属性がポインタであるときに対応
                 if attr.get_type.kind_of?( PtrType ) && attr.get_type.get_size != nil then
                     type = c_type_to_rust_type(attr.get_type).delete("[]")
-                    size = cell.get_attr_initializer(attr.get_type.get_size.to_s.to_sym)
+                    size = nil
+                    if @celltype.get_attribute_list.any? { |a| a.get_name == attr.get_type.get_size.to_s.to_sym } then
+                        # 属性名をサイズに使っている場合は、その属性名を使う
+                        size = cell.get_attr_initializer(attr.get_type.get_size.to_s.to_sym)
+                    else
+                        # それ以外は、size_is指定子に直接指定されている値を使う 
+                        # size_is(256) のように指定されている場合
+                        size = attr.get_type.get_size.to_s
+                    end
+                    # size = cell.get_attr_initializer(attr.get_type.get_size.to_s.to_sym)
                     name = "#{cell.get_global_name.upcase}ATTRARRAY#{array_number}"
                     @pointer_array.push([name, type, size, attr_array])
                     file.print "\t#{attr.get_name.to_s}: &#{name},\n"
@@ -1065,7 +1218,16 @@ class RustGenCelltypePlugin < CelltypePlugin
             if var.get_type.kind_of?( PtrType ) && var.get_type.get_size != nil then
 
                 type = c_type_to_rust_type(var.get_type).delete("[]")
-                size = cell.get_attr_initializer(var.get_type.get_size.to_s.to_sym)
+                size = nil
+                if @celltype.get_attribute_list.any? { |attr| attr.get_name == var.get_type.get_size.to_s.to_sym } then
+                    # 属性名をサイズに使っている場合は、その属性名を使う
+                    size = cell.get_attr_initializer(var.get_type.get_size.to_s.to_sym)
+                else
+                    # それ以外は、size_is指定子に直接指定されている値を使う 
+                    # size_is(256) のように指定されている場合
+                    size = var.get_type.get_size.to_s
+                end
+                # size = cell.get_attr_initializer(var.get_type.get_size.to_s.to_sym)
                 name = "mut #{cell.get_global_name.upcase}VARARRAY#{array_number}"
                 @pointer_array.push([name, type, size, var_array])
                 file.print "\t\t#{var.get_name.to_s}: unsafe{ &mut *core::ptr::addr_of_mut!(#{cell.get_global_name.upcase}VARARRAY#{array_number}) },\n"
@@ -1154,7 +1316,7 @@ class RustGenCelltypePlugin < CelltypePlugin
 
                 # 受け口構造体の初期化を生成
                 # 一つの受け口構造体がもつセルは１つ
-                file.print "#[link_section = \".rodata\"]\n"
+                file.print "#[unsafe(link_section = \".rodata\")]\n"
                 file.print "pub static #{port.get_name.to_s.upcase}FOR#{cell.get_global_name.to_s.upcase}: #{camel_case(snake_case(port.get_name.to_s))}For#{get_rust_celltype_name(celltype)} = #{camel_case(snake_case(port.get_name.to_s))}For#{get_rust_celltype_name(celltype)} {\n"
                 file.print "\tcell: &#{cell.get_global_name.to_s.upcase},\n"
                 file.print "};\n\n"
@@ -1189,7 +1351,8 @@ class RustGenCelltypePlugin < CelltypePlugin
                     # if lifetime_flag then
                     #     file.print "<'a>"
                     # end
-                    file.print"(&'static self"
+                    # file.print"(&'static self"
+                    file.print"(&self"
                     # param_num と sig_param_str_list の要素数が等しいことを前提としている
                     param_num = func_head.get_paramlist.get_items.size
                     param_num.times do
@@ -1407,7 +1570,10 @@ class RustGenCelltypePlugin < CelltypePlugin
     def gen_use_for_impl_file file, celltype
         signature_list = []
         celltype.get_port_list.each{ |port|
-            signature_list.push("#{snake_case(port.get_signature.get_global_name.to_s)}")
+            # 空のシグニチャの場合は、use文を生成しない
+            if port.get_signature.get_function_head_array.length != 0 then
+                signature_list.push("#{snake_case(port.get_signature.get_global_name.to_s)}")
+            end
         }
         signature_list.uniq!
         # implファイルに対して、排他制御に関するuse文は生成する必要がない
@@ -2022,8 +2188,6 @@ class RustGenCelltypePlugin < CelltypePlugin
             enum_blocks = extract_enum_blocks(src_text)
             # gen に存在しない enum ブロックのみ保持
             enum_blocks.reject! { |blk| gen_text.include?(blk) }
-
-            puts "enum_blocks: #{enum_blocks}"
 
             if @@diff_src_and_gen[file_name].empty? then
                 @@diff_src_and_gen[file_name].concat(use_mod_diff)

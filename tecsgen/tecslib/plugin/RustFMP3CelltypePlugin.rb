@@ -223,7 +223,7 @@ class RustFMP3CelltypePlugin < RustITRONCelltypePlugin
         contents = <<~'EOS'
 use itron::abi::*;
 
-extern "C"{
+unsafe extern "C"{
     pub fn syslog_wri_log(prio: u32, p_syslog: *const Syslog) -> ER;
 }
 
@@ -251,7 +251,7 @@ pub const LOG_NOTICE: u32 = 0x5;
 pub const LOG_INFO: u32 = 0x6;
 pub const LOG_DEBUG: u32 = 0x7;
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 #[macro_export]
 #[macro_use]
 macro_rules! print{
