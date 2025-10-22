@@ -860,7 +860,10 @@ EOT
       @celltype_list.each{ |ct|
         if ct.get_impl_lang == :Rust then
           ct.get_port_list.each{ |port|
-            rust_signature_str_list << port.get_signature.get_global_name.to_s.gsub(/([a-z0-9])([A-Z])/, '\1_\2').gsub(/([A-Z])([A-Z][a-z])/, '\1_\2').downcase
+            if port.get_signature.get_function_head_array.length != 0 then
+              # 関数を持つシグニチャのみ出力
+              rust_signature_str_list << port.get_signature.get_global_name.to_s.gsub(/([a-z0-9])([A-Z])/, '\1_\2').gsub(/([A-Z])([A-Z][a-z])/, '\1_\2').downcase
+            end
           }
         end
       }

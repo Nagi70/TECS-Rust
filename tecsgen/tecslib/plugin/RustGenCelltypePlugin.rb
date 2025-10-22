@@ -1781,33 +1781,6 @@ class RustGenCelltypePlugin < CelltypePlugin
         end
     end
 
-    # TODO: 現在は、ライブラリとしてコンパイルすることを前提としている
-    def check_call_chg_pri cargo_path, target_triple
-
-        # TODO: ライブラリ名は itron に固定しており、ビルドも release に固定しているため、柔軟にする必要がある
-        binary_bath = "#{cargo_path}/target/#{target_triple}/release/libitron.a"
-
-        command = "arm-none-eabi-nm #{binary_bath} > #{$gen}/arm-none-eabi-nm.txt"
-
-        if File.exist?(binary_bath) && check_option_main_or_lib == "lib" then
-            if @@arm_none_eabi_nm_gen == false then
-                system(command)
-                @@arm_none_eabi_nm_gen = true
-            end
-
-            # chg_pri 関数が含まれているかを確認
-            if File.readlines("#{$gen}/arm-none-eabi-nm.txt").any?{ |line| line.include?("chg_pri") } then
-                return true
-            else
-                return false
-            end
-        else
-            # *.a ファイルが存在しない場合、保守的に chg_pri が含まれていると判断する
-            puts "Error: #{binary_bath} does not exist"
-            return true
-        end
-    end
-
     # cargo.toml の target を取得する
     def extract_target_triple path
         config_toml_path = "#{path}/.cargo/config.toml"
@@ -2358,7 +2331,6 @@ class RustGenCelltypePlugin < CelltypePlugin
         makefile.print( "\t$(GEN_DIR)/../$(APPLNAME)/src/tecs_celltype.rs \\\n" )
         makefile.print( "\t$(GEN_DIR)/../$(APPLNAME)/src/tecs_signature.rs \\\n" )
         makefile.print( "\t$(GEN_DIR)/../$(APPLNAME)/src/tecs_impl.rs \\\n" )
-        makefile.print( "\t$(GEN_DIR)/../$(APPLNAME)/src/tecs_variable.rs \\\n" )
 
         gen_extra_rust_plugin_tecsgen_srcs_for_makefile makefile
 

@@ -581,6 +581,34 @@ class RustITRONCelltypePlugin < RustGenCelltypePlugin
         return "none"
     end
 
+    # TODO: 現在は、ライブラリとしてコンパイルすることを前提としている
+    # バイナリに chg_pri 関数が含まれているかを確認する
+    def check_call_chg_pri cargo_path, target_triple
+
+        # TODO: ライブラリ名は itron に固定しており、ビルドも release に固定しているため、柔軟にする必要がある
+        binary_bath = "#{cargo_path}/target/#{target_triple}/release/libitron.a"
+
+        command = "arm-none-eabi-nm #{binary_bath} > #{$gen}/arm-none-eabi-nm.txt"
+
+        if File.exist?(binary_bath) && check_option_main_or_lib == "lib" then
+            if @@arm_none_eabi_nm_gen == false then
+                system(command)
+                @@arm_none_eabi_nm_gen = true
+            end
+
+            # chg_pri 関数が含まれているかを確認
+            if File.readlines("#{$gen}/arm-none-eabi-nm.txt").any?{ |line| line.include?("chg_pri") } then
+                return true
+            else
+                return false
+            end
+        else
+            # *.a ファイルが存在しない場合、保守的に chg_pri が含まれていると判断する
+            puts "Error: #{binary_bath} does not exist"
+            return true
+        end
+    end
+
     def gen_use_header file
         kernel_obj = get_itronrs_kernel_obj_ref_str
         if kernel_obj != "unknown" then
@@ -931,7 +959,7 @@ class RustITRONCelltypePlugin < RustGenCelltypePlugin
                 # そのため、use_jenerics_alphabet にトレイトオブジェクトが入っている場合は、その生成をスキップする
                 # セルタイプ構造体にライフタイムアノテーションが必要かどうか判定する(必要 -> 呼び口を持っている)
                 # TODO: ライフタイムアノテーションの判定は厳格にする必要がある
-                if check_lifetime_annotation_for_celltype_structure(celltype, callport_list) then
+                if check_only_entryport_celltype(celltype) == false then
                     file.print "<'_"
                     # use_jenerics_alphabet と callport_list の要素数が等しいことを前提としている
                     callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
@@ -1201,7 +1229,7 @@ class RustITRONCelltypePlugin < RustGenCelltypePlugin
         #         break
         #     end
         # }
-        if check_lifetime_annotation_for_celltype_structure(celltype, callport_list) then
+        if check_only_entryport_celltype(celltype) == false then
             file.print "<'_"
             # use_jenerics_alphabet と callport_list の要素数が等しいことを前提としている
             callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
@@ -1246,7 +1274,8 @@ class RustITRONCelltypePlugin < RustGenCelltypePlugin
                     # if lifetime_flag then
                     #     file.print "<'a>"
                     # end
-                    file.print"(&'static self"
+                    # file.print"(&'static self"
+                    file.print"(&self"
                     # param_num と sig_param_str_list の要素数が等しいことを前提としている
                     param_num = func_head.get_paramlist.get_items.size
                     param_num.times do
@@ -1753,6 +1782,7 @@ impl LockManager for TECSSemaphoreRef{
         super(file)
 
         # TODO: 必要なときにのみ生成するようにする
+        print "#{@celltype.get_global_name.to_s}: gen_tecs_ex_ctrl_rs\n"
         gen_tecs_ex_ctrl_rs
 
         # TODO: 必要なときにのみ生成するようにする
@@ -1760,12 +1790,14 @@ impl LockManager for TECSSemaphoreRef{
 
         # TODO: 必要なときにのみ生成するようにする
         # gen_tecs_semaphore_rs
-
+        print "#{@celltype.get_global_name.to_s}: gen_tecs_print_rs\n"
         gen_tecs_print_rs
 
         # カーネルオブジェクトコンポーネントの ID を生成する
+        print "#{@celltype.get_global_name.to_s}: gen_kernel_object_id_in_kernel_cfg_rs\n"
         gen_kernel_object_id_in_kernel_cfg_rs @celltype
 
+        print "#{@celltype.get_global_name.to_s}: copy_gen_files_to_cargo\n"
         copy_gen_files_to_cargo "kernel_cfg.rs", nil
     end
 

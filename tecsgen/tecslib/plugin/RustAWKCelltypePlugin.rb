@@ -1530,6 +1530,11 @@ impl<'a, T: core::marker::Send> core::ops::DerefMut for TECSVarGuard<'a, T> {
 
     end
 
+    # 他のRustプラグインで生成したい RUST_PLUGIN_TECSGEN_SRCS の要素
+    def gen_extra_rust_plugin_tecsgen_srcs_for_makefile makefile
+        makefile.print( "\t$(GEN_DIR)/../$(APPLNAME)/src/tecs_variable.rs \\\n" )
+    end
+
     #=== tCelltype_factory.h に挿入するコードを生成する
     # file 以外の他のファイルにファクトリコードを生成してもよい
     # セルタイププラグインが指定されたセルタイプのみ呼び出される
