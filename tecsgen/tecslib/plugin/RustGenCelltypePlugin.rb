@@ -2158,6 +2158,9 @@ class RustGenCelltypePlugin < CelltypePlugin
             gen_use_mod = File.readlines(gen_file).select { |line| (s = line.strip) && (s.start_with?("use ") || s.start_with?("mod ")) }
             use_mod_diff = src_use_mod - gen_use_mod
 
+            # use crate:: で始まる行は差分にしない (tecs_celltype や tecs_signature からの use 文などを想定)
+            use_mod_diff.reject! { |line| (s = line.lstrip) && s.start_with?("use crate::") }
+
             enum_blocks = extract_enum_blocks(src_text)
             # gen に存在しない enum ブロックのみ保持
             enum_blocks.reject! { |blk| gen_text.include?(blk) }
@@ -2173,6 +2176,10 @@ class RustGenCelltypePlugin < CelltypePlugin
             src_use_mod = File.readlines(src_file).select { |line| (s = line.strip) && (s.start_with?("use ") || s.start_with?("mod ")) }
             src_text = File.read(src_file)
             enum_blocks = extract_enum_blocks(src_text)
+
+            # use crate:: で始まる行は差分にしない (tecs_celltype や tecs_signature からの use 文などを想定)
+            src_use_mod.reject! { |line| (s = line.lstrip) && s.start_with?("use crate::") }
+
             @@diff_src_and_gen[file_name].concat(src_use_mod)
             @@diff_src_and_gen[file_name].concat(enum_blocks)
         end
