@@ -1206,6 +1206,10 @@ module TECSFlow
         sub_h[task.get_global_name.to_s] = false
       end
       h[cell]["ExclusiveControl"] = false
+      h[cell]["AccessCount"] = 0
+      h[cell]["HasVariable"] = false
+      h[cell]["IsMultiAccess"] = false
+      h[cell]["IsCoveredByParent"] = false
     end
 
     # JSON のコールフローを解析し、どのアクティブセルからアクセスされるのかを格納
@@ -1219,8 +1223,34 @@ module TECSFlow
       end
     end
 
-    # 排他制御をかけるセルを特定
+    # 排他制御の判定を開始
+
+    # 2つ以上のアクティブセルからアクセスされるかどうかの判定
     cell_list.each do |cell|
+      cell_access_count = 0
+      active_cell_list.each do |task|
+        if accessed_cell_hash[cell.get_global_name.to_s][task.get_global_name.to_s] then
+          cell_access_count += 1
+        end
+      end
+      # アクセスカウントを更新
+      accessed_cell_hash[cell.get_global_name.to_s]["AccessCount"] = cell_access_count
+      # 複数のアクティブセルからアクセスされるため、排他制御をかける
+      if cell_access_count >= 2 then
+        accessed_cell_hash[cell.get_global_name.to_s]["IsMultiAccess"] = true
+      end
+    end
+
+    # 変数を持つかどうかの判定
+    cell_list.each do |cell|
+      # 変数を持たない場合、next
+      next if cell.get_celltype.get_var_list.length == 0
+      accessed_cell_hash[cell.get_global_name.to_s]["HasVariable"] = true
+    end
+
+    # 構造上、上位のセルにアクセスするアクティブセルと同じかどうかの判定
+    cell_list.each do |cell|
+
       cell.get_celltype.get_port_list.each do |port|
         next if port.get_port_type == :ENTRY
 
@@ -1228,29 +1258,37 @@ module TECSFlow
 
         callee_cell_name = cell.get_join_list.get_item(port.get_name).get_cell.get_global_name.to_s
 
-        # 呼び先のセルがアクセスされるアクティブセルの数をカウント
-        callee_cell_count = 0
-        active_cell_list.each do |task|
-          if accessed_cell_hash[callee_cell_name][task.get_global_name.to_s] then
-            callee_cell_count += 1
-          end
-        end
-
-        # 呼び元と呼び先が同じアクセスされるアクティブセルを持っているかどうかを判定
-        same_accessed = true
-        # current_cell_hash = accessed_cell_hash[cell.get_name.to_s].dup
         current_cell_hash = accessed_cell_hash[cell.get_global_name.to_s].dup
         current_cell_hash.delete("ExclusiveControl")
+        current_cell_hash.delete("AccessCount")
+        current_cell_hash.delete("HasVariable")
+        current_cell_hash.delete("IsMultiAccess")
+        current_cell_hash.delete("IsCoveredByParent")
         callee_cell_hash = accessed_cell_hash[callee_cell_name].dup
         callee_cell_hash.delete("ExclusiveControl")
-        same_accessed = false if current_cell_hash != callee_cell_hash
+        callee_cell_hash.delete("AccessCount")
+        callee_cell_hash.delete("HasVariable")
+        callee_cell_hash.delete("IsMultiAccess")
+        callee_cell_hash.delete("IsCoveredByParent")
 
-        # 呼び先のセルがアクセスされるアクティブセルの数が 2 以上で、かつ呼び元と呼び先が同じアクセスされるアクティブセルを持っていない場合、排他制御をかける
-        if same_accessed == false && callee_cell_count >= 2 then
-          accessed_cell_hash[callee_cell_name]["ExclusiveControl"] = true
+        # 呼び元と呼び先が同じアクセスされるアクティブセルを持っているかどうかを判定
+        # アクセスするアクティブセルの種類の比較 + 呼び先が複数からアクセスされるかの判定 をする
+        if (current_cell_hash != callee_cell_hash) && (accessed_cell_hash[callee_cell_name]["AccessCount"] >= 2) then
+          accessed_cell_hash[callee_cell_name]["IsCoveredByParent"] = true
         end
       end
     end
+
+    # 最終的な排他制御の判定
+    cell_list.each do |cell|
+      cell_name = cell.get_global_name.to_s
+      if accessed_cell_hash[cell_name]["IsMultiAccess"] == true ||
+         accessed_cell_hash[cell_name]["HasVariable"] == true ||
+         accessed_cell_hash[cell_name]["IsCoveredByParent"] == false then
+        accessed_cell_hash[cell_name]["ExclusiveControl"] = true
+      end
+    end
+
 
     # puts "accessed_cell_hash: #{accessed_cell_hash}"
 
