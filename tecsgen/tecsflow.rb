@@ -1282,8 +1282,8 @@ module TECSFlow
     # 最終的な排他制御の判定
     cell_list.each do |cell|
       cell_name = cell.get_global_name.to_s
-      if accessed_cell_hash[cell_name]["IsMultiAccess"] == true ||
-         accessed_cell_hash[cell_name]["HasVariable"] == true ||
+      if accessed_cell_hash[cell_name]["IsMultiAccess"] == true &&
+         accessed_cell_hash[cell_name]["HasVariable"] == true &&
          accessed_cell_hash[cell_name]["IsCoveredByParent"] == false then
         accessed_cell_hash[cell_name]["ExclusiveControl"] = true
       end
