@@ -417,6 +417,8 @@ class Cell
     end
   end
 
+  # printed な関数について、それ以降の呼び出し関係の Path 情報を JSON 形式で $flow_json_hash　から抽出する
+  # tecsflow のプリントでは、printed で出力が終わるが、排他制御の最適化では printed な関数以降の呼び出し関係も必要になるため
   def extract_printed_func_json func_nsp
     legion_cell_name = func_nsp.to_s.split(".")[0]
     entry_port_name = func_nsp.to_s.split(".")[1]
@@ -484,6 +486,22 @@ class Cell
       current_cell = self
       printed_func_json.each do |path|
         calleeport_join = current_cell.get_join_list.get_item(path[:Callport].to_sym)
+        # join が無い場合、それは path 情報の終了を意味するため、ここで終了する
+        if calleeport_join == nil then
+          puts "[tecsflow] Printed-path replay: join not found for callport '#{path[:Callport]}' on cell '#{current_cell.get_global_name}'. Skipping this printed path."
+          break
+        end
+        # puts "path: #{path}"
+        # puts "calleeport_join: #{calleeport_join.get_name}"
+        # puts "calleeport_join.get_port_name: #{calleeport_join.get_port_name}"
+        # puts "current_cell: #{current_cell.get_global_name}"
+        # puts "path[:Calleeport]: #{path[:Calleeport].to_s}"
+        # nil ガード: JSON の Path が現在のセルの呼び口と一致しない場合にクラッシュしないようにする
+        # TODO: どのケースでこの現象が発生するかを調査し、根本的な解決を図る
+        # if calleeport_join.nil?
+        #   puts "[tecsflow] Printed-path replay: join not found for callport '#{path[:Callport]}' on cell '#{current_cell.get_global_name}'. Skipping this printed path."
+        #   break
+        # end
         if calleeport_join.get_port_name.to_s != path[:Calleeport].to_s then
           puts "Printed function path json is not generated successfully."
           break
@@ -491,6 +509,7 @@ class Cell
         current_cell = calleeport_join.get_cell
 
         # TODO: 呼び口配列や受け口配列に対応していない
+        # printed 以降の JSON path 情報を、$flow_json_hash に追加する
         create_path_item_hash indent_level, false, path[:Callport], nil, current_cell, path[:Calleeport], nil, path[:Function]
         
       end
