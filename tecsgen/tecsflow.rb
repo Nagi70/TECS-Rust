@@ -265,6 +265,69 @@ class Cell
   @@printed_celltype_list = {}
   # $repeat = false
 
+  # 深さ優先で、このセルから呼び先の joined されたセルを順番に全てたどるユーティリティ
+  # 使用例:
+  #   start_cell.traverse_connected_cells do |callee, via_port|
+  #     # ここで callee に対する操作を行う (例: 集計/フラグ設定 等)
+  #   end
+  #
+  # 引数:
+  # - order: :dfs | :bfs (現状 :dfs のみサポート、拡張余地あり)
+  # - include_self: 始点セル自身も最初に yield するか
+  # - visited: 内部用（無限ループ防止）。省略時は新規作成
+  # ブロックから :prune を返すと、その callee の「更に先」へは潜らず、次の枝に進む
+  # ブロックから :stop を返すと、以降の走査をすべて中断し、探索全体を止める
+  def traverse_connected_cells(order: :dfs, include_self: false, visited: nil, max_depth: nil, depth: 0, state: nil, &block)
+    require 'set'
+    visited ||= Set.new
+    state ||= { stop: false }
+
+    return if state[:stop]
+    return if max_depth && depth > max_depth
+
+    # セル同一性はグローバル名で判定（同名セルの重複を避ける）
+    this_name = self.get_global_name.to_s
+    return if visited.include?(this_name)
+    visited.add(this_name)
+
+    if include_self && block_given?
+      action = yield self, nil, depth
+      if action == :stop
+        state[:stop] = true
+        return
+      end
+      # :prune は始点では無視
+    end
+
+    # CALL ポートの定義順で安定的に走査（必要なら名前でソート）
+    call_ports = self.get_celltype.get_port_list.select { |p| p.get_port_type == :CALL }
+    # call_ports.sort_by! { |p| p.get_name.to_s }  # 名前順にしたい場合は有効化
+
+    call_ports.each do |port|
+      break if state[:stop]
+
+      join = self.get_join_list.get_item(port.get_name)
+      next if join.nil?
+
+      callee_cell = if !$unopt
+        join.get_rhs_cell
+      else
+        join.get_rhs_cell1
+      end
+      next if callee_cell.nil?
+
+      action = (yield callee_cell, port.get_name, depth + 1) if block_given?
+      if action == :stop
+        state[:stop] = true
+        break
+      end
+      next if action == :prune
+
+      # 再帰的にたどる
+      callee_cell.traverse_connected_cells(order: order, include_self: false, visited: visited, max_depth: max_depth, depth: depth + 1, state: state, &block)
+    end
+  end
+
   def self.print_unused_func
     parent_cell = []
     indent_level = 1
@@ -485,32 +548,24 @@ class Cell
 
       current_cell = self
       printed_func_json.each do |path|
+        # puts "path: #{path}"
         calleeport_join = current_cell.get_join_list.get_item(path[:Callport].to_sym)
         # join が無い場合、それは path 情報の終了を意味するため、ここで終了する
+        # 同じ呼び口から複数の関数を呼ぶケースがあるため、next で次のpath情報へ進む
         if calleeport_join == nil then
           puts "[tecsflow] Printed-path replay: join not found for callport '#{path[:Callport]}' on cell '#{current_cell.get_global_name}'. Skipping this printed path."
-          break
+          next
         end
-        # puts "path: #{path}"
-        # puts "calleeport_join: #{calleeport_join.get_name}"
-        # puts "calleeport_join.get_port_name: #{calleeport_join.get_port_name}"
-        # puts "current_cell: #{current_cell.get_global_name}"
-        # puts "path[:Calleeport]: #{path[:Calleeport].to_s}"
-        # nil ガード: JSON の Path が現在のセルの呼び口と一致しない場合にクラッシュしないようにする
-        # TODO: どのケースでこの現象が発生するかを調査し、根本的な解決を図る
-        # if calleeport_join.nil?
-        #   puts "[tecsflow] Printed-path replay: join not found for callport '#{path[:Callport]}' on cell '#{current_cell.get_global_name}'. Skipping this printed path."
+
+        # if calleeport_join.get_port_name.to_s != path[:Calleeport].to_s then
+        #   puts "Printed function path json is not generated successfully."
         #   break
         # end
-        if calleeport_join.get_port_name.to_s != path[:Calleeport].to_s then
-          puts "Printed function path json is not generated successfully."
-          break
-        end
-        current_cell = calleeport_join.get_cell
+        callee_cell = calleeport_join.get_cell
 
         # TODO: 呼び口配列や受け口配列に対応していない
         # printed 以降の JSON path 情報を、$flow_json_hash に追加する
-        create_path_item_hash indent_level, false, path[:Callport], nil, current_cell, path[:Calleeport], nil, path[:Function]
+        create_path_item_hash indent_level, false, path[:Callport], nil, callee_cell, path[:Calleeport], nil, path[:Function]
         
       end
 
@@ -801,124 +856,8 @@ class Cell
   end
 end
 
-# class FlowTreeNode
-#   attr_accessor :value, :children, :parent, :callport_name, :callfunc_name, :cellname, :entryport_name
-
-#   def initialize(value)
-#     @value = sanitize_value(value)
-#     @children = []
-#     @parent = nil
-#     @callport_name, @callfunc_name, @cellname, @entryport_name = split_flow_line(value)
-#   end
-
-#   def add_child(child)
-#     child.parent = self
-#     @children << child
-#   end
-
-#   def display(level = 0)
-#     puts "#{'  ' * level}#{value}"
-#     children.each { |child| child.display(level + 1) }
-#   end
-
-#   def find_node(value)
-#     return self if @value.include?(value)
-
-#     children.each do |child|
-#       result = child.find_node(value)
-#       return result if result
-#     end
-#     nil
-#   end
-
-#   def find_nodes_by_cellname(target_cellname)
-#     results = []
-#     traverse do |node|
-#       results << node if node.cellname == target_cellname
-#     end
-#     results
-#   end
-
-#   def flow_from_root_to_node(node_or_nodes)
-#     nodes = [node_or_nodes].flatten
-#     nodes.map do |node|
-#       path = node.path_to_root
-#       path.map do |n|
-#         if n.parent
-#           "#{n.callport_name}.#{n.callfunc_name} => #{n.cellname}.#{n.entryport_name}.#{n.callfunc_name}"
-#         else
-#           n.value
-#         end
-#       end.join(' -> ')
-#     end
-#   end
-
-#   def traverse(&block)
-#     yield self
-#     children.each { |child| child.traverse(&block) }
-#   end
-
-#   def path_to_root
-#     node = self
-#     path = []
-#     while node
-#       path << node
-#       node = node.parent
-#     end
-#     path.reverse
-#   end
-
-#   def formatted_path_to_root
-#     path = path_to_root
-#     path.map.with_index do |n, index|
-#       if index == 0
-#         n.value
-#       elsif n.parent
-#         "#{n.callport_name}.#{n.callfunc_name} => #{n.cellname}.#{n.entryport_name}.#{n.callfunc_name}"
-#       end
-#     end.compact.join(' -> ')
-#   end
-
-#   def sanitize_value(value)
-#     # 正規表現を使って余分な部分を取り除く
-#     value.sub(/\s*\(.*?\)\s*$/, '').sub(/: printed$/, '')
-#   end
-
-#   def root_value
-#     node = self
-#     node = node.parent while node.parent
-#     node.value
-#   end
-
-#   private
-
-#   def split_flow_line(line)
-#     callport_name_in_flow = nil
-#     callfunc_name_in_flow = nil
-#     cellname_in_flow = nil
-#     entryport_name_in_flow = nil
-
-#     if line.include?("=>")
-#       cfunc_statement = line.split("=>")[0].strip
-#       callport_name_in_flow = cfunc_statement.split(".")[0].strip
-#       callfunc_name_in_flow = cfunc_statement.split(".")[1].strip
-#       efunc_statement = line.split("=>")[1].strip.sub(/: printed$/, '')
-#       if efunc_statement.include?(":")
-#         cellname_in_flow = efunc_statement.split(":")[0].strip
-#         entryport_name_in_flow = efunc_statement.split(":")[1].split(".")[0].strip
-#       else
-#         cellname_in_flow = efunc_statement.split(".")[0].strip
-#         entryport_name_in_flow = efunc_statement.split(".")[1].strip
-#       end
-#     end
-
-#     return callport_name_in_flow, callfunc_name_in_flow, cellname_in_flow, entryport_name_in_flow
-#   end
-# end
-
 module TECSFlow
   include Locale_printer
-  # include FlowTreeNode
   require 'json'
   def self.main
     doing = "nothing"
@@ -970,20 +909,8 @@ module TECSFlow
     json_list = []
     cell_list = []
 
-    # cell_list = $root_namespace.get_cell_list
-    # cell_list.each{ |cell|
-    #   next if cell.get_celltype.is_active?
-    #   json_list << $flow_json_hash[cell.get_name.to_s]
-    # }
-
     name_space_list = $root_namespace.get_namespace_list
     
-    # name_space_list.each do |name_space|
-    #   print "name_space.get_name.to_s = ", name_space.get_name.to_s, "\n"
-    # end
-
-    # print "$flow_json_hash = #{$flow_json_hash}\n"
-
     name_space_list.each do |name_space|
       name_space.get_cell_list.each do |cell|
         cell_list << cell
@@ -993,24 +920,13 @@ module TECSFlow
       end
     end
 
-    # print "json_list = #{json_list}\n"
-
-    # cell_list.each do |cell|
-    #   # print "cell.get_name.to_s = ", cell.get_name.to_s, "\n"
-    #   print "cell.get_name.to_s = ", cell.get_global_name.to_s, "\n"
-    # end
-
     analyze_deadlock json_list, cell_list
 
     json_file = File.open( "#{$gen}/tecsflow.json", "w" ) do |f|
       f.write(JSON.pretty_generate(json_list))
     end
 
-    # json_file = File.open( "#{$gen}/tecsflow_temp.json", "w" ) do |f|
-      # f.write(JSON.pretty_generate($flow_json_hash))
-    # end
-
-    # generate_json_file
+    # exit(1)
   end
 
   def self.analyze_call_port_func_name fname
@@ -1047,138 +963,6 @@ module TECSFlow
       end
     }
   end
-
-  # def self.generate_json_file
-
-  #   log_file = File.open( "#{$gen}/tecsflow.log", "w" )
-  #   $stdout = log_file
-
-  #   Cell.class_variable_set(:$repeat, true)
-  #   Cell.class_variable_set(:@@printed_func_nsp_list, {})
-  #   Cell.class_variable_set(:@@printed_cell_list, {})
-  #   Cell.class_variable_set(:@@printed_celltype_list, {})
-
-  #   $root_namespace.print_all_cells
-
-  #   $stdout = STDOUT
-  #   log_file.close
-
-  #   trees = process_file("#{$gen}/tecsflow.log")
-
-  #   cell_list = []
-  #   name_space_list = $root_namespace.get_namespace_list
-    
-  #   name_space_list.each do |name_space|
-  #     name_space.get_cell_list.each do |cell|
-  #       cell_list << cell
-  #     end
-  #   end
-
-  #   json_obj = []
-
-  #   cell_list.each{ |cell|
-
-  #     next if cell.get_celltype.is_active?
-
-  #     # cellname = cell.get_name.to_s
-  #     cellname = cell.get_global_name.to_s
-  #     celltype = cell.get_celltype.get_name.to_s
-
-  #     cell_obj = {
-  #       "Cell": cellname,
-  #       "Celltype": celltype,
-  #       "Accessed": []
-  #     }
-
-  #     trees.each_with_index do |tree, index|
-
-  #       # その active_cell tree のなかに、cellname があるかどうかを探す
-  #       found_nodes = tree.find_nodes_by_cellname(cellname)
-
-  #       # あれば、以下の処理を行う
-  #       if found_nodes.any?
-
-  #         # JSONオブジェクトの初期化
-
-  #         found_nodes.each do |node|
-
-  #           path = node.formatted_path_to_root
-  #           array = path.split("=>").map(&:strip)
-
-  #           # 最初の要素の処理
-  #           first_element = array[0]
-  #           first_split = first_element.split("->")
-  #           active_cell = first_split[0].strip
-  #           callport = first_split[1].strip.split(".")[0]
-  #           function = first_split[1].strip.split(".")[1]
-
-  #           # 二番目の要素の処理
-  #           second_element = array[1]
-  #           second_split = second_element.split("->")
-  #           calleeport = second_split[0].strip.split(".")[1]
-
-  #           accessed_celltype = nil
-  #           cell_list.each do |c|
-  #             if c.get_name.to_s == active_cell then
-  #               accessed_celltype = c.get_celltype.get_name.to_s
-  #               break
-  #             end
-  #           end
-
-  #           # 最初の要素の情報をJSONオブジェクトに追加
-  #           accessed_item = {
-  #             "ActiveCell": active_cell,
-  #             "Celltype": accessed_celltype,
-  #             "Callport": callport,
-  #             "Calleeport": calleeport,
-  #             "Function": function,
-  #             "Path": []
-  #           }
-
-  #           # 二番目以降の要素の処理
-  #           (array[1..-1] || []).each_with_index do |element, index|
-  #             break if index == array.size - 2
-  #             next_split = element.split("->")
-  #             cell_name = next_split[0].strip.split(".")[0]
-  #             callport = next_split[1].strip.split(".")[0]
-  #             function = next_split[1].strip.split(".")[1]
-  #             calleeport = if array[index + 2]
-  #                            array[index + 2].split("->")[0].strip.split(".")[1]
-  #                          else
-  #                            ""
-  #                          end
-              
-  #             path_celltype = nil
-  #             cell_list.each do |c|
-  #               if c.get_name.to_s == cell_name then
-  #                 path_celltype = c.get_celltype.get_name.to_s
-  #                 break
-  #               end
-  #             end
-
-  #             path_item = {
-  #               "CellName": cell_name,
-  #               "Celltype": path_celltype,
-  #               "Callport": callport,
-  #               "Calleeport": calleeport,
-  #               "Function": function
-  #             }
-  #             accessed_item[:Path] << path_item
-            
-  #           end
-  #           cell_obj[:Accessed] << accessed_item
-
-  #         end
-  #       end
-  #     end
-
-  #     json_obj.push(cell_obj)
-  #   }
-
-  #   json_file = File.open( "#{$gen}/tecsflow.json", "w" ) do |f|
-  #     f.write(JSON.pretty_generate(json_obj))
-  #   end
-  # end
 
   def self.analyze_deadlock json_list, cell_list
 
@@ -1283,10 +1067,33 @@ module TECSFlow
     # TODO: ここの判定が本当に正しいかどうかは検証が必要
     cell_list.each do |cell|
       cell_name = cell.get_global_name.to_s
+
+      # すべての条件を満たしている場合、排他制御は必須
       if accessed_cell_hash[cell_name]["IsMultiAccess"] == true &&
          accessed_cell_hash[cell_name]["HasVariable"] == true &&
          accessed_cell_hash[cell_name]["IsNotCoveredByParent"] == true then
         accessed_cell_hash[cell_name]["ExclusiveControl"] = true
+      end
+
+      # 新しいアクティブセルの合流がある(IsNotCoveredByParent = true)場合でも、変数を持たなければ排他性制御は必要ないが、
+      # その代わり、そのセルの結合先に変数を持つセルがある場合、その変数を持つセルに排他制御が必要になる
+      if accessed_cell_hash[cell_name]["HasVariable"] == false &&
+         accessed_cell_hash[cell_name]["IsMultiAccess"] == true &&
+         accessed_cell_hash[cell_name]["IsNotCoveredByParent"] == true then
+        
+        cell.traverse_connected_cells do |callee_cell, via_port|
+          # たどった先に排他制御が適用されているセルを見つけた場合、その枝はそれ以上探索しない
+          if accessed_cell_hash[callee_cell.get_global_name.to_s]["ExclusiveControl"] == true then
+            next :prune
+          end
+
+          # たどった先に変数を持つセルがあった場合、そのセルに排他制御を適用し、さらにその枝はそれ以上探索しない
+          if accessed_cell_hash[callee_cell.get_global_name.to_s]["HasVariable"] == true &&
+             accessed_cell_hash[callee_cell.get_global_name.to_s]["IsNotCoveredByParent"] == false then
+            accessed_cell_hash[callee_cell.get_global_name.to_s]["ExclusiveControl"] = true
+            next :prune
+          end
+        end
       end
     end
 
@@ -1404,34 +1211,6 @@ module TECSFlow
     trees << create_tree_from_lines(current_lines) unless current_lines.empty?
     trees
   end
-
-  # def self.create_tree_from_lines(lines)
-  #   root = nil
-  #   current_node = nil
-  #   node_stack = []
-  
-  #   lines.each_with_index do |line, index|
-  #     indent_level = line.match(/^\s*/)[0].size
-  #     node_value = index.zero? ? line.strip.split(' ').first : line.strip
-  #     node = FlowTreeNode.new(node_value)
-  
-  #     if indent_level == 0
-  #       root = node
-  #       current_node = root
-  #       node_stack = [[current_node, indent_level]]
-  #     else
-  #       while node_stack.any? && node_stack.last[1] >= indent_level
-  #         node_stack.pop
-  #       end
-  #       parent_node, _ = node_stack.last
-  #       parent_node.add_child(node) if parent_node
-  #       current_node = node
-  #       node_stack.push([current_node, indent_level])
-  #     end
-  #   end
-  
-  #   root
-  # end
 
   require 'set'
 
