@@ -1209,7 +1209,7 @@ module TECSFlow
       h[cell]["AccessCount"] = 0
       h[cell]["HasVariable"] = false
       h[cell]["IsMultiAccess"] = false
-      h[cell]["IsCoveredByParent"] = false
+      h[cell]["IsNotCoveredByParent"] = false
     end
 
     # JSON のコールフローを解析し、どのアクティブセルからアクセスされるのかを格納
@@ -1263,32 +1263,34 @@ module TECSFlow
         current_cell_hash.delete("AccessCount")
         current_cell_hash.delete("HasVariable")
         current_cell_hash.delete("IsMultiAccess")
-        current_cell_hash.delete("IsCoveredByParent")
+        current_cell_hash.delete("IsNotCoveredByParent")
         callee_cell_hash = accessed_cell_hash[callee_cell_name].dup
         callee_cell_hash.delete("ExclusiveControl")
         callee_cell_hash.delete("AccessCount")
         callee_cell_hash.delete("HasVariable")
         callee_cell_hash.delete("IsMultiAccess")
-        callee_cell_hash.delete("IsCoveredByParent")
+        callee_cell_hash.delete("IsNotCoveredByParent")
 
         # 呼び元と呼び先が同じアクセスされるアクティブセルを持っているかどうかを判定
         # アクセスするアクティブセルの種類の比較 + 呼び先が複数からアクセスされるかの判定 をする
         if (current_cell_hash != callee_cell_hash) && (accessed_cell_hash[callee_cell_name]["AccessCount"] >= 2) then
-          accessed_cell_hash[callee_cell_name]["IsCoveredByParent"] = true
+          accessed_cell_hash[callee_cell_name]["IsNotCoveredByParent"] = true
         end
       end
     end
 
     # 最終的な排他制御の判定
+    # TODO: ここの判定が本当に正しいかどうかは検証が必要
     cell_list.each do |cell|
       cell_name = cell.get_global_name.to_s
       if accessed_cell_hash[cell_name]["IsMultiAccess"] == true &&
          accessed_cell_hash[cell_name]["HasVariable"] == true &&
-         accessed_cell_hash[cell_name]["IsCoveredByParent"] == false then
+         accessed_cell_hash[cell_name]["IsNotCoveredByParent"] == true then
         accessed_cell_hash[cell_name]["ExclusiveControl"] = true
       end
     end
 
+    # exit(1)
 
     # puts "accessed_cell_hash: #{accessed_cell_hash}"
 
