@@ -63,7 +63,7 @@ class RustGenCelltypePlugin < CelltypePlugin
     @@gen_heapless_crate_dependency = false
     @@const_init_catalog_loaded = false
     @@const_init_impled_custom_struct_list = Hash.new { |hash, key| hash[key] = [] }
-    @@used_in_rust_custom_struct_list = Hash.new { |hash, key| hash[key] = [] }
+    @@used_in_rust_custom_struct_list = Hash.new
 
     #celltype::     Celltype        セルタイプ（インスタンス）
     def initialize( celltype, option )
@@ -399,7 +399,7 @@ class RustGenCelltypePlugin < CelltypePlugin
             # @@struct_type_list.push(c_type)
 
             # Rust のコード生成で使用されているオリジナル構造体のリストに追加する
-            @@used_in_rust_custom_struct_list[c_type.get_name.to_s] << c_type
+            @@used_in_rust_custom_struct_list[c_type.get_name.to_s] = c_type
 
             # @gen_use_global = true
         elsif c_type.kind_of?( PtrType ) then
@@ -468,7 +468,7 @@ class RustGenCelltypePlugin < CelltypePlugin
             structs.each do |st|
                 if str.include?(st.get_name.to_s) then
                     # Rust のコード生成で使用されているオリジナル構造体のリストに追加する
-                    @@used_in_rust_custom_struct_list[st.get_name.to_s] << st
+                    @@used_in_rust_custom_struct_list[st.get_name.to_s] = st
                 end
             end
         else
@@ -665,7 +665,10 @@ class RustGenCelltypePlugin < CelltypePlugin
         default_impled_custom_struct_list = Hash.new { |hash, key| hash[key] = [] }
 
         # default を実装できるかのチェック
-        @@used_in_rust_custom_struct_list.each do |struct_name, st|
+        # ハッシュを直接イテレーションすると、中で要素追加が起きた場合にエラーになるため、
+        # キーのリストをコピーして回す、あるいは to_a して回す
+        @@used_in_rust_custom_struct_list.to_a.each do |struct_name, st|
+
             rust_name = camel_case(snake_case(st.get_name.to_s.sub(/^_+/, "")))
 
             # まだチェックされていない構造体の場合は、チェックを行う
