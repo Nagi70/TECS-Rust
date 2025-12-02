@@ -696,7 +696,7 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
             # TODO: 型に応じて適切な初期化をする必要がある
             # TODO: オリジナルの型に対応させるのは難しいかもしれない
             publish_topic_hash.each do |topic_arg_name, (topic_type)|
-                reactor_api += "\t\t\tlet mut #{topic_arg_name}: #{topic_type} = Default::default();\n"
+                reactor_api += "\t\t\tlet mut #{topic_arg_name}: #{topic_type} = #{topic_type}::const_init();\n"
             end
 
             reactor_api += "\t\t\ttecs_celltype::#{snake_case(celltype.get_global_name.to_s)}::#{cell.get_global_name.to_s.upcase}.#{snake_case(c_dag_periodic_reactor.get_name.to_s)}.#{c_dag_periodic_reactor.get_signature.get_function_head_array.first.get_name}("
@@ -789,7 +789,7 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
             # TODO: 型に応じて適切な初期化をする必要がある
             # TODO: オリジナルの型に対応させるのは難しいかもしれない
             publish_topic_hash.each do |topic_arg_name, (topic_type)|
-                reactor_api += "\t\t\tlet mut #{topic_arg_name}: #{topic_type} = Default::default();\n"
+                reactor_api += "\t\t\tlet mut #{topic_arg_name}: #{topic_type} = #{topic_type}::const_init();\n"
             end
 
             reactor_api += "\t\t\ttecs_celltype::#{snake_case(celltype.get_global_name.to_s)}::#{cell.get_global_name.to_s.upcase}.#{snake_case(c_dag_reactor.get_name.to_s)}.#{c_dag_reactor.get_signature.get_function_head_array.first.get_name}("
@@ -1129,30 +1129,6 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
 
     def gen_use_in_tecs_global_rs file
         # file.print("use awkernel_lib::time::Time;\n")
-    end
-
-    # awkernelのTime型など、defaultの実装がない型への特別な対応を生成する
-    def gen_default_impl_for_custom_struct file, struct
-        file.print("impl Default for #{camel_case(snake_case(struct.get_name.to_s.sub(/^_+/, "")))} {\n")
-        file.print("\tfn default() -> Self {\n")
-        file.print("\t\tSelf {\n")
-        struct.get_members_decl.get_items.each do |m|
-            if @@non_default_impl_type_list.include?(c_type_to_rust_type(m.get_type)) then
-                # defaultの実装がない型の場合は、特別な値を生成する
-                case c_type_to_rust_type(m.get_type)
-                    when "awkernel_lib::time::Time"
-                        file.print("\t\t\t#{m.get_name}: awkernel_lib::time::Time::zero(),\n")
-                    else
-                        file.print("\t\t\t#{m.get_name}: Default::default(),\n")
-                end
-            else
-                # defaultの実装がある型の場合は、Default::default()を生成する
-                file.print("\t\t\t#{m.get_name}: Default::default(),\n")
-            end
-        end
-        file.print("\t\t}\n")
-        file.print("\t}\n")
-        file.print("}\n\n")
     end
 
     # ロックガード構造体の定義を生成

@@ -662,43 +662,10 @@ class RustGenCelltypePlugin < CelltypePlugin
             end
         end
 
-        default_impled_custom_struct_list = Hash.new { |hash, key| hash[key] = [] }
-
-        # default を実装できるかのチェック
-        # ハッシュを直接イテレーションすると、中で要素追加が起きた場合にエラーになるため、
-        # キーのリストをコピーして回す、あるいは to_a して回す
         @@used_in_rust_custom_struct_list.to_a.each do |struct_name, st|
-
             rust_name = camel_case(snake_case(st.get_name.to_s.sub(/^_+/, "")))
 
-            # まだチェックされていない構造体の場合は、チェックを行う
-            if default_impled_custom_struct_list.key?(rust_name) == false then
-                # 構造体のメンバの型にdefaultが実装されていないものがあるかどうかをチェックする
-                st.get_members_decl.get_items.each do |m|
-                    # defaultが実装されていない型をフィールドに持つ場合は、#[derive(Default)]を付与しない
-                    if !@@default_type_checker.default_impl?(c_type_to_rust_type(m.get_type)) then
-                        # ここに到達するまでに、mの型にdefaultが実装されているかどうかはチェックされている
-                        if default_impled_custom_struct_list[c_type_to_rust_type(m.get_type)] != true then
-                            default_impled_custom_struct_list[rust_name] = false
-                            break
-                        end
-                    end
-                    default_impled_custom_struct_list[rust_name] = true
-                end
-            end
-        end
-
-        @@used_in_rust_custom_struct_list.each do |struct_name, st|
-            rust_name = camel_case(snake_case(st.get_name.to_s.sub(/^_+/, "")))
-
-            # derive(Default)を付与するかどうかをチェックする
-            # メッセージ型にはCloneが必須であるため、Cloneを付与する
-            if default_impled_custom_struct_list[rust_name] == true then
-                file.print("#[derive(Default, Clone)]\n")
-            else
-                file.print("#[derive(Clone)]\n")
-            end
-
+            file.print("#[derive(Clone)]\n")
             file.print("pub struct #{rust_name} {\n")
 
             st.get_members_decl.get_items.each do |m|
@@ -708,10 +675,6 @@ class RustGenCelltypePlugin < CelltypePlugin
             end
 
             file.print("}\n\n")
-
-            if default_impled_custom_struct_list[rust_name] == false then
-                gen_default_impl_for_custom_struct file, st
-            end
 
             # const fn const_init() の生成（入れ子構造体や Time など catalog で定義した式で初期化）
             if @@const_init_catalog_loaded
