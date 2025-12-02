@@ -912,16 +912,21 @@ module TECSFlow
     json_list = []
     cell_list = []
 
-    name_space_list = $root_namespace.get_namespace_list
-    
-    name_space_list.each do |name_space|
-      name_space.get_cell_list.each do |cell|
+    # 再帰的にセルを収集して json_list と cell_list を作成する
+    collect_cells_for_json = Proc.new do |ns|
+      ns.get_cell_list.each do |cell|
         cell_list << cell
         next if cell.get_celltype.is_active?
-        # json_list << $flow_json_hash[cell.get_name.to_s]
-        json_list << $flow_json_hash[cell.get_global_name.to_s]
+        if $flow_json_hash[cell.get_global_name.to_s]
+          json_list << $flow_json_hash[cell.get_global_name.to_s]
+        end
+      end
+      ns.get_namespace_list.each do |sub_ns|
+        collect_cells_for_json.call(sub_ns)
       end
     end
+
+    collect_cells_for_json.call($root_namespace)
 
     analyze_deadlock json_list, cell_list
 
