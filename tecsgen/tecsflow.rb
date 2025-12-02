@@ -158,10 +158,9 @@ class Namespace
       return
     end
 
-    name_space_list = @@root_namespace.get_namespace_list
-
-    name_space_list.each do |name_space|
-      name_space.get_cell_list.each do |cell|
+    # 再帰的にセルを収集する Proc を定義
+    collect_cells = Proc.new do |ns|
+      ns.get_cell_list.each do |cell|
         cellname = cell.get_global_name.to_s
         celltype = cell.get_celltype.get_name.to_s
         cell_obj = {
@@ -172,7 +171,12 @@ class Namespace
         }
         $flow_json_hash[cellname] = cell_obj
       end
+      ns.get_namespace_list.each do |sub_ns|
+        collect_cells.call(sub_ns)
+      end
     end
+
+    collect_cells.call(@@root_namespace)
   end
 
   #=== print_all_cells
@@ -381,7 +385,6 @@ class Cell
 
   # TODO: 呼び口配列や受け口配列に対応していない
   def create_path_item_hash indent_level, no_caller_cell, call_port_name, call_subsc, callee_cell, entry_port_name, callee_subsc, func_name
-
     path_item = {
       "CellName": callee_cell.get_global_name,
       "Celltype": callee_cell.get_celltype.get_name,
