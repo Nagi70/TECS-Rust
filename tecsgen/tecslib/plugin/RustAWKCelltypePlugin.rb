@@ -720,7 +720,8 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
 
             reactor_api += "\t\t},\n"
 
-            reactor_api += "\t\tvec![Cow::from(\"#{cell.get_attr_initializer("publishTopicNames".to_sym).to_s}\")],\n"
+            publish_topics = cell.get_attr_initializer("publishTopicNames".to_sym).to_s.split(',').map { |t| "Cow::from(\"#{t.strip}\")" }.join(', ')
+            reactor_api += "\t\tvec![#{publish_topics}],\n"
 
             # TODO: sched_type 属性の初期値を明確にする必要がある。現在は、スケジューラ名 (FIFOなど)のみを想定している
             reactor_api += "\t\t#{cell.get_attr_initializer("schedType".to_sym).to_s},\n"
@@ -816,10 +817,12 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
             reactor_api += "\t\t},\n"
 
             # subscribeTopicNames 引数を生成する
-            reactor_api += "\t\tvec![Cow::from(\"#{cell.get_attr_initializer("subscribeTopicNames".to_sym).to_s}\")],\n"
+            subscribe_topics = cell.get_attr_initializer("subscribeTopicNames".to_sym).to_s.split(',').map { |t| "Cow::from(\"#{t.strip}\")" }.join(', ')
+            reactor_api += "\t\tvec![#{subscribe_topics}],\n"
 
             # publishTopicNames 引数を生成する
-            reactor_api += "\t\tvec![Cow::from(\"#{cell.get_attr_initializer("publishTopicNames".to_sym).to_s}\")],\n"
+            publish_topics = cell.get_attr_initializer("publishTopicNames".to_sym).to_s.split(',').map { |t| "Cow::from(\"#{t.strip}\")" }.join(', ')
+            reactor_api += "\t\tvec![#{publish_topics}],\n"
 
             # TODO: sched_type 属性の初期値を明確にする必要がある。現在は、スケジューラ名 (FIFOなど)のみを想定している
             reactor_api += "\t\t#{cell.get_attr_initializer("schedType".to_sym).to_s},\n"
@@ -890,7 +893,8 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
             reactor_api += "\t\t},\n"
 
             # subscribeTopicNames 引数を生成する
-            reactor_api += "\t\tvec![Cow::from(\"#{cell.get_attr_initializer("subscribeTopicNames".to_sym).to_s}\")],\n"
+            subscribe_topics = cell.get_attr_initializer("subscribeTopicNames".to_sym).to_s.split(',').map { |t| "Cow::from(\"#{t.strip}\")" }.join(', ')
+            reactor_api += "\t\tvec![#{subscribe_topics}],\n"
 
             # TODO: sched_type 属性の初期値を明確にする必要がある。現在は、スケジューラ名 (FIFOなど)のみを想定している
             reactor_api += "\t\t#{cell.get_attr_initializer("schedType".to_sym).to_s},\n"
