@@ -1375,7 +1375,7 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
                     # if lifetime_flag then
                     #     file.print "<'a>"
                     # end
-                    file.print"(&'static self"
+                    file.print"(&self"
                     # param_num と sig_param_str_list の要素数が等しいことを前提としている
                     param_num = func_head.get_paramlist.get_items.size
                     param_num.times do
