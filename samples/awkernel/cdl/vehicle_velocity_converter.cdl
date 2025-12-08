@@ -9,7 +9,7 @@ signature sVehicleVelocityConverter {
 celltype tVehicleVelocityConverter {
 
     [omit] call sTwistWithCovarianceStamped cTwistWithCovarianceV;
-    entry sVelocityStatus eVelocityStatus;
+    entry sVelocityReport eVelocityStatus;
 
     entry sVehicleVelocityConverter eReactor;
 

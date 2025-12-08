@@ -9,7 +9,7 @@ signature sDummyPeriodicReactorInMrm {
 celltype tDummyPeriodicReactorInMrm{
 
     [omit] call sImu cImu;
-    [omit] call sVelocityStatus cVelocityStatus;
+    [omit] call sVelocityReport cVelocityStatus;
     entry sDummyPeriodicReactorInMrm eReactor;
 
     attr{

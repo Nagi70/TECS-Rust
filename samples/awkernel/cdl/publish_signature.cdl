@@ -1,42 +1,42 @@
 import("struct.cdl");
 
 signature sImu {
-	void send([in] struct Frame imu);
+	// void send([in] struct Frame imu);
 };
 
 signature sImuRaw {
-	void send([in] struct ImuMsg imu_raw);
+	// void send([in] struct ImuMsg imu_raw);
 };
 
 signature sImuData {
-	void send([in] struct ImuMsg imu_data);
+	// void send([in] struct ImuMsg imu_data);
 };
 
-signature sVelocityStatus {
-    void send([in] struct VelocityReport velocity_status);
+signature sVelocityReport {
+    // void send([in] struct VelocityReport velocity_status);
 };
 
 signature sTwistWithCovariance {
-    void send([in] struct TwistWithCovariance twist_with_covariance);
+    // void send([in] struct TwistWithCovariance twist_with_covariance);
 };
 
 signature sTwistWithCovarianceStamped {
-    void send([in] struct TwistWithCovarianceStamped twist_with_covariance);
+    // void send([in] struct TwistWithCovarianceStamped twist_with_covariance);
 };
 
 signature sKinematicState {
-    void send([in] struct KinematicState kinematic_state);
+    // void send([in] struct KinematicState kinematic_state);
 };
 
 signature sAccelWithCovariance {
-    void send([in] struct AccelWithCovariance accel_with_covariance);
+    // void send([in] struct AccelWithCovariance accel_with_covariance);
 };
 
 signature sAccelWithCovarianceStamped {
-    void send([in] struct AccelWithCovarianceStamped accel_with_covariance);
+    // void send([in] struct AccelWithCovarianceStamped accel_with_covariance);
 };
 
 signature sControl {
-    void send([in] struct Control control);
+    // void send([in] struct Control control);
 };
 

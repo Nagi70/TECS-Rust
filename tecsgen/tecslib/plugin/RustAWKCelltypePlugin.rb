@@ -524,26 +524,20 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
     def get_topic_type port
         signature = port.get_signature
         func_array = signature.get_function_head_array
-        if func_array.length == 0 then
-          puts "error: #{signature.get_global_name.to_s} has no function head"
-          exit 1
-        elsif func_array.length > 1 then
-          puts "warning: #{signature.get_global_name.to_s} has multiple function heads. Use the first one this time."
+
+        if func_array.length != 0 then
+            puts "error: #{signature.get_global_name.to_s} has function heads. Please define the empty signaure for topic port using the name s + \"topic type\""
+            exit 1
         end
-  
-        first_func = func_array.first
-        param_list = first_func.get_paramlist
-        if param_list.get_items.length == 0 then
-          puts "error: #{signature.get_global_name.to_s} has no argument. Please define a topic argument in the signature."
-          exit 1
-        elsif param_list.get_items.length > 1 then
-          puts "warning: #{signature.get_global_name.to_s} has multiple arguments. Use the first one this time."
-        end
-  
-        first_param = param_list.get_items.first
-        return c_type_to_rust_type(first_param.get_type)
+
+        signature_name = signature.get_global_name.to_s
+        # 先頭の s を取り除いたものをトピックの型とする
+        topic_type = signature_name.slice(1..-1)
+
+        return topic_type
     end
 
+    # リアクターボディシグニチャの引数から、パブリッシュするトピックとサブスクライブするトピックを取得する
     def get_topic_list_from_callback_signature signature
 
         # パブリッシュするトピックとサブスクライブするトピックを取得する
