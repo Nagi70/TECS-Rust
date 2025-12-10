@@ -1,10 +1,10 @@
 import("struct_define.cdl");
 
-signature sImu {
+signature sFrame {
 	void send([in] struct ImuMsg imu);
 };
 
-signature sImuRaw {
+signature sImuMsg {
 	void send([in] struct ImuMsg imu_raw);
 };
 
@@ -22,7 +22,7 @@ signature sDummyImuCorrectorbody {
 
 [generate( RustAWKPlugin, "DAG_PERIODIC_REACTOR_BODY")]
 celltype tDummyImubody{
-    [omit] call sImu cImu;                /* imu トピック送信ポート */
+    [omit] call sFrame cImu;                /* imu トピック送信ポート */
     
     entry sDummyImubody eReactor;
     
@@ -41,8 +41,8 @@ celltype tDummyImubody{
 
 [generate( RustAWKPlugin, "DAG_REACTOR_BODY")]
 celltype tImuDriverbody {
-    [omit] call sImuRaw cImuRaw;          /* imu_raw トピック送信ポート */
-    entry sImu eImu;                      /* imu トピック受信ポート */
+    [omit] call sImuMsg cImuRaw;          /* imu_raw トピック送信ポート */
+    entry sFrame eImu;                      /* imu トピック受信ポート */
     
     entry sImudriverbody eReactor;
     
@@ -58,7 +58,7 @@ celltype tImuDriverbody {
 
 [generate( RustAWKPlugin, "DAG_SINK_REACTOR_BODY")]
 celltype tDummyImuCorrectorbody{
-    entry sImuRaw eImuRaw;                               /* imu_raw トピック受信ポート */
+    entry sImuMsg eImuRaw;                               /* imu_raw トピック受信ポート */
     
     entry sDummyImuCorrectorbody eReactor;
     

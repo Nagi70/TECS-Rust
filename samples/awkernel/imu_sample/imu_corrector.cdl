@@ -16,9 +16,9 @@ celltype tImuCorrectorbody {
     entry sImuCorrectorbody eBody;
 
     /* imu_data トピック送信用ポート */
-    [omit] call sImuData cImuData;
+    [omit] call sImuMsg cImuData;
     /* imu_raw トピック受信用ポート */
-    entry sImuRaw eImuRaw;
+    entry sImuMsg eImuRaw;
 
     /* 呼び口ポート */
     call sTfListener   cTf;      /* TF 取得 */

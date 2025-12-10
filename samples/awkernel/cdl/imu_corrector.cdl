@@ -12,8 +12,8 @@ signature sImuCorrector {
 [generate(RustAWKPlugin, "DAG_REACTOR_BODY")]  // プラグインの適用
 celltype tImuCorrector {
 
-    [omit] call sImuData cImuData;  // パブリッシュ用呼び口 (必ずomitにする, c+"トピック名"にする)
-    entry sImuRaw eImuRaw;  // サブスクライブ用受け口 (e+"トピック名"にする)
+    [omit] call sImuMsg cImuData;  // パブリッシュ用呼び口 (必ずomitにする, c+"トピック名"にする)
+    entry sImuMsg eImuRaw;  // サブスクライブ用受け口 (e+"トピック名"にする)
     
     entry sImuCorrector eReactor;  //eReactorという名前の受け口を必ず1つ定義する
     

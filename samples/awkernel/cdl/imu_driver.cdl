@@ -41,8 +41,8 @@ celltype tTamagawaImuDevice {
 celltype tImuDriver {
     entry sImuDriver eReactor;
 
-    [omit] call sImuRaw cImuRaw;
-    entry sImu eImu;
+    [omit] call sImuMsg cImuRaw;
+    entry sFrame eImu;
 
     /* 呼び口ポート */
     call sImuDevice   cDev;   /* IMU デバイス制御 */

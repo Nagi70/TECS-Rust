@@ -50,9 +50,9 @@ celltype tImuDriverbody {
     entry sImuDriverbody eImuDriverbody;
 
     /* imu_raw トピック送信ポート */
-    [omit] call sImuRaw cImuRaw;
+    [omit] call sImuMsg cImuRaw;
     /* IMU のデータを受け取る受信ポート */
-    entry sImu eImu;
+    entry sFrame eImu;
 
     /* 呼び口ポート */
     call sImuDevice   cDev;   /* IMU デバイス制御 */

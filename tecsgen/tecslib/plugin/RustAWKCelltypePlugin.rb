@@ -1358,6 +1358,11 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
             if port.get_port_type == :ENTRY then
                 sig = port.get_signature
 
+                # 空のシグニチャの場合は、impl を生成しない
+                if sig.get_function_head_array.length == 0 then
+                    next
+                end
+
                 file.print "impl #{camel_case(snake_case(port.get_signature.get_global_name.to_s))} for #{camel_case(snake_case(port.get_name.to_s))}For#{get_rust_celltype_name(celltype)}{\n\n"
 
                 sig_param_str_list, _, lifetime_flag = get_sig_param_str sig

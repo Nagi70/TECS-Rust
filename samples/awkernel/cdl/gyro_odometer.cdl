@@ -17,7 +17,7 @@ celltype tGyroOdometer {
     [omit] call sTwistWithCovarianceStamped cTwistWithCovarianceG;
 
     entry sTwistWithCovarianceStamped eTwistWithCovarianceV;
-    entry sImuData eImuData;
+    entry sImuMsg eImuData;
 
     entry sGyroOdometer eReactor;
 

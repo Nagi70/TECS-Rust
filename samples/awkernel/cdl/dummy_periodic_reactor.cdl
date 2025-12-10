@@ -8,7 +8,7 @@ signature sDummyPeriodicReactorInMrm {
 [generate( RustAWKPlugin, "DAG_PERIODIC_REACTOR_BODY")]
 celltype tDummyPeriodicReactorInMrm{
 
-    [omit] call sImu cImu;
+    [omit] call sFrame cImu;
     [omit] call sVelocityReport cVelocityStatus;
     entry sDummyPeriodicReactorInMrm eReactor;
 

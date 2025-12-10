@@ -21,17 +21,17 @@ cell tTemplateDagSinkReactor DummyImuCorrector {
     subscribeTopicNames = PL_EXP("ImuMsg");
 };
 
-signature sImu {
+signature sFrame {
 	void send([in] struct ImuMsg imu);
 };
 
-signature sImuRaw {
+signature sImuMsg {
 	void send([in] struct ImuMsg imu_raw);
 };
 
 [generate( RustAWKPlugin, "")]
 celltype tDummyImubody{
-    [omit] call sImu cImu;                       /* imu トピック送信ポート */
+    [omit] call sFrame cImu;                       /* imu トピック送信ポート */
     entry sReactorbody eTemplateDummyImubody;    /* テンプレリアクター用受け口 */
     entry sDummyImubody eDummyImubody;           /* 生成後リアクター用受け口 */
     var {
@@ -41,15 +41,15 @@ celltype tDummyImubody{
 
 [generate( RustAWKPlugin, "")]
 celltype tImuDriverbody {
-    [omit] call sImuRaw cImuRaw;                /* imu_raw トピック送信ポート */
+    [omit] call sImuMsg cImuRaw;                /* imu_raw トピック送信ポート */
     entry sReactorbody eTemplateImuDriverbody;  /* テンプレリアクター用受け口 */
     entry sImuDriverbody eImuDriverbody;        /* 生成後リアクター用受け口 */
-    entry sImu eImu;                            /* imu トピック受信ポート */
+    entry sFrame eImu;                            /* imu トピック受信ポート */
 };
 
 [generate( RustAWKPlugin, "")]
 celltype tDummyImuCorrectorbody{
-    entry sImuRaw eImuRaw;
+    entry sImuMsg eImuRaw;
     entry sReactorbody eTemplateDummyImuCorrectorbody;   /* テンプレリアクター用受け口 */
     entry sDummyImuCorrectorbody eDummyImuCorrectorbody; /* 生成後リアクター用受け口 */
 };

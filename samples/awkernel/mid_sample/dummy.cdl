@@ -23,7 +23,7 @@ celltype tDummyImuCorrector{
 
 [generate( RustAWKPlugin, "")]
 celltype tDummyImubody{
-    [omit] call sImu cImu;
+    [omit] call sFrame cImu;
     entry sDummyImubody eDummyImubody;
     var {
         int32_t i = 0;
@@ -32,6 +32,6 @@ celltype tDummyImubody{
 
 [generate( RustAWKPlugin, "")]
 celltype tDummyImuCorrectorbody{
-    entry sImuRaw eImuRaw;
+    entry sImuMsg eImuRaw;
     entry sDummyImuCorrectorbody eDummyImuCorrectorbody;
 };

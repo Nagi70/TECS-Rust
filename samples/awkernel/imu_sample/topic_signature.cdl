@@ -1,10 +1,10 @@
 import("struct_define.cdl");
 
-signature sImuRaw {
+signature sImuMsg {
 };
 
-signature sImuData {
+signature sImuMsg {
 };
 
-signature sImu {
+signature sFrame {
 };

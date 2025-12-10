@@ -1,15 +1,11 @@
 import("struct.cdl");
 
-signature sImu {
+signature sFrame {
 	// void send([in] struct Frame imu);
 };
 
-signature sImuRaw {
+signature sImuMsg {
 	// void send([in] struct ImuMsg imu_raw);
-};
-
-signature sImuData {
-	// void send([in] struct ImuMsg imu_data);
 };
 
 signature sVelocityReport {
