@@ -24,6 +24,8 @@ signature sTimeDelayKalmanFilter {
     double64_t getXelement([in] uint32_t i);
 };
 
+import("dimension.cdl");
+
 /* 遅延を拡張状態で表現する KF */
 [generate( RustAWKPlugin , "")]
 celltype tTimeDelayKalmanFilter {
@@ -31,11 +33,11 @@ celltype tTimeDelayKalmanFilter {
 
     /* ビルド時に固定する拡張サイズ（不変）、この二つの値はべた書きでもいいかも */
     attr {
-        int32_t dim_x = 6;           /* 単一スロットの状態次元 */
+        int32_t dim_x = DIM_X;           /* 単一スロットの状態次元 */
         int32_t max_delay_step = 50;  /* 保持するスロット数（拡張長） */
-        int32_t dim_x_ex = 300;
+        int32_t dim_x_ex = DIM_X_EX;
         int32_t d_dim_x = 294;
-        int32_t dim_y_twist = 2;
+        int32_t dim_y_twist = DIM_Y_TWIST;
     };
 
     /* 変化する値（実行中に更新） */
