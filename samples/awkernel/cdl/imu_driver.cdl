@@ -15,7 +15,7 @@ signature sImuDriver {
 [generate( RustAWKPlugin, "")]
 celltype tTamagawaImuDevice {
     /* エントリポート */
-    entry sImuDevice eImuDevice;
+    [inline] entry sImuDevice eImuDevice;
 
     /* 変更されないパラメータ */
     attr {
@@ -39,7 +39,7 @@ celltype tTamagawaImuDevice {
 //*** IMUノードルーチンセルタイプ ***//
 [generate( RustAWKPlugin, "DAG_REACTOR_BODY")]
 celltype tImuDriver {
-    entry sImuDriver eReactor;
+    [inline] entry sImuDriver eReactor;
 
     [omit] call sImuMsg cImuRaw;
     entry sFrame eImu;

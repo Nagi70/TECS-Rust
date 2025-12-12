@@ -34,7 +34,7 @@ celltype tTwist2Accel {
     entry sKinematicState eKinematicState;        
 
     // Reactor entry for plugin
-    entry sTwist2Accel eReactor;        // required eReactor
+    [inline] entry sTwist2Accel eReactor;        // required eReactor
 
     call sLowpass1d cFilterAlx;
     call sLowpass1d cFilterAly;

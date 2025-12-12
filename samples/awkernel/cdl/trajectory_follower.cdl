@@ -21,7 +21,7 @@ celltype tTrajectoryFollower {
     [omit] call sControl cControl;
     
     /* リアクターの受け口（必須: eReactor） */
-    entry sTrajectoryFollower eReactor;
+    [inline] entry sTrajectoryFollower eReactor;
 
     call sUtilsTrajectory cTraj;
     call sUtilsPoseDeviation cPose;

@@ -13,6 +13,7 @@ signature sTwistWithCovarianceSet {
 signature sTwistWithCovarianceGet {
     PLType("Option<TwistWithCovarianceStamped>") pop( void );
     PLType("Option<TwistWithCovarianceStamped>") popIncrementAge( void );
+    PLType("usize") len( void );
 };
 
 [generate(RustAWKPlugin, "DAG_SINK_REACTOR_BODY")]
@@ -24,7 +25,7 @@ celltype tEkfLocalizer {
     entry sTwistWithCovarianceStamped  eTwistWithCovarianceG;
 
     // リアクター本体の受け口 (awkernelのルール)
-    entry sEkfLocalizer eReactor;
+    [inline] entry sEkfLocalizer eReactor;
 
     // ----- 属性定義 (不変パラメータ) -----
     attr {
@@ -66,12 +67,12 @@ celltype tEkfLocalizerTimer{
     call sEkfModule cEkfModule;
     call sTwistWithCovarianceGet cQueue;
 
-    entry sEkfLocalizerTimer eReactor;
+    [inline] entry sEkfLocalizerTimer eReactor;
 
     attr{
 	    [omit] PLType("Cow") reactorName  = PL_EXP("EkfLocalizerTimer");
 	    [omit] PLType("SchedulerType") schedType = PL_EXP("SchedulerType::PrioritizedFIFO(7)");
-	    [omit] PLType("Duration") period = PL_EXP("Duration::from_millis(50)");
+	    [omit] PLType("Duration") period = PL_EXP("Duration::from_millis(20)");
         [omit] PLType("Cow") publishTopicNames = PL_EXP("KinematicState");
 
         double64_t ekf_rate = 0.01;

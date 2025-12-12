@@ -13,7 +13,7 @@ celltype tStopFilter {
     entry     sKinematicState  eKinematicState;      /* 入力: 生 Odometry を subscribe */
     
     /* リアクターの受け口（必須: eReactor） */
-    entry sStopFilter eReactor;
+    [inline] entry sStopFilter eReactor;
     
     /* 属性（プラグインが要求するリアクター属性は omit 指定） */
     attr {

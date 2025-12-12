@@ -11,7 +11,7 @@ celltype tVehicleVelocityConverter {
     [omit] call sTwistWithCovarianceStamped cTwistWithCovarianceV;
     entry sVelocityReport eVelocityStatus;
 
-    entry sVehicleVelocityConverter eReactor;
+    [inline] entry sVehicleVelocityConverter eReactor;
 
     // 属性定義 (パラメータ)
     attr {

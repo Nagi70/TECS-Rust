@@ -19,7 +19,7 @@ celltype tGyroOdometer {
     entry sTwistWithCovarianceStamped eTwistWithCovarianceV;
     entry sImuMsg eImuData;
 
-    entry sGyroOdometer eReactor;
+    [inline] entry sGyroOdometer eReactor;
 
     // TF用呼び口
     call sTf cTf;
