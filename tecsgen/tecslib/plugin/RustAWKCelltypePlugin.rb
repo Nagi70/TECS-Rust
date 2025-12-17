@@ -992,7 +992,8 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
         check_mutex = []
 
         celltype.get_cell_list.each{ |cell|
-            check_mutex.push(check_exclusive_control_for_cell cell).uniq!
+            val = check_exclusive_control_for_cell(cell) ? "mutex" : "none"
+            check_mutex.push(val).uniq!
         }
 
         # ・ミューテックスを適用するセルと排他制御を使わないセルが混在する場合、check_mutex の中に
@@ -1073,7 +1074,14 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
     # セル構造体の変数フィールドの定義を生成
     def gen_rust_cell_structure_variable file, celltype
         if celltype.get_var_list.length != 0 then
-            file.print "\tvariable: &'static TECSVariable<#{get_rust_celltype_name(celltype)}Var>,\n"
+            case check_gen_mutex_or_not_for_celltype(celltype)
+            when "mix"
+                file.print "\tvariable: &'static TECSVariable<#{get_rust_celltype_name(celltype)}Var>,\n"
+            when "mutex"
+                file.print "\tvariable: &'static awkernel_lib::sync::mutex::Mutex<#{get_rust_celltype_name(celltype)}Var>,\n"
+            when "none"
+                file.print "\tvariable: &'static TECSSyncVar<#{get_rust_celltype_name(celltype)}Var>,\n"
+            end
         end
     end
 
@@ -1121,7 +1129,14 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
     # ロックガード構造体の変数への参照の定義を生成
     def gen_rust_lock_guard_structure_variable file, celltype
         if celltype.get_var_list.length != 0 then
-            file.print "\tpub var: TECSVarGuard<'a, #{get_rust_celltype_name(celltype)}Var>,\n"
+            case check_gen_mutex_or_not_for_celltype(celltype)
+            when "mix"
+                file.print "\tpub var: TECSVarGuard<'a, #{get_rust_celltype_name(celltype)}Var>,\n"
+            when "mutex"
+                file.print "\tpub var: awkernel_lib::sync::mutex::LockGuard<'a, #{get_rust_celltype_name(celltype)}Var>,\n"
+            when "none"
+                file.print "\tpub var: &'a mut #{get_rust_celltype_name(celltype)}Var,\n"
+            end
         end
     end
 
@@ -1277,16 +1292,26 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
         } # celltype.get_port_list.each
     end
 
-    # 変数構造体と TECSVariable enum の初期化を生成
+    # 変数構造体と 以下のルールに沿った初期化を生成
+    # 排他制御有りのセルのみ -> TECSMutexedVariable 構造体の初期化を生成
+    # 排他制御無しのセルのみ -> TECSRawVariable 構造体の初期化を生成
+    # 両方混在するセルタイプ -> TECSVariable enum の初期化を生成
     def gen_rust_variable_structure_initialize file, cell
         if @celltype.get_var_list.length != 0 then
-            file.print "static #{cell.get_global_name.to_s.upcase}VAR: TECSVariable<#{get_rust_celltype_name(cell.get_celltype)}Var> = TECSVariable::"
+            mutex_mode = check_gen_mutex_or_not_for_celltype(@celltype)
 
-            # セルに排他制御が必要かどうか
-            if check_exclusive_control_for_cell(cell) == true then
-                file.print "Mutexed(awkernel_lib::sync::mutex::Mutex::new(\n"
-            else
-                file.print "Raw(TECSSyncVar { unsafe_var: core::cell::UnsafeCell::new(\n"
+            case mutex_mode
+            when "mix"
+                file.print "static #{cell.get_global_name.to_s.upcase}VAR: TECSVariable<#{get_rust_celltype_name(cell.get_celltype)}Var> = TECSVariable::"
+                if check_exclusive_control_for_cell(cell) == true then
+                    file.print "Mutexed(awkernel_lib::sync::mutex::Mutex::new(\n"
+                else
+                    file.print "Raw(TECSSyncVar { unsafe_var: core::cell::UnsafeCell::new(\n"
+                end
+            when "mutex"
+                file.print "static #{cell.get_global_name.to_s.upcase}VAR: awkernel_lib::sync::mutex::Mutex<#{get_rust_celltype_name(cell.get_celltype)}Var> = awkernel_lib::sync::mutex::Mutex::new(\n"
+            when "none"
+                file.print "static #{cell.get_global_name.to_s.upcase}VAR: TECSSyncVar<#{get_rust_celltype_name(cell.get_celltype)}Var> = TECSSyncVar { unsafe_var: core::cell::UnsafeCell::new(\n"
             end
 
             file.print "\t#{get_rust_celltype_name(cell.get_celltype)}Var {\n"
@@ -1294,12 +1319,21 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
             # 変数構造体のフィールドの初期化を生成
             gen_rust_variable_structure_field_initialize(file, cell)
 
-            if check_exclusive_control_for_cell(cell) == true then
+            case mutex_mode
+            when "mix"
+                if check_exclusive_control_for_cell(cell) == true then
+                    file.print "\t}\n"
+                    file.print "));\n"
+                else
+                    file.print "\t}),\n"
+                    file.print "});\n\n"
+                end
+            when "mutex"
                 file.print "\t}\n"
-                file.print "));\n"
-            else
-                file.print "\t}),\n"
-                file.print "});\n\n"
+                file.print ");\n\n"
+            when "none"
+                file.print "\t})\n"
+                file.print "};\n\n"
             end
         end
     end
@@ -1457,6 +1491,13 @@ pub enum TECSVariable<T: core::marker::Send>{
     Raw(TECSSyncVar<T>),
 }
 
+impl<T: core::marker::Send> TECSSyncVar<T> {
+    #[inline(always)]
+    pub fn lock<'a>(&'a self, _node: &'a mut MCSNode<T>) -> &'a mut T {
+        unsafe { &mut *self.unsafe_var.get() }
+    }
+}
+
 impl<'a, T: core::marker::Send> TECSVariable<T>{
     #[inline]
 	pub fn lock(&'a self, node: &'a mut MCSNode<T>) -> TECSVarGuard<'a, T>{
@@ -1474,7 +1515,7 @@ pub enum TECSVarGuard<'a, T: core::marker::Send>{
 
 impl<'a, T: core::marker::Send> core::ops::Deref for TECSVarGuard<'a, T> {
     type Target = T;
-    #[inline]
+    #[inline(always)]
     fn deref(&self) -> &Self::Target {
         match self {
             TECSVarGuard::Mutexed(g)  => &*g,
@@ -1484,7 +1525,7 @@ impl<'a, T: core::marker::Send> core::ops::Deref for TECSVarGuard<'a, T> {
 }
 
 impl<'a, T: core::marker::Send> core::ops::DerefMut for TECSVarGuard<'a, T> {
-    #[inline]
+    #[inline(always)]
     fn deref_mut(&mut self) -> &mut Self::Target {
         match self {
             TECSVarGuard::Mutexed(g)  => &mut *g,

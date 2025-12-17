@@ -100,6 +100,9 @@ def parse_rust_functions(rust_file)
     # fn xxx() の検知
     # impl 内の関数実装だけを確認するため
     if line =~ fn_pattern && brace_count == 2
+      if @currennt_entry_structure.nil?
+        next
+      end
       @current_function_name = line.scan(/fn\s+\w+\s*\(.*?\)\s*/)
       # print "\t[#{@current_function_name}]\n"
       temp = @current_function_name[0]
