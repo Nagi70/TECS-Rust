@@ -53,7 +53,7 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
     @@use_periodic_reactor_gen = false
     @@use_reactor_gen = false
     @@use_sink_reactor_gen = false
-    @@reactor_api_list = []
+    @@reactor_nodes = []
     @@non_default_impl_type_list = ["awkernel_lib::time::Time"] # defaultの実装がない型のリスト(awkernelのTime型など)
     @@dag_reactor_body_celltype_list = []
     @@dag_sink_reactor_body_celltype_list = []
@@ -624,31 +624,11 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
 
         file.print "use tecs_global::*;\n\n"
 
-        if @@use_periodic_reactor_gen then
-            # file.print "use tecs_celltype::t_dag_periodic_reactor::*;\n"
-            # file.print "use tecs_signature::s_periodic_reactorbody::*;\n\n"
-        end
-        if @@use_reactor_gen then
-            # file.print "use tecs_celltype::t_dag_reactor::*;\n"
-            # file.print "use tecs_signature::s_reactorbody::*;\n\n"
-        end
-        if @@use_sink_reactor_gen then
-            # file.print "use tecs_celltype::t_dag_sink_reactor::*;\n"
-            # file.print "use tecs_signature::s_sink_reactorbody::*;\n\n"
-        end
-
-        # file.print "use tecs_signature::s_reactorbody::*;\n\n"
-
         file.print "pub async fn run() {\n\n"
         file.print "\twait_microsec(1000000);\n\n"
-        file.print "\tlet dag = create_dag();\n\n"
 
-        @@reactor_api_list.each do |reactor_api|
-            file.print reactor_api
-            file.print "\n\n"
-        end
+        analyze_and_generate_dags file
 
-        file.print "\tlet _ = finish_create_dags(&[dag.clone()]).await;\n"
         file.print "}\n"
     end
 
@@ -656,7 +636,7 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
         @@use_periodic_reactor_gen = true
 
         suffix = "DagPeriodicReactor"
-        api = "dag.register_periodic_reactor"
+        api = "%{dag}.register_periodic_reactor"
         if !in_dag then
             suffix = "PeriodicReactor"
             api = "spawn_periodic_reactor"
@@ -714,8 +694,9 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
 
             reactor_api += "\t\t},\n"
 
-            publish_topics = cell.get_attr_initializer("publishTopicNames".to_sym).to_s.split(',').map { |t| "Cow::from(\"#{t.strip}\")" }.join(', ')
-            reactor_api += "\t\tvec![#{publish_topics}],\n"
+            p_topics = extract_tecs_topics(cell.get_attr_initializer("publishTopicNames".to_sym))
+            publish_topics_str = p_topics.map { |t| "Cow::from(\"#{t}\")" }.join(', ')
+            reactor_api += "\t\tvec![#{publish_topics_str}],\n"
 
             # TODO: sched_type 属性の初期値を明確にする必要がある。現在は、スケジューラ名 (FIFOなど)のみを想定している
             reactor_api += "\t\t#{cell.get_attr_initializer("schedType".to_sym).to_s},\n"
@@ -724,17 +705,24 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
             reactor_api += "\t)\n"
             reactor_api += "\t.await;"
 
-            @@reactor_api_list << reactor_api
+            @@reactor_nodes << {
+                cell: cell,
+                celltype: celltype,
+                in_dag: in_dag,
+                publish_topics: p_topics,
+                subscribe_topics: [],
+                code: reactor_api
+            }
         end
 
-        @@reactor_api_list.uniq!
+        @@reactor_nodes.uniq! { |n| n[:code] }
     end
 
     def add_dag_reactor_api file, celltype, in_dag=true
         @@use_reactor_gen = true
 
         suffix = "DagReactor"
-        api = "dag.register_reactor"
+        api = "%{dag}.register_reactor"
         if !in_dag then
             suffix = "Reactor"
             api = "spawn_reactor"
@@ -811,29 +799,38 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
             reactor_api += "\t\t},\n"
 
             # subscribeTopicNames 引数を生成する
-            subscribe_topics = cell.get_attr_initializer("subscribeTopicNames".to_sym).to_s.split(',').map { |t| "Cow::from(\"#{t.strip}\")" }.join(', ')
-            reactor_api += "\t\tvec![#{subscribe_topics}],\n"
+            s_topics = extract_tecs_topics(cell.get_attr_initializer("subscribeTopicNames".to_sym))
+            subscribe_topics_str = s_topics.map { |t| "Cow::from(\"#{t}\")" }.join(', ')
+            reactor_api += "\t\tvec![#{subscribe_topics_str}],\n"
 
             # publishTopicNames 引数を生成する
-            publish_topics = cell.get_attr_initializer("publishTopicNames".to_sym).to_s.split(',').map { |t| "Cow::from(\"#{t.strip}\")" }.join(', ')
-            reactor_api += "\t\tvec![#{publish_topics}],\n"
+            p_topics = extract_tecs_topics(cell.get_attr_initializer("publishTopicNames".to_sym))
+            publish_topics_str = p_topics.map { |t| "Cow::from(\"#{t}\")" }.join(', ')
+            reactor_api += "\t\tvec![#{publish_topics_str}],\n"
 
             # TODO: sched_type 属性の初期値を明確にする必要がある。現在は、スケジューラ名 (FIFOなど)のみを想定している
             reactor_api += "\t\t#{cell.get_attr_initializer("schedType".to_sym).to_s},\n"
             reactor_api += "\t)\n"
             reactor_api += "\t.await;"
 
-            @@reactor_api_list << reactor_api
+            @@reactor_nodes << {
+                cell: cell,
+                celltype: celltype,
+                in_dag: in_dag,
+                publish_topics: p_topics,
+                subscribe_topics: s_topics,
+                code: reactor_api
+            }
         end
 
-        @@reactor_api_list.uniq!
+        @@reactor_nodes.uniq! { |n| n[:code] }
     end
 
     def add_dag_sink_reactor_api file, celltype, in_dag=true
         @@use_sink_reactor_gen = true
 
         suffix = "DagSinkReactor"
-        api = "dag.register_sink_reactor"
+        api = "%{dag}.register_sink_reactor"
         if !in_dag then
             suffix = "SinkReactor"
             api = "spawn_sink_reactor"
@@ -887,8 +884,9 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
             reactor_api += "\t\t},\n"
 
             # subscribeTopicNames 引数を生成する
-            subscribe_topics = cell.get_attr_initializer("subscribeTopicNames".to_sym).to_s.split(',').map { |t| "Cow::from(\"#{t.strip}\")" }.join(', ')
-            reactor_api += "\t\tvec![#{subscribe_topics}],\n"
+            s_topics = extract_tecs_topics(cell.get_attr_initializer("subscribeTopicNames".to_sym))
+            subscribe_topics_str = s_topics.map { |t| "Cow::from(\"#{t}\")" }.join(', ')
+            reactor_api += "\t\tvec![#{subscribe_topics_str}],\n"
 
             # TODO: sched_type 属性の初期値を明確にする必要がある。現在は、スケジューラ名 (FIFOなど)のみを想定している
             reactor_api += "\t\t#{cell.get_attr_initializer("schedType".to_sym).to_s},\n"
@@ -896,10 +894,18 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
             reactor_api += "\t)\n"
             reactor_api += "\t.await;"
 
-            @@reactor_api_list << reactor_api
+            @@reactor_nodes << {
+                cell: cell,
+                celltype: celltype,
+                in_dag: in_dag,
+                publish_topics: [],
+                subscribe_topics: s_topics,
+                code: reactor_api
+            }
+
         end
 
-        @@reactor_api_list.uniq!
+        @@reactor_nodes.uniq! { |n| n[:code] }
     end
 
     #----------------------------------------
@@ -1583,6 +1589,187 @@ impl<'a, T: core::marker::Send> core::ops::DerefMut for TECSVarGuard<'a, T> {
         # copy_gen_files_to_cargo "kernel_cfg.rs", nil
 
         gen_tecs_variable_rs
+    end
+
+    def analyze_and_generate_dags file
+        # 1. Split into connected components
+        components, non_dag_nodes = analyze_dag_groups(@@reactor_nodes)
+
+        # 2. Validate components
+        if !validate_dag_components(components)
+            # puts "warning: skipping DAG generation due to validation errors (might be incomplete collection)"
+            return
+        end
+
+        # 3. Generate code for each component (DAG)
+        dag_vars = []
+        components.each_with_index do |nodes, i|
+            dag_var = "dag#{i + 1}"
+            dag_vars << dag_var
+            file.print "\tlet #{dag_var} = create_dag();\n"
+            nodes.each do |node|
+                # Replace dag variable in the template code
+                file.print node[:code].gsub("%{dag}", dag_var)
+                file.print "\n\n"
+            end
+        end
+
+        # 4. Generate code for non-dag nodes
+        non_dag_nodes.each do |node|
+            file.print node[:code].gsub("%{dag}.", "") # Remove dag prefix
+            file.print "\n\n"
+        end
+
+        # 5. finish_create_dags call with error handling
+        if !dag_vars.empty?
+            file.print "\tlet dag_result = finish_create_dags(&["
+            file.print dag_vars.map { |v| "#{v}.clone()" }.join(", ")
+            file.print "]).await;\n\n"
+            
+            file.print "\tmatch dag_result {\n"
+            file.print "\t\tOk(_) => {},\n"
+            file.print "\t\tErr(errors) => {\n"
+            file.print "\t\t\tlog::error!(\"Failed to create DAG. Found {} error(s):\", errors.len());\n"
+            file.print "\t\t\tfor (i, e) in errors.iter().enumerate() {\n"
+            file.print "\t\t\t\tlog::error!(\"  Error[{}]: {}\", i, e);\n"
+            file.print "\t\t\t}\n"
+            file.print "\t\t\treturn;\n"
+            file.print "\t\t},\n"
+            file.print "\t}\n"
+        end
+    end
+
+    def analyze_dag_groups(nodes)
+        dag_nodes = nodes.select { |n| n[:in_dag] }
+        non_dag_nodes = nodes.select { |n| !n[:in_dag] }
+
+        # Topic connectivity mapping
+        topic_to_nodes = Hash.new { |h, k| h[k] = [] }
+        dag_nodes.each do |node|
+            (node[:publish_topics] + node[:subscribe_topics]).uniq.each do |topic|
+                topic_to_nodes[topic] << node
+            end
+        end
+
+        # Find connected components (BFS)
+        visited = {}
+        components = []
+        dag_nodes.each do |node|
+            next if visited[node]
+            component = []
+            queue = [node]
+            visited[node] = true
+            while !queue.empty?
+                curr = queue.shift
+                component << curr
+                (curr[:publish_topics] + curr[:subscribe_topics]).uniq.each do |topic|
+                    topic_to_nodes[topic].each do |neighbor|
+                        next if visited[neighbor]
+                        visited[neighbor] = true
+                        queue << neighbor
+                    end
+                end
+            end
+            components << component
+        end
+        return components, non_dag_nodes
+    end
+
+    def validate_dag_components(components)
+        all_publishers = Hash.new { |h, k| h[k] = [] }
+        valid = true
+        
+        components.each_with_index do |component, i|
+            dag_id = i + 1
+            topic_publishers = Hash.new { |h, k| h[k] = [] }
+            topic_subscribers = Hash.new { |h, k| h[k] = [] }
+            
+            component.each do |node|
+                node[:publish_topics].each do |t| 
+                    topic_publishers[t] << node
+                    all_publishers[t] << node
+                end
+                node[:subscribe_topics].each { |t| topic_subscribers[t] << node }
+            end
+
+            # 1. Multiple Publishers in same DAG
+            topic_publishers.each do |topic, pubs|
+                if pubs.size > 1
+                    puts "error: DAG##{dag_id}: Topic '#{topic}' has multiple publishers: #{pubs.map{|n| n[:cell].get_global_name}.join(', ')}"
+                    valid = false
+                end
+            end
+
+            # 2. Cycle detection (DFS)
+            visited = {}
+            stack = {}
+            component.each do |node|
+                if !visited[node]
+                    if has_dag_cycle?(node, topic_subscribers, visited, stack)
+                        puts "error: DAG##{dag_id} contains a cycle involving node '#{node[:cell].get_global_name}'"
+                        valid = false
+                    end
+                end
+            end
+            
+            # 3. Source/Sink count
+            sources = []
+            sinks = []
+            component.each do |node|
+                has_incoming = node[:subscribe_topics].any? { |t| topic_publishers.key?(t) }
+                has_outgoing = node[:publish_topics].any? { |t| topic_subscribers.key?(t) }
+                sources << node if !has_incoming
+                sinks << node if !has_outgoing
+            end
+
+            if sources.size > 1
+                puts "error: DAG##{dag_id} has multiple source nodes: #{sources.map{|n| n[:cell].get_global_name}.join(', ')}"
+                valid = false
+            end
+            if sinks.size > 1
+                puts "error: DAG##{dag_id} has multiple sink nodes: #{sinks.map{|n| n[:cell].get_global_name}.join(', ')}"
+                valid = false
+            end
+        end
+
+        # 4. Inter-DAG Topic Conflict (One publisher per topic globally for now)
+        all_publishers.each do |topic, pubs|
+            if pubs.size > 1
+                puts "error: Topic '#{topic}' has multiple publishers across DAGs: #{pubs.map{|n| n[:cell].get_global_name}.join(', ')}"
+                valid = false
+            end
+        end
+        return valid
+    end
+
+    def has_dag_cycle?(node, topic_subscribers, visited, stack)
+        visited[node] = true
+        stack[node] = true
+        
+        node[:publish_topics].each do |topic|
+            (topic_subscribers[topic] || []).each do |neighbor|
+                if !visited[neighbor]
+                    return true if has_dag_cycle?(neighbor, topic_subscribers, visited, stack)
+                elsif stack[neighbor]
+                    return true
+                end
+            end
+        end
+        
+        stack[node] = false
+        false
+    end
+
+    def extract_tecs_topics(attr_expr)
+        s = attr_expr.to_s
+        content = s
+        if s =~ /PL_EXP\s*\(\s*"(.*)"\s*\)/
+            content = $1
+        elsif s =~ /"(.*)"/
+            content = $1
+        end
+        # Split by comma and strip quotes/spaces from each element
+        content.split(',').map { |t| t.strip.gsub(/\A["']|["']\z/, "") }.reject(&:empty?)
     end
 
 end

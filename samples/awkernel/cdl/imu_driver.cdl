@@ -86,3 +86,23 @@ celltype tImuDriverOnly {
         int16_t  acceleration_z_raw = 0;
     };
 };
+
+[generate( RustAWKPlugin, "DAG_REACTOR_BODY")]
+celltype tImuDriverWithoutVar {
+    [inline] entry sImuDriver eReactor;
+
+    [omit] call sImuMsg cImuRaw;
+    entry sFrame eImu;
+
+    attr{
+        uint32_t  can_id_gyro;   /* CAN GYRO メッセージ ID (0x319) */
+        uint32_t  can_id_accel;  /* CAN ACCEL メッセージ ID (0x31A) */
+        PLType("&'static str")  imu_frame_id = PL_EXP("\"imu\"");  /* IMU frame id "imu" */
+
+	    [omit] PLType("Cow") reactorName  = PL_EXP("ImuDriver");
+	    [omit] PLType("SchedulerType") schedType = PL_EXP("SchedulerType::PrioritizedFIFO(7)");
+	      
+        [omit] PLType("Cow") subscribeTopicNames = PL_EXP("Imu");
+        [omit] PLType("Cow") publishTopicNames = PL_EXP("ImuRaw");
+    };
+};
