@@ -12,7 +12,7 @@ celltype tDummySinkReactorInMrm{
     entry sDummySinkReactorInMrm eReactor;
 
     attr{
-	    [omit] PLType("Cow") reactorName  = PL_EXP("DummyPeriodicReactorInMrm");
+	    [omit] PLType("Cow") reactorName  = PL_EXP("DummySinkReactorInMrm");
 	    [omit] PLType("SchedulerType") schedType = PL_EXP("SchedulerType::PrioritizedFIFO(7)");
         [omit] PLType("Cow") subscribeTopicNames = PL_EXP("Control");
         [omit] PLType("Duration") relativeDeadline = PL_EXP("Duration::from_secs(1)");

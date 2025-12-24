@@ -1604,6 +1604,27 @@ impl<'a, T: core::marker::Send> core::ops::DerefMut for TECSVarGuard<'a, T> {
         # 3. Generate code for each component (DAG)
         dag_vars = []
         components.each_with_index do |nodes, i|
+            # --- ソースノードを特定して最後に移動する ---
+            topic_publishers = {}
+            nodes.each do |node|
+                node[:publish_topics].each { |t| topic_publishers[t] = node }
+            end
+
+            source_nodes = []
+            other_nodes = []
+            nodes.each do |node|
+                # 同一DAG内の他のノードからパブリッシュされるトピックをサブスクライブしているか確認
+                has_incoming = node[:subscribe_topics].any? { |t| topic_publishers.key?(t) }
+                if has_incoming
+                    other_nodes << node
+                else
+                    source_nodes << node
+                end
+            end
+            # ソースノードを最後に持ってくる
+            nodes = other_nodes + source_nodes
+            # --------------------------------------------
+
             dag_var = "dag#{i + 1}"
             dag_vars << dag_var
             file.print "\tlet #{dag_var} = create_dag();\n"
