@@ -205,7 +205,9 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
             suffix = "Reactor"
         end
 
-        file.print "import(\"#{$gen}/#{celltype.get_global_name}_#{file_suffix}.cdl\");\n\n"
+        if !celltype.get_cell_list.empty?
+            file.print "import(\"#{$gen}/#{celltype.get_global_name}_#{file_suffix}.cdl\");\n\n"
+        end
 
         # cell定義の生成
         celltype.get_cell_list.each do |cell|
@@ -290,7 +292,9 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
             suffix = "SinkReactor"
         end
 
-        file.print "import(\"#{$gen}/#{celltype.get_global_name}_#{file_suffix}.cdl\");\n\n"
+        if !celltype.get_cell_list.empty?
+            file.print "import(\"#{$gen}/#{celltype.get_global_name}_#{file_suffix}.cdl\");\n\n"
+        end
 
         celltype.get_cell_list.each do |cell|
             file.print <<~CDL
@@ -377,7 +381,9 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
             suffix = "PeriodicReactor"
         end
 
-        file.print "import(\"#{$gen}/#{celltype.get_global_name}_#{file_suffix}.cdl\");\n\n"
+        if !celltype.get_cell_list.empty?
+            file.print "import(\"#{$gen}/#{celltype.get_global_name}_#{file_suffix}.cdl\");\n\n"
+        end
 
         celltype.get_cell_list.each do |cell|
             file.print <<~CDL
@@ -1124,10 +1130,13 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
                 next
             else
                 file.print "\tpub #{attr.get_name.to_s}: "
-                file.print "&'a #{c_type_to_rust_type(attr.get_type)},\n"
-                # str = c_type_to_rust_type(attr.get_type)
-                # 属性や変数のフィールドに構造体がある場合は，ライフタイムを付与する必要がある
-                # file.print "&'a #{str},\n"
+                if is_singleton_optimization?(celltype) then
+                    celltype_name_camel = get_rust_celltype_name(celltype)
+                    attr_name_camel = camel_case(attr.get_name.to_s)
+                    file.print "Singleton#{celltype_name_camel}#{attr_name_camel},\n"
+                else
+                    file.print "&'a #{c_type_to_rust_type(attr.get_type)},\n"
+                end
             end
         }
     end
@@ -1273,7 +1282,13 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
                         next
                     end
                     lock_guard_filed_name.push(attr.get_name)
-                    lock_guard_field_value.push("&self.#{attr.get_name}")
+                    if is_singleton_optimization?(celltype) then
+                        celltype_name_camel = get_rust_celltype_name(celltype)
+                        attr_name_camel = camel_case(attr.get_name.to_s)
+                        lock_guard_field_value.push("Singleton#{celltype_name_camel}#{attr_name_camel}")
+                    else
+                        lock_guard_field_value.push("&self.#{attr.get_name}")
+                    end
                 end
 
                 if celltype.get_var_list.length != 0 then
@@ -1373,16 +1388,19 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
         end
 
         # ライフタイムアノテーションが必要な属性があるかどうか
-        celltype.get_attribute_list.each{ |attr|
-            if attr.is_omit? then
-                next
-            else
-                attr_type_name = attr.get_type.get_type_str
-                if check_lifetime_annotation_for_type(attr_type_name) then
-                    return true
+        # シングルトン最適化が行われる場合は、celltype構造体に属性が定義されないため、チェックを省略するs
+        if !is_singleton_optimization?(celltype) then
+            celltype.get_attribute_list.each{ |attr|
+                if attr.is_omit? then
+                    next
+                else
+                    attr_type_name = attr.get_type.get_type_str
+                    if check_lifetime_annotation_for_type(attr_type_name) then
+                        return true
+                    end
                 end
-            end
-        }
+            }
+        end
 
         # 変数があるかどうか
         # awkernelでは、変数への参照を必ず持つため、trueを返す

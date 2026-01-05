@@ -228,16 +228,19 @@ class RustGenCelltypePlugin < CelltypePlugin
         end
 
         # ライフタイムアノテーションが必要な属性があるかどうか
-        celltype.get_attribute_list.each{ |attr|
-            if attr.is_omit? then
-                next
-            else
-                attr_type_name = attr.get_type.get_type_str
-                if check_lifetime_annotation_for_type(attr_type_name) then
-                    return true
+        # シングルトン最適化が行われる場合は、celltype構造体に属性が定義されないため、チェックを省略する
+        if !is_singleton_optimization?(celltype) then
+            celltype.get_attribute_list.each{ |attr|
+                if attr.is_omit? then
+                    next
+                else
+                    attr_type_name = attr.get_type.get_type_str
+                    if check_lifetime_annotation_for_type(attr_type_name) then
+                        return true
+                    end
                 end
-            end
-        }
+            }
+        end
 
         # ライフタイムアノテーションが必要な変数があるかどうか
         celltype.get_var_list.each{ |var|
@@ -291,6 +294,11 @@ class RustGenCelltypePlugin < CelltypePlugin
                 end
             }
         end
+    end
+
+    # セルタイプがシングルトン最適化対象かどうかを返す
+    def is_singleton_optimization?(celltype)
+        celltype.get_cell_list.length == 1
     end
 
     # tecs_celltype.rs と tecs_celltype ディレクトリを生成する
@@ -1009,8 +1017,113 @@ class RustGenCelltypePlugin < CelltypePlugin
         end
     end
 
+    # シングルトン最適化のための定数とユニット構造体の生成
+    def gen_singleton_attribute_optimizations file, celltype
+        return if !is_singleton_optimization?(celltype)
+        
+        cell = celltype.get_cell_list[0]
+        
+        # const の生成
+        celltype.get_attribute_list.each do |attr|
+            next if attr.is_omit?
+            attr_symbol = attr.get_name.to_s.to_sym
+            attr_value = cell.get_attr_initializer(attr_symbol)
+            
+            # 型の変換
+            rust_type = c_type_to_rust_type(attr.get_type)
+            
+            # 属性名を大文字のスネークケースに変換して定数名とする
+            const_name = snake_case(attr.get_name.to_s).upcase
+            
+            # 属性がポインタであるときに対応 (size_is 指定子がある場合など)
+            if attr.get_type.kind_of?( PtrType ) && attr.get_type.get_size != nil then
+                type = rust_type.delete("[]") # c_type_to_rust_type returns "[type]" for size_is
+                size = nil
+                if celltype.get_attribute_list.any? { |a| a.get_name == attr.get_type.get_size.to_s.to_sym } then
+                    # 属性名をサイズに使っている場合は、その属性名を使う
+                    size = cell.get_attr_initializer(attr.get_type.get_size.to_s.to_sym)
+                else
+                    # それ以外は、size_is指定子に直接指定されている値を使う 
+                    size = attr.get_type.get_size.to_s
+                end
+                
+                # シングルトンの時は @pointer_array を使わず直接定義
+                file.print "const #{const_name}: [#{type}; #{size}] = "
+                
+                if attr_value.nil? then
+                    if type == "f32" || type == "f64" then
+                        file.print "[0.0; #{size}];\n"
+                    else
+                        file.print "[0; #{size}];\n"
+                    end
+                elsif attr_value.is_a?(Array) then
+                    file.print "["
+                    attr_value.each_with_index do |item, index|
+                        file.print "#{item.to_s}"
+                        file.print ", " if index != attr_value.length - 1
+                    end
+                    file.print "];\n"
+                else
+                    # C_EXP など。ポインタ型への本来の期待は配列リテラルだが、
+                    # 式が指定されている場合はそのまま出力
+                    file.print "#{attr_value.to_s};\n"
+                end
+            elsif attr.get_type.kind_of?( StructType ) then
+                file.print "const #{const_name}: #{rust_type} = "
+                # 構造体属性: 初期化子が配列ならフィールドごとに割当、
+                # それ以外（PL_EXP/C_EXP など式）の場合は式をそのまま出力する
+                if attr_value.is_a?(Array) then
+                    file.print "#{rust_type} {\n"
+                    struct_field_name = attr.get_type.get_members_decl.get_items
+                    struct_field_name.zip(attr_value).each{ |field, val|
+                        file.print "\t\t#{snake_case(field.get_name.to_s)}: #{val},\n"
+                    }
+                    file.print("\t};\n")
+                else
+                    # 非配列（C_EXP 等）: そのまま式を埋め込む
+                    file.print "#{attr_value.to_s};\n"
+                end
+            # 属性が本来の配列であるときに対応
+            elsif attr_value.is_a?(Array) then 
+                file.print "const #{const_name}: #{rust_type} = ["
+                attr_value.each_with_index do |item, index|
+                    file.print "#{item.to_s}"
+                    file.print ", " if index != attr_value.length - 1
+                end
+                file.print "];\n"
+            else
+                file.print "const #{const_name}: #{rust_type} = #{attr_value.to_s};\n"
+            end
+        end
+        file.print "\n"
+        
+        # ユニット構造体と Deref 実装の生成
+        celltype_name_camel = get_rust_celltype_name(celltype)
+        celltype.get_attribute_list.each do |attr|
+            next if attr.is_omit?
+            attr_name_camel = camel_case(attr.get_name.to_s)
+            struct_name = "Singleton#{celltype_name_camel}#{attr_name_camel}"
+            const_name = snake_case(attr.get_name.to_s).upcase
+            
+            # 各定数に対応する Deref Target 型を決定
+            target_type = c_type_to_rust_type(attr.get_type)
+            
+            file.print "pub struct #{struct_name};\n\n"
+            file.print "impl core::ops::Deref for #{struct_name} {\n"
+            file.print "    type Target = #{target_type};\n"
+            file.print "    #[inline(always)]\n"
+            file.print "    fn deref(&self) -> &Self::Target {\n"
+            file.print "        &#{const_name}\n"
+            file.print "    }\n"
+            file.print "}\n\n"
+        end
+    end
+
     # セル構造体の属性フィールドの定義を生成
     def gen_rust_cell_structure_attribute file, celltype
+        if is_singleton_optimization?(celltype) then
+            return
+        end
         celltype.get_attribute_list.each{ |attr|
             next if attr.is_omit?
 
@@ -1097,6 +1210,9 @@ class RustGenCelltypePlugin < CelltypePlugin
 
     # セルの構造体の属性フィールドの初期化を生成
     def gen_rust_cell_structure_attribute_initialize file, celltype, cell
+        if is_singleton_optimization?(celltype) then
+            return
+        end
         array_number = 1
         celltype.get_attribute_list.each{ |attr|
             if attr.is_omit? then
@@ -1476,8 +1592,15 @@ class RustGenCelltypePlugin < CelltypePlugin
                     if attr.is_omit? then
                         next
                     end
-                    return_tuple_type_list.push("&'static #{c_type_to_rust_type(attr.get_type)}")
-                    return_tuple_list.push("&self.#{attr.get_name.to_s}")
+                    if is_singleton_optimization?(celltype) then
+                        celltype_name_camel = get_rust_celltype_name(celltype)
+                        attr_name_camel = camel_case(attr.get_name.to_s)
+                        return_tuple_type_list.push("Singleton#{celltype_name_camel}#{attr_name_camel}")
+                        return_tuple_list.push("Singleton#{celltype_name_camel}#{attr_name_camel}")
+                    else
+                        return_tuple_type_list.push("&'static #{c_type_to_rust_type(attr.get_type)}")
+                        return_tuple_list.push("&self.#{attr.get_name.to_s}")
+                    end
                 }
 
                 # 変数をタプルの配列に追加
@@ -2479,6 +2602,9 @@ class RustGenCelltypePlugin < CelltypePlugin
 
         print "#{@celltype.get_global_name.to_s}: gen_use_header\n"
         gen_use_header file
+
+        # シングルトン最適化の定数などを生成
+        gen_singleton_attribute_optimizations file, @celltype
 
         print "#{@celltype.get_global_name.to_s}: gen_rust_cell_structure_header\n"
         # セルの構造体の定義の先頭部を生成

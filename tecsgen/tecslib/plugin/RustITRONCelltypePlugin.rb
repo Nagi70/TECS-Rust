@@ -750,24 +750,27 @@ class RustITRONCelltypePlugin < RustGenCelltypePlugin
             next if attr.is_omit?
             
             file.print "\tpub #{attr.get_name.to_s}: "
-            # file.print "#{c_type_to_rust_type(attr.get_type)}"
-            str = c_type_to_rust_type(attr.get_type)
-            # 属性や変数のフィールドに構造体がある場合は，ライフタイムを付与する必要がある
-            # itron-rsオブジェクトに対する，特別な生成
-            # ライフタイムを付与
-            case str
-            when "TaskRef"
-                str = "TaskRef<'static>"
-            when "SemaphoreRef"
-                str = "SemaphoreRef<'static>"
-            when "EventflagRef"
-                str = "EventflagRef<'static>"
-            when "DataqueueRef"
-                str = "DataqueueRef<'static>"
-            when "MutexRef"
-                str = "MutexRef<'static>"
+            if is_singleton_optimization?(celltype) then
+                celltype_name_camel = get_rust_celltype_name(celltype)
+                attr_name_camel = camel_case(attr.get_name.to_s)
+                file.print "Singleton#{celltype_name_camel}#{attr_name_camel},\n"
+            else
+                # itron-rsオブジェクトに対する，特別な生成
+                str = c_type_to_rust_type(attr.get_type)
+                case str
+                when "TaskRef"
+                    str = "TaskRef<'static>"
+                when "SemaphoreRef"
+                    str = "SemaphoreRef<'static>"
+                when "EventflagRef"
+                    str = "EventflagRef<'static>"
+                when "DataqueueRef"
+                    str = "DataqueueRef<'static>"
+                when "MutexRef"
+                    str = "MutexRef<'static>"
+                end
+                file.print "&'a #{str},\n"
             end
-            file.print "&'a #{str},\n"
         }
     end
 
@@ -1017,7 +1020,13 @@ class RustITRONCelltypePlugin < RustGenCelltypePlugin
                         next
                     end
                     lock_guard_filed_name.push(attr.get_name)
-                    lock_guard_field_value.push("&self.#{attr.get_name}")
+                    if is_singleton_optimization?(celltype) then
+                        celltype_name_camel = get_rust_celltype_name(celltype)
+                        attr_name_camel = camel_case(attr.get_name.to_s)
+                        lock_guard_field_value.push("Singleton#{celltype_name_camel}#{attr_name_camel}")
+                    else
+                        lock_guard_field_value.push("&self.#{attr.get_name}")
+                    end
                 end
 
                 if celltype.get_var_list.length != 0 then
