@@ -301,6 +301,32 @@ class RustGenCelltypePlugin < CelltypePlugin
         celltype.get_cell_list.length == 1
     end
 
+    # ロックガード構造体のライフタイムアノテーションが必要かどうかを返す
+    # シングルトン最適化が行われ、ロックガードに属性以外の要素が存在しない場合、ライフタイムは不要
+    def is_lock_guard_lifetime_required?(celltype, callport_list, use_jenerics_alphabet)
+
+        # 呼び口がある場合はライフタイムが必要
+        if callport_list.length > 0 then
+            return true
+        end
+
+        # 変数がある場合はライフタイムが必要
+        if celltype.get_var_list.length > 0 then
+            return true
+        end
+
+        # シングルトン最適化が行われない場合で、属性がある場合はライフタイムが必要
+        if !is_singleton_optimization?(celltype) then
+            celltype.get_attribute_list.each do |attr|
+                if !attr.is_omit? then
+                    return true
+                end
+            end
+        end
+
+        return false
+    end
+
     # tecs_celltype.rs と tecs_celltype ディレクトリを生成する
     def gen_tecs_celltype_rs
         # ディレクトリを生成する

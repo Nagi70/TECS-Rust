@@ -1101,14 +1101,24 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
     def gen_rust_lock_guard_structure_header file, celltype, callport_list, use_jenerics_alphabet
         file.print "pub struct LockGuardFor#{get_rust_celltype_name(celltype)}"
 
-        file.print "<'a"
+        params = []
+        # シングルトン最適化が行われ、ロックガードに属性以外の要素が存在しない場合、ライフタイムは不要
+        if is_lock_guard_lifetime_required?(celltype, callport_list, use_jenerics_alphabet) then
+            params << "'a"
+        end
+        
         # use_jenerics_alphabet と callport_list の要素数が等しいことを前提としている
         callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
             if check_gen_dyn_for_port(callport) == nil then
-                file.print ", #{alphabet}"
+                params << alphabet
             end
         end
-        file.print ">"
+
+        if params.length > 0 then
+            file.print "<"
+            file.print params.join(", ")
+            file.print ">"
+        end
 
     end
 
