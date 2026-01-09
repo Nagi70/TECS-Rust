@@ -1060,7 +1060,25 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
         if check_async_callport_in_celltype(cell.get_celltype) then
             file.print "pub "
         end
-        file.print "static #{cell.get_global_name.to_s.upcase}: #{get_rust_celltype_name(cell.get_celltype)}"
+        
+        # 属性があれば CONFIG を出す
+        has_attr = cell.get_celltype.get_attribute_list.any? { |attr| !attr.is_omit? }
+
+        if has_attr then
+            config_name = "Config#{camel_case(cell.get_name.to_s)}"
+            if is_attribute_optimization?(cell.get_celltype) then
+                file.print "static #{cell.get_global_name.to_s.upcase}: #{get_rust_celltype_name(cell.get_celltype)}<#{config_name}"
+            else
+                # RAM 属性保持時（非 ZST）は、セル本体から CONFIG が消えているため、非ジェネリクスとして扱う
+                file.print "static #{cell.get_global_name.to_s.upcase}: #{get_rust_celltype_name(cell.get_celltype)}"
+            end
+            # 呼び口がない場合はここで閉じる
+            if is_attribute_optimization?(cell.get_celltype) && get_number_of_jenerics(get_jenerics_alphabet_list(get_callport_list)) == 0 then
+                file.print ">"
+            end
+        else
+            file.print "static #{cell.get_global_name.to_s.upcase}: #{get_rust_celltype_name(cell.get_celltype)}"
+        end
     end
 
     # 受け口構造体の初期化を生成
@@ -1074,10 +1092,19 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
                     next
                 end
 
-                # 受け口構造体の初期化を生成
-                # 一つの受け口構造体がもつセルは１つ
-                file.print "pub static #{port.get_name.to_s.upcase}FOR#{cell.get_global_name.to_s.upcase}: #{camel_case(snake_case(port.get_name.to_s))}For#{get_rust_celltype_name(celltype)} = #{camel_case(snake_case(port.get_name.to_s))}For#{get_rust_celltype_name(celltype)} {\n"
-                file.print "\tcell: &#{cell.get_global_name.to_s.upcase},\n"
+                config_type = get_rust_config_type(cell)
+                if config_type then
+                    # 属性を持つ場合は必ずジェネリクスを指定する
+                    file.print "pub static #{port.get_name.to_s.upcase}FOR#{cell.get_global_name.to_s.upcase}: #{camel_case(snake_case(port.get_name.to_s))}For#{get_rust_celltype_name(celltype)}<#{config_type}> = #{camel_case(snake_case(port.get_name.to_s))}For#{get_rust_celltype_name(celltype)} {\n"
+                    file.print "\tcell: &#{cell.get_global_name.to_s.upcase},\n"
+                    if !is_attribute_optimization?(celltype) then
+                        # RAM 属性保持時（非 ZST）は、PhantomData の初期化が必要
+                        file.print "\t_phantom: core::marker::PhantomData,\n"
+                    end
+                else
+                    file.print "pub static #{port.get_name.to_s.upcase}FOR#{cell.get_global_name.to_s.upcase}: #{camel_case(snake_case(port.get_name.to_s))}For#{get_rust_celltype_name(celltype)} = #{camel_case(snake_case(port.get_name.to_s))}For#{get_rust_celltype_name(celltype)} {\n"
+                    file.print "\tcell: &#{cell.get_global_name.to_s.upcase},\n"
+                end
                 file.print "};\n\n"
             end
         }
@@ -1105,6 +1132,11 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
         # シングルトン最適化が行われ、ロックガードに属性以外の要素が存在しない場合、ライフタイムは不要
         if is_lock_guard_lifetime_required?(celltype, callport_list, use_jenerics_alphabet) then
             params << "'a"
+        end
+
+        # 属性があれば CONFIG を出す
+        if celltype.get_attribute_list.any? { |attr| !attr.is_omit? } then
+            params << "CONFIG: #{get_rust_celltype_name(celltype)}Config"
         end
         
         # use_jenerics_alphabet と callport_list の要素数が等しいことを前提としている
@@ -1140,15 +1172,20 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
                 next
             else
                 file.print "\tpub #{attr.get_name.to_s}: "
-                if is_singleton_optimization?(celltype) then
+                if is_attribute_optimization?(celltype) then
                     celltype_name_camel = get_rust_celltype_name(celltype)
                     attr_name_camel = camel_case(attr.get_name.to_s)
-                    file.print "Singleton#{celltype_name_camel}#{attr_name_camel},\n"
+                    file.print "#{celltype_name_camel}#{attr_name_camel}<CONFIG>,\n"
                 else
                     file.print "&'a #{c_type_to_rust_type(attr.get_type)},\n"
                 end
             end
         }
+        # CONFIG が存在し、ZST 最適化でない場合は PhantomData が必要
+        has_attr = celltype.get_attribute_list.any? { |attr| !attr.is_omit? }
+        if has_attr && !is_attribute_optimization?(celltype) then
+            file.print "\t_phantom: core::marker::PhantomData<CONFIG>,\n"
+        end
     end
 
     # ロックガード構造体の変数への参照の定義を生成
@@ -1201,6 +1238,16 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
             if port.get_port_type == :ENTRY then
                 jenerics_flag = true
                 file.print "impl"
+                
+                # 属性があれば CONFIG を出す
+                # ただし、属性最適化（定数化）を行わない場合は構造体が非ジェネリクスなので、
+                # impl ヘッダの CONFIG は後で関数のジェネリクスに移譲する
+                has_attr = celltype.get_attribute_list.any? { |attr| !attr.is_omit? }
+                is_attr_opt = is_attribute_optimization?(celltype)
+                if has_attr && is_attr_opt then
+                    file.print "<CONFIG: #{get_rust_celltype_name(celltype)}Config"
+                    jenerics_flag = false
+                end
 
                 # impl のジェネリクスを生成
                 callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
@@ -1219,9 +1266,15 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
 
                 # impl する型を生成
                 file.print " #{get_rust_celltype_name(celltype)}"
+                impl_first = true
+                # 属性最適化（定数化）を行う場合のみ、セル本体が CONFIG ジェネリクスを持つ
+                if is_attribute_optimization?(celltype) then
+                    impl_first = false
+                    file.print "<CONFIG"
+                end
+
                 if check_only_entryport_celltype(celltype) then
                 else
-                    impl_first = true
                     callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
                         if check_gen_dyn_for_port(callport) == nil then
                             if impl_first then
@@ -1232,8 +1285,8 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
                             end
                         end
                     end
-                    file.print ">" if impl_first == false
                 end
+                file.print ">" if impl_first == false
                 file.print " {\n"
                 # インライン化
                 file.print "\t#[inline]\n"
@@ -1241,10 +1294,22 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
                 # get_cell_ref 関数の定義を生成
                 file.print "\tpub fn get_cell_ref"
 
+                # 関数のジェネリクス引数を整理
+                fn_params = []
+                if celltype.get_var_list.length != 0 then
+                    fn_params << "'node"
+                end
+                # if has_attr && !is_attr_opt then
+                #     fn_params << "CONFIG: #{get_rust_celltype_name(celltype)}Config"
+                # end
+
+                if fn_params.length > 0 then
+                    file.print "<#{fn_params.join(", ")}>"
+                end
+
                 # セルタイプに変数がある場合は、引数にnodeをとる
                 if celltype.get_var_list.length != 0 then
-                    # ノードのライフタイムアノテーションは 'node とする
-                    file.print "<'node>(&'static self, node: &'node mut awkernel_lib::sync::mutex::MCSNode<#{get_rust_celltype_name(celltype)}Var>) -> "
+                    file.print "(&'static self, node: &'node mut awkernel_lib::sync::mutex::MCSNode<#{get_rust_celltype_name(celltype)}Var>) -> "
                 else
                     file.print "(&'static self) -> "
                 end
@@ -1256,7 +1321,42 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
                 # セルタイプ構造体にライフタイムアノテーションが必要かどうか判定する(必要 -> 呼び口を持っている)
                 # TODO: ライフタイムアノテーションの判定は厳格にする必要がある
                 # check_lifetime_annotation_for_celltype_structure から変更
-                if check_only_entryport_celltype(celltype) then
+                # 属性の有無を確認
+                has_attr = celltype.get_attribute_list.any? { |attr| !attr.is_omit? }
+
+                # 以前は is_attribute_optimization? (フル定数化) の場合のみ CONFIG を出していたが、
+                # size_first (非 ZST) の場合でも LockGuard は CONFIG を要求するため、
+                # has_attr があれば常に CONFIG を出力するように変更する。
+                if has_attr then
+                    lock_guard_first = true
+                    if celltype.get_var_list.length != 0 then
+                        file.print "<'node"
+                        lock_guard_first = false
+                    end
+                    # CONFIG ジェネリクス
+                    if lock_guard_first then
+                        if is_zst_optimization?(celltype) then
+                            file.print "<CONFIG"
+                        else
+                            file.print "<ConfigDefault#{get_rust_celltype_name(celltype)}"
+                        end
+                        lock_guard_first = false
+                    else
+                        if is_zst_optimization?(celltype) then
+                            file.print ", CONFIG"
+                        else
+                            file.print ", ConfigDefault#{get_rust_celltype_name(celltype)}"
+                        end
+                    end
+
+                    # use_jenerics_alphabet と callport_list の要素数が等しいことを前提としている
+                    callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
+                        if check_gen_dyn_for_port(callport) == nil then
+                            file.print ", #{alphabet}"
+                        end
+                    end
+                    file.print ">"
+                elsif check_only_entryport_celltype(celltype) then
                 else
                     lock_guard_first = true
                     if celltype.get_var_list.length != 0 then
@@ -1292,13 +1392,20 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
                         next
                     end
                     lock_guard_filed_name.push(attr.get_name)
-                    if is_singleton_optimization?(celltype) then
+                    if is_zst_optimization?(celltype) then
                         celltype_name_camel = get_rust_celltype_name(celltype)
                         attr_name_camel = camel_case(attr.get_name.to_s)
-                        lock_guard_field_value.push("Singleton#{celltype_name_camel}#{attr_name_camel}")
+                        lock_guard_field_value.push("#{celltype_name_camel}#{attr_name_camel}(core::marker::PhantomData)")
                     else
                         lock_guard_field_value.push("&self.#{attr.get_name}")
                     end
+                end
+
+                # PhantomData の初期化
+                has_attr = celltype.get_attribute_list.any? { |attr| !attr.is_omit? }
+                if has_attr && !is_attribute_optimization?(celltype) then
+                    lock_guard_filed_name.push("_phantom")
+                    lock_guard_field_value.push("core::marker::PhantomData")
                 end
 
                 if celltype.get_var_list.length != 0 then
@@ -1398,8 +1505,8 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
         end
 
         # ライフタイムアノテーションが必要な属性があるかどうか
-        # シングルトン最適化が行われる場合は、celltype構造体に属性が定義されないため、チェックを省略するs
-        if !is_singleton_optimization?(celltype) then
+        # 属性最適化（定数化）が行われる場合は、celltype構造体に属性が定義されないため、チェックを省略する
+        if !is_attribute_optimization?(celltype) then
             celltype.get_attribute_list.each{ |attr|
                 if attr.is_omit? then
                     next
@@ -1431,7 +1538,11 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
                     next
                 end
 
-                file.print "impl #{camel_case(snake_case(port.get_signature.get_global_name.to_s))} for #{camel_case(snake_case(port.get_name.to_s))}For#{get_rust_celltype_name(celltype)}{\n\n"
+                if is_attribute_optimization?(celltype) then
+                    file.print "impl<CONFIG: #{get_rust_celltype_name(celltype)}Config> #{camel_case(snake_case(port.get_signature.get_global_name.to_s))} for #{camel_case(snake_case(port.get_name.to_s))}For#{get_rust_celltype_name(celltype)}<CONFIG> {\n\n"
+                else
+                    file.print "impl #{camel_case(snake_case(port.get_signature.get_global_name.to_s))} for #{camel_case(snake_case(port.get_name.to_s))}For#{get_rust_celltype_name(celltype)}{\n\n"
+                end
 
                 sig_param_str_list, _, lifetime_flag = get_sig_param_str sig
 
