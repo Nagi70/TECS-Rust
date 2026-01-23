@@ -1069,7 +1069,21 @@ class RustGenCelltypePlugin < CelltypePlugin
         # end
         callport_list.each_with_index{ |callport, index|
             if check_gen_dyn_for_port(callport) == nil then
-                use_jenerics_alphabet.push(jenerics_alphabet[index])
+                # use_jenerics_alphabet.push(jenerics_alphabet[index])
+
+                callee_cell = callport.get_real_callee_cell
+                callee_port = callport.get_real_callee_port
+
+                callee_port_name = camel_case(snake_case(callee_port.get_name.to_s))
+                callee_celltype = callee_cell.get_celltype
+                callee_celltype_name = get_rust_celltype_name(callee_celltype)
+                
+                type_string = "#{callee_port_name}For#{callee_celltype_name}"
+                config_type = get_rust_config_type(callee_cell)
+                if config_type then
+                    type_string += "<#{config_type}>"
+                end
+                use_jenerics_alphabet.push(type_string)
             else
                 use_jenerics_alphabet.push(check_gen_dyn_for_port(callport))
             end
@@ -1095,11 +1109,11 @@ class RustGenCelltypePlugin < CelltypePlugin
             params << "CONFIG"
         end
         
-        callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
-            if check_gen_dyn_for_port(callport) == nil then
-                params << alphabet
-            end
-        end
+        # callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
+            # if check_gen_dyn_for_port(callport) == nil then
+            #     params << alphabet
+            # end
+        # end
 
         if params.length > 0 then
             file.print "<#{params.join(", ")}>"
@@ -1111,7 +1125,7 @@ class RustGenCelltypePlugin < CelltypePlugin
         has_attr_optimized = is_attribute_optimization?(@celltype)
         has_jenerics = get_number_of_jenerics(use_jenerics_alphabet) != 0
 
-        if has_attr_optimized || has_jenerics then
+        if has_attr_optimized && has_jenerics then
             file.print "\nwhere\n"
             first = true
             if has_attr_optimized then
@@ -1119,16 +1133,16 @@ class RustGenCelltypePlugin < CelltypePlugin
                 first = false
             end
 
-            callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
-                if check_gen_dyn_for_port(callport) == nil then
-                    if first then
-                        file.print "\t#{alphabet}: #{get_rust_signature_name(callport.get_signature)} + 'static"
-                        first = false
-                    else
-                        file.print ",\n\t#{alphabet}: #{get_rust_signature_name(callport.get_signature)} + 'static"
-                    end
-                end
-            end
+            # callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
+            #     if check_gen_dyn_for_port(callport) == nil then
+            #         if first then
+            #             file.print "\t#{alphabet}: #{get_rust_signature_name(callport.get_signature)} + 'static"
+            #             first = false
+            #         else
+            #             file.print ",\n\t#{alphabet}: #{get_rust_signature_name(callport.get_signature)} + 'static"
+            #         end
+            #     end
+            # end
             file.print ",\n"
         end
     end
@@ -1337,40 +1351,40 @@ class RustGenCelltypePlugin < CelltypePlugin
 
     # セル構造体の初期化ためのジェネリクス代入部を生成
     def gen_rust_cell_structure_jenerics_initialize file, cell, callport_list, use_jenerics_alphabet
-        has_attr = cell.get_celltype.get_attribute_list.any? { |attr| !attr.is_omit? }
-        if get_number_of_jenerics(use_jenerics_alphabet) != 0 then
-            if is_attribute_optimization?(cell.get_celltype) then
-                file.print ", "
-            else
-                file.print "<"
-            end
+        # has_attr = cell.get_celltype.get_attribute_list.any? { |attr| !attr.is_omit? }
+        # if get_number_of_jenerics(use_jenerics_alphabet) != 0 then
+        #     if is_attribute_optimization?(cell.get_celltype) then
+        #         file.print ", "
+        #     else
+        #         file.print "<"
+        #     end
 
-            first = true
+        #     first = true
             # ジェネリクスを代入
-            callport_list.each_with_index do |callport, index|
-                if check_gen_dyn_for_port(callport) == nil then
-                    joined_item = cell.get_join_list.get_item(callport.get_name)
-                    callee_port_name = camel_case(snake_case(joined_item.get_port_name.to_s))
-                    callee_cell = joined_item.get_cell
-                    callee_celltype = callee_cell.get_celltype
-                    callee_celltype_name = camel_case(snake_case(callee_celltype.get_global_name.to_s))
+            # callport_list.each_with_index do |callport, index|
+            #     if check_gen_dyn_for_port(callport) == nil then
+            #         joined_item = cell.get_join_list.get_item(callport.get_name)
+            #         callee_port_name = camel_case(snake_case(joined_item.get_port_name.to_s))
+            #         callee_cell = joined_item.get_cell
+            #         callee_celltype = callee_cell.get_celltype
+            #         callee_celltype_name = camel_case(snake_case(callee_celltype.get_global_name.to_s))
                     
-                    type_string = "#{callee_port_name}For#{callee_celltype_name}"
-                    config_type = get_rust_config_type(callee_cell)
-                    if config_type then
-                        type_string += "<#{config_type}>"
-                    end
+            #         type_string = "#{callee_port_name}For#{callee_celltype_name}"
+            #         config_type = get_rust_config_type(callee_cell)
+            #         if config_type then
+            #             type_string += "<#{config_type}>"
+            #         end
 
-                    if first then
-                        file.print "#{type_string}"
-                        first = false
-                    else
-                        file.print ", #{type_string}"
-                    end
-                end
-            end
-            file.print ">"
-        end
+            #         if first then
+            #             file.print "#{type_string}"
+            #             first = false
+            #         else
+            #             file.print ", #{type_string}"
+            #         end
+            #     end
+            # end
+        #     file.print ">"
+        # end
         file.print " = #{get_rust_celltype_name(cell.get_celltype)} "
     end
 
@@ -1560,44 +1574,44 @@ class RustGenCelltypePlugin < CelltypePlugin
 
                 # セルタイプが持つ呼び口のジェネリクスを解決
                 generics_added = false
-                if !is_singleton && check_only_entryport_celltype(celltype) == false then
-                    # マルチインスタンスの場合は、呼び口のジェネリクスも構造体のジェネリクスとして引き継ぐ必要がある
-                    # （現状の実装では不完全な可能性があるが、今回は Config 共通化に注力する）
-                elsif is_singleton && check_only_entryport_celltype(celltype) == false then
-                    # シングルトンの場合は、具体的な接続先の型を埋め込む
-                    first = true
-                    cell = celltype.get_cell_list[0]
-                    callport_list.each{ |cport|
-                        if check_gen_dyn_for_port(cport) == nil then
-                            joined_item = cell.get_join_list.get_item(cport.get_name)
-                            callee_port_name = camel_case(snake_case(joined_item.get_port_name.to_s))
-                            callee_cell = joined_item.get_cell
-                            callee_celltype = callee_cell.get_celltype
-                            callee_celltype_name = camel_case(snake_case(callee_celltype.get_global_name.to_s))
+                # if !is_singleton && check_only_entryport_celltype(celltype) == false then
+                #     # マルチインスタンスの場合は、呼び口のジェネリクスも構造体のジェネリクスとして引き継ぐ必要がある
+                #     # （現状の実装では不完全な可能性があるが、今回は Config 共通化に注力する）
+                # elsif is_singleton && check_only_entryport_celltype(celltype) == false then
+                #     # シングルトンの場合は、具体的な接続先の型を埋め込む
+                #     first = true
+                #     cell = celltype.get_cell_list[0]
+                #     callport_list.each{ |cport|
+                #         if check_gen_dyn_for_port(cport) == nil then
+                #             joined_item = cell.get_join_list.get_item(cport.get_name)
+                #             callee_port_name = camel_case(snake_case(joined_item.get_port_name.to_s))
+                #             callee_cell = joined_item.get_cell
+                #             callee_celltype = callee_cell.get_celltype
+                #             callee_celltype_name = camel_case(snake_case(callee_celltype.get_global_name.to_s))
                             
-                            type_string = "#{callee_port_name}For#{callee_celltype_name}"
-                            config_type = get_rust_config_type(callee_cell)
-                            if config_type then
-                                type_string += "<#{config_type}>"
-                            end
+                #             type_string = "#{callee_port_name}For#{callee_celltype_name}"
+                #             config_type = get_rust_config_type(callee_cell)
+                #             if config_type then
+                #                 type_string += "<#{config_type}>"
+                #             end
 
-                            if first then
-                                # すでに CONFIG が入っている場合はカンマで繋ぐ
-                                if has_attr && is_attribute_optimization?(celltype) then
-                                    file.print ", "
-                                else
-                                    file.print "<"
-                                end
-                                file.print "#{type_string}"
-                                first = false
-                                generics_added = true
-                            else
-                                file.print ", #{type_string}"
-                            end
-                        end
-                    }
-                    file.print ">" if first == false
-                end
+                #             if first then
+                #                 # すでに CONFIG が入っている場合はカンマで繋ぐ
+                #                 if has_attr && is_attribute_optimization?(celltype) then
+                #                     file.print ", "
+                #                 else
+                #                     file.print "<"
+                #                 end
+                #                 file.print "#{type_string}"
+                #                 first = false
+                #                 generics_added = true
+                #             else
+                #                 file.print ", #{type_string}"
+                #             end
+                #         end
+                #     }
+                #     file.print ">" if first == false
+                # end
                 
                 # has_attr && is_attribute_optimization? の場合で、ジェネリクスがこれ以上追加されなかった場合は閉じる
                 if has_attr && is_attribute_optimization?(celltype) && !generics_added then
@@ -1613,6 +1627,11 @@ class RustGenCelltypePlugin < CelltypePlugin
         }
     end
 
+    # rodataセクションに配置するための属性を付与する
+    def gen_rust_entryport_structure_initialize_specifier file
+        file.print "#[unsafe(link_section = \".rodata\")]"
+    end
+
     # 受け口構造体の初期化を生成
     def gen_rust_entryport_structure_initialize file, celltype, cell
         celltype.get_port_list.each{ |port|
@@ -1624,7 +1643,7 @@ class RustGenCelltypePlugin < CelltypePlugin
                 end
 
                 # 受け口構造体の初期化を生成
-                file.print "#[unsafe(link_section = \".rodata\")]\n"
+                gen_rust_entryport_structure_initialize_specifier(file)
                 config_type = get_rust_config_type(cell)
                 if config_type then
                     # 属性を持つ場合は必ずジェネリクスを指定する
@@ -1781,17 +1800,17 @@ class RustGenCelltypePlugin < CelltypePlugin
                     jenerics_flag = false
                 end
                 
-                # impl のジェネリクスを生成
-                callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
-                    if check_gen_dyn_for_port(callport) == nil then
-                        if jenerics_flag then
-                            jenerics_flag = false
-                            file.print "<#{alphabet}: #{get_rust_signature_name(callport.get_signature)}"
-                        else
-                            file.print ", #{alphabet}: #{get_rust_signature_name(callport.get_signature)}"
-                        end
-                    end
-                end
+                # # impl のジェネリクスを生成
+                # callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
+                #     if check_gen_dyn_for_port(callport) == nil then
+                #         if jenerics_flag then
+                #             jenerics_flag = false
+                #             file.print "<#{alphabet}: #{get_rust_signature_name(callport.get_signature)}"
+                #         else
+                #             file.print ", #{alphabet}: #{get_rust_signature_name(callport.get_signature)}"
+                #         end
+                #     end
+                # end
                 file.print ">" if jenerics_flag == false
 
                 # impl する型を生成
@@ -1802,19 +1821,19 @@ class RustGenCelltypePlugin < CelltypePlugin
                     jenerics_first = false
                 end
 
-                if check_only_entryport_celltype(celltype) then
-                else
-                    callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
-                        if check_gen_dyn_for_port(callport) == nil then
-                            if jenerics_first then
-                                file.print "<#{alphabet}"
-                                jenerics_first = false
-                            else
-                                file.print ", #{alphabet}"
-                            end
-                        end
-                    end
-                end
+                # if check_only_entryport_celltype(celltype) then
+                # else
+                #     callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
+                #         if check_gen_dyn_for_port(callport) == nil then
+                #             if jenerics_first then
+                #                 file.print "<#{alphabet}"
+                #                 jenerics_first = false
+                #             else
+                #                 file.print ", #{alphabet}"
+                #             end
+                #         end
+                #     end
+                # end
                 file.print ">" if jenerics_first == false
 
                 file.print " {\n"
@@ -1980,21 +1999,20 @@ class RustGenCelltypePlugin < CelltypePlugin
     # ポートの接続先が一意であるかどうかを判断し，一意でない場合は，そのシグニチャの名前を返す -> 動的ディスパッチを適用するため
     def check_gen_dyn_for_port port
         if port.get_port_type == :CALL then
-            if port.get_real_callee_port == nil then  # TODO：joinではなくportで接続先を確認しているため、より厳密なチェックが必要になる可能性がある 
-                # 呼び先が一意でない かつ 受け口を持っている場合に動的ディスパッチ
-                port.get_celltype.get_port_list.each{ |entryport|
-                    if entryport.get_port_type == :ENTRY then
-                        return "dyn " + get_rust_signature_name(port.get_signature)
-                    end
-                }
-                return nil
-            else
-                return nil
+            # if port.get_real_callee_port == nil then  # TODO：joinではなくportで接続先を確認しているため、より厳密なチェックが必要になる可能性がある 
+            #     # 呼び先が一意でない かつ 受け口を持っている場合に動的ディスパッチ
+            #     port.get_celltype.get_port_list.each{ |entryport|
+            #         if entryport.get_port_type == :ENTRY then
+            #             return "dyn " + get_rust_signature_name(port.get_signature)
+            #         end
+            #     }
+            # end
+            if !port.is_cell_unique? then
+                return "dyn " + get_rust_signature_name(port.get_signature)
             end
-        else
-            # 受け口だった場合nilを返すが、この関数は実装を分離すべき
-            return nil
         end
+        # 受け口だった場合nilを返すが、この関数は実装を分離すべき
+        return nil
     end
 
     def gen_impl_sync_send_trait file, celltype

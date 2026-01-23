@@ -1081,33 +1081,8 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
         end
     end
 
-    # 受け口構造体の初期化を生成
     # rodata セクション指定を削除
-    def gen_rust_entryport_structure_initialize file, celltype, cell
-        celltype.get_port_list.each{ |port|
-            if port.get_port_type == :ENTRY then
-
-                # 空のシグニチャの場合は、初期化を生成しない
-                if port.get_signature.get_function_head_array.length == 0 then
-                    next
-                end
-
-                config_type = get_rust_config_type(cell)
-                if config_type then
-                    # 属性を持つ場合は必ずジェネリクスを指定する
-                    file.print "pub static #{port.get_name.to_s.upcase}FOR#{cell.get_global_name.to_s.upcase}: #{camel_case(snake_case(port.get_name.to_s))}For#{get_rust_celltype_name(celltype)}<#{config_type}> = #{camel_case(snake_case(port.get_name.to_s))}For#{get_rust_celltype_name(celltype)} {\n"
-                    file.print "\tcell: &#{cell.get_global_name.to_s.upcase},\n"
-                    if !is_attribute_optimization?(celltype) then
-                        # RAM 属性保持時（非 ZST）は、PhantomData の初期化が必要
-                        file.print "\t_phantom: core::marker::PhantomData,\n"
-                    end
-                else
-                    file.print "pub static #{port.get_name.to_s.upcase}FOR#{cell.get_global_name.to_s.upcase}: #{camel_case(snake_case(port.get_name.to_s))}For#{get_rust_celltype_name(celltype)} = #{camel_case(snake_case(port.get_name.to_s))}For#{get_rust_celltype_name(celltype)} {\n"
-                    file.print "\tcell: &#{cell.get_global_name.to_s.upcase},\n"
-                end
-                file.print "};\n\n"
-            end
-        }
+    def gen_rust_entryport_structure_initialize_specifier file
     end
 
     # セル構造体の変数フィールドの定義を生成
@@ -1140,11 +1115,11 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
         end
         
         # use_jenerics_alphabet と callport_list の要素数が等しいことを前提としている
-        callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
-            if check_gen_dyn_for_port(callport) == nil then
-                params << alphabet
-            end
-        end
+        # callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
+        #     if check_gen_dyn_for_port(callport) == nil then
+        #         params << alphabet
+        #     end
+        # end
 
         if params.length > 0 then
             file.print "<"
@@ -1250,17 +1225,17 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
                 end
 
                 # impl のジェネリクスを生成
-                callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
-                    # 呼び口が動的ディスパッチの場合は、ジェネリクスを生成しない
-                    if check_gen_dyn_for_port(callport) == nil then
-                        if jenerics_flag then
-                            jenerics_flag = false
-                            file.print "<#{alphabet}: #{get_rust_signature_name(callport.get_signature)}"
-                        else
-                            file.print ", #{alphabet}: #{get_rust_signature_name(callport.get_signature)}"
-                        end
-                    end
-                end
+                # callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
+                #     # 呼び口が動的ディスパッチの場合は、ジェネリクスを生成しない
+                #     if check_gen_dyn_for_port(callport) == nil then
+                #         if jenerics_flag then
+                #             jenerics_flag = false
+                #             file.print "<#{alphabet}: #{get_rust_signature_name(callport.get_signature)}"
+                #         else
+                #             file.print ", #{alphabet}: #{get_rust_signature_name(callport.get_signature)}"
+                #         end
+                #     end
+                # end
 
                 file.print ">" if jenerics_flag == false
 
@@ -1273,19 +1248,19 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
                     file.print "<CONFIG"
                 end
 
-                if check_only_entryport_celltype(celltype) then
-                else
-                    callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
-                        if check_gen_dyn_for_port(callport) == nil then
-                            if impl_first then
-                                impl_first = false
-                                file.print "<#{alphabet}"
-                            else
-                                file.print ", #{alphabet}"
-                            end
-                        end
-                    end
-                end
+                # if check_only_entryport_celltype(celltype) then
+                # else
+                #     callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
+                #         if check_gen_dyn_for_port(callport) == nil then
+                #             if impl_first then
+                #                 impl_first = false
+                #                 file.print "<#{alphabet}"
+                #             else
+                #                 file.print ", #{alphabet}"
+                #             end
+                #         end
+                #     end
+                # end
                 file.print ">" if impl_first == false
                 file.print " {\n"
                 # インライン化
@@ -1350,11 +1325,11 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
                     end
 
                     # use_jenerics_alphabet と callport_list の要素数が等しいことを前提としている
-                    callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
-                        if check_gen_dyn_for_port(callport) == nil then
-                            file.print ", #{alphabet}"
-                        end
-                    end
+                    # callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
+                    #     if check_gen_dyn_for_port(callport) == nil then
+                    #         file.print ", #{alphabet}"
+                    #     end
+                    # end
                     file.print ">"
                 elsif check_only_entryport_celltype(celltype) then
                 else
@@ -1364,16 +1339,16 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
                         lock_guard_first = false
                     end
                     # use_jenerics_alphabet と callport_list の要素数が等しいことを前提としている
-                    callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
-                        if check_gen_dyn_for_port(callport) == nil then
-                            if lock_guard_first then
-                                lock_guard_first = false
-                                file.print "<#{alphabet}"
-                            else
-                                file.print ", #{alphabet}"
-                            end
-                        end
-                    end
+                    # callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
+                    #     if check_gen_dyn_for_port(callport) == nil then
+                    #         if lock_guard_first then
+                    #             lock_guard_first = false
+                    #             file.print "<#{alphabet}"
+                    #         else
+                    #             file.print ", #{alphabet}"
+                    #         end
+                    #     end
+                    # end
                     file.print ">" if lock_guard_first == false
                 end
 
