@@ -1067,15 +1067,15 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
         if has_attr then
             config_name = "Config#{camel_case(cell.get_name.to_s)}"
             if is_attribute_optimization?(cell.get_celltype) then
-                file.print "static #{cell.get_global_name.to_s.upcase}: #{get_rust_celltype_name(cell.get_celltype)}<#{config_name}"
+                file.print "static #{cell.get_global_name.to_s.upcase}: #{get_rust_celltype_name(cell.get_celltype)}<#{config_name}>"
             else
                 # RAM 属性保持時（非 ZST）は、セル本体から CONFIG が消えているため、非ジェネリクスとして扱う
                 file.print "static #{cell.get_global_name.to_s.upcase}: #{get_rust_celltype_name(cell.get_celltype)}"
             end
             # 呼び口がない場合はここで閉じる
-            if is_attribute_optimization?(cell.get_celltype) && get_number_of_jenerics(get_jenerics_alphabet_list(get_callport_list)) == 0 then
-                file.print ">"
-            end
+            # if is_attribute_optimization?(cell.get_celltype) && get_number_of_jenerics(get_jenerics_alphabet_list(get_callport_list)) == 0 then
+            #     file.print ">"
+            # end
         else
             file.print "static #{cell.get_global_name.to_s.upcase}: #{get_rust_celltype_name(cell.get_celltype)}"
         end
