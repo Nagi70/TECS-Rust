@@ -167,7 +167,11 @@ class RustGenCelltypePlugin < CelltypePlugin
             else
                 case param_decl.get_direction
                 when :IN
-                    param_list_str.push(", #{param_decl.get_name}: &#{c_type_to_rust_type(param_decl.get_type)}")
+                    if param_decl.get_type.kind_of?( PtrType ) then
+                        param_list_str.push(", #{param_decl.get_name}: &#{c_type_to_rust_type(param_decl.get_type)}")
+                    else
+                        param_list_str.push(", #{param_decl.get_name}: #{c_type_to_rust_type(param_decl.get_type)}")
+                    end
                 when :INOUT
                     param_list_str.push(", #{param_decl.get_name}: &mut #{c_type_to_rust_type(param_decl.get_type)}")
                 when :OUT
