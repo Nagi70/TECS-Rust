@@ -37,79 +37,13 @@
 #   $Id: CelltypePlugin.rb 2952 2018-05-07 10:19:07Z okuma-top $
 #++
 
-class Cell
-    # 足したい関数を実装できる
-end
 
-#== celltype プラグインの共通の親クラス
-class RustGenCelltypePlugin < CelltypePlugin
-    CLASS_NAME_SUFFIX = ""
-    @@size_first_celltypes = {}
-    @@b_signature_header_generated = false
-    @@module_generated = false
-    @@ex_ctrl_ref_id = 1
-    @@json_parse_result = []
-    @@main_lib_rs_cleaned = false
-    @@cargo_path = "#{$gen}/../#{$target}"
-    @@diff_src_and_gen = Hash.new { |hash, key| hash[key] = [] }
-    @@rust_src_list = []
-    @@makefile_generated = false
-    @@mod_global_signatures_list = []
-    @@mod_global_celltypes_list = []
-    @@mod_global_impls_list = []
-    @@struct_type_list = []
-    # tecs_global.rs を 1 度だけ生成したかどうかを示すフラグ
-    @@global_generated = false
-
-    @@gen_heapless_crate_dependency = false
-    @@const_init_catalog_loaded = false
-    @@const_init_impled_custom_struct_list = Hash.new { |hash, key| hash[key] = [] }
-    @@used_in_rust_custom_struct_list = Hash.new
-
-    #celltype::     Celltype        セルタイプ（インスタンス）
-    def initialize( celltype, option )
-      super
-      @celltype = celltype
-      @plugin_arg_str = option.gsub( /\A"(.*)/, '\1' )    # 前後の "" を取り除く
-      @plugin_arg_str.sub!( /(.*)"\z/, '\1' )
-      @plugin_arg_str = CDLString.remove_dquote option
-      @plugin_arg_list = {}
-      @cell_list =[]
-      @dyn_mutex_ref = false
-      @mod_signatures_list = []
-      @mod_celltypes_list = []
-      @mod_impls_list = []
-      @gen_use_global = false
-      @pointer_array = [] #配列を指すポインタのリスト   [[セル名, シンボル, 名前]]
-
-      plugin_option = @plugin_arg_str.split(",").map(&:strip)
-      if plugin_option.include?("size_first") then
-        @@size_first_celltypes[celltype.get_global_name] = true
-      end
-
-      require_tecsgen_lib 'lib/RustDefaultTypeChecker.rb'
-      @@default_type_checker = Default.load!(File.expand_path(File.join(__dir__, 'lib', 'RustDefaultTypeList.json')))
-
-      require 'fileutils'
-
-      celltype.set_impl_lang :Rust
+module RustGenHelper
+    def get_rust_celltype_name celltype
+        return camel_case(snake_case(celltype.get_global_name.to_s))
     end
-
-    #=== 新しいセル
-    #cell::        Cell            セル
-    #
-    # celltype プラグインを指定されたセルタイプのセルが生成された
-    # セルタイププラグインに対する新しいセルの報告
-    def new_cell( cell )
-        @cell_list << cell
-    end
-
-    #=== 後ろの CDL コードを生成
-    #プラグインの後ろの CDL コードを生成
-    #file:: File:
-    def self.gen_post_code( file )
-      # 複数のプラグインの post_code が一つのファイルに含まれるため、以下のような見出しをつけること
-      # file.print "/* '#{self.class.name}' post code */\n"
+    def get_rust_function_name func_head
+        return snake_case(func_head.get_name.to_s)
     end
 
     # 文字列を snake_case に変換する
@@ -125,99 +59,6 @@ class RustGenCelltypePlugin < CelltypePlugin
         input_string.split('_').map(&:capitalize).join
     end
 
-    def get_sig_param_str sig
-        param_decl_list = []
-        lifetime_annotation_flag = false
-        # シグニチャの param_decl を取得する
-        # 今回は receive が引数に存在していないからうまくいったが，引数にもしある場合は要素数がずれる．
-        sig.each_param{ |func_decl, param_decl|
-            case param_decl.get_direction
-            when :IN, :INOUT, :OUT
-                param_decl_list.push(param_decl)
-            when :SEND
-                param_decl_list.push(param_decl)
-                # TODO: send 引数への対応
-            when :RECEIVE
-                param_decl_list.push(param_decl)
-                # TODO：receive 引数への対応
-            end
-        }
-
-        # [out,string(len)]などのlenを削除する
-        param_decl_list.each{ |param_decl|
-            if param_decl.get_type.kind_of?( PtrType ) && param_decl.get_type.get_string != nil then
-                param_decl_list.each_with_index{ |param_decl2, index|
-                    if param_decl2.get_name.to_s == param_decl.get_type.get_string.to_s then
-                        param_decl_list.delete_at(index)
-                    end
-                }
-            end
-        }
-
-        # param_decl を文字列にする
-        param_list_str =[]
-        return_param_str =[]
-        param_decl_list.each{ |param_decl|
-            param_type = param_decl.get_type.get_type_str
-            if check_lifetime_annotation_for_type(param_type) then
-                lifetime_annotation_flag = true
-            end
-            if param_decl == "return" then
-                next
-            else
-                case param_decl.get_direction
-                when :IN
-                    if param_decl.get_type.kind_of?( PtrType ) then
-                        param_list_str.push(", #{param_decl.get_name}: &#{c_type_to_rust_type(param_decl.get_type)}")
-                    else
-                        param_list_str.push(", #{param_decl.get_name}: #{c_type_to_rust_type(param_decl.get_type)}")
-                    end
-                when :INOUT
-                    param_list_str.push(", #{param_decl.get_name}: &mut #{c_type_to_rust_type(param_decl.get_type)}")
-                when :OUT
-                    param_list_str.push(", #{param_decl.get_name}: &mut #{c_type_to_rust_type(param_decl.get_type)}")
-                when :SEND
-                    # TODO: send 引数への対応
-                    # 引数の数自体を変えないようにするために，ignore を入れる
-                    param_list_str.push("ignore")
-                when :RECEIVE
-                    # TODO： receive 引数への対応
-                    # 引数の数自体を変えないようにするために，ignore を入れる
-                    param_list_str.push("ignore")
-                end
-            end
-        }
-        return param_list_str, return_param_str, lifetime_annotation_flag
-    end
-
-    # 正規表現を用いて，Option 型などに変換する
-    def convert_rust_type_string(input)
-        # 正規表現パターンの配列を定義
-        # yamlファイルなどの外部ファイルを利用して，パターンの追加を簡単にしていく
-        patterns = [
-            [/Option__(\w+)__/, ->(type) { "Option<#{type}>" }],
-            [/Option_Ref__(\w+)__/, ->(type) { "Option<& #{type}>" }],
-            [/Option_Ref_mut__(\w+)__/, ->(type) { "Option<&mut #{type}>" }],
-            [/Option_Ref_a_mut__(\w+)__/, ->(type) { "Option<&'a mut #{type}>" }],
-            [/Ref__(\w+)__/, ->(type) { "&#{type}" }],
-            [/Ref_mut__(\w+)__/, ->(type) { "&mut #{type}" }],
-            [/Ref_a__(\w+)__/, ->(type) { "&'a #{type}" }],
-            [/ITRONResult__empty__(\w+)__/, ->(err) { "Result<(), Error<#{err}>>" }],
-            [/ITRONResult__(\w+)__(\w+)__/, ->(ok, err) { "Result<#{ok}, Error<#{err}>>" }],
-            [/Result__empty__(\w+)__/, ->(err) { "Result<(), #{err}>" }],
-            [/Result__(\w+)__(\w+)__/, ->(ok, err) { "Result<#{ok}, #{err}>" }],
-          ]
-
-          result = input.dup
-          patterns.each do |pattern, conversion|
-            result.gsub!(pattern) do
-              conversion.call(*$~.captures)  # `$~.captures` を展開して渡す
-            end
-          end
-
-        return result
-    end
-
     # 正規表現のパターンを用いて，型にライフタイムが必要かチェックする関数
     # 正規表現のパターン以外には対応していない
     def check_lifetime_annotation_for_type str
@@ -226,271 +67,6 @@ class RustGenCelltypePlugin < CelltypePlugin
         else
             return false
         end
-    end
-
-    # セルタイプ構造体にライフタイムアノテーションが必要かどうかを判定する関数
-    def check_lifetime_annotation_for_celltype_structure celltype, callport_list
-
-        # 呼び口は受け口構造体に繋がっており、受け口構造体は必ずライフタイムアノテーションが必要であるため、trueを返す
-        if callport_list.length >= 1 then
-            return true
-        end
-
-        # ライフタイムアノテーションが必要な属性があるかどうか
-        # 属性最適化が行われる場合は、celltype構造体に属性が定義されないため、チェックを省略する
-        if !is_attribute_optimization?(celltype) then
-            celltype.get_attribute_list.each{ |attr|
-                if attr.is_omit? then
-                    next
-                else
-                    attr_type_name = attr.get_type.get_type_str
-                    if check_lifetime_annotation_for_type(attr_type_name) then
-                        return true
-                    end
-                end
-            }
-        end
-
-        # ライフタイムアノテーションが必要な変数があるかどうか
-        celltype.get_var_list.each{ |var|
-            var_type_name = var.get_type.get_type_str
-            if check_lifetime_annotation_for_type(var_type_name) then
-                return true
-            end
-        }
-
-        return false
-    end
-
-    def gen_use_mutex file
-        file.print "use spin::Mutex;\n"
-    end
-
-    # @use_string_list に格納されている文字列を元に use 文を生成する
-    def gen_use_header file
-        if @celltype.get_var_list.length != 0 then
-            gen_use_mutex file
-        end
-
-        # TODO: 必要な時だけ use するようにする
-        # if @gen_use_global then
-            file.print "use crate::tecs_global::*;\n"
-        # end
-
-        if @mod_signatures_list.length == 1 then
-            file.print "use crate::tecs_signature::#{@mod_signatures_list[0]}::*;\n"
-        elsif @mod_signatures_list.length > 1 then
-            file.print "use crate::tecs_signature::{"
-            @mod_signatures_list.each{ |mod_signature|
-                if mod_signature != @mod_signatures_list.last then
-                    file.print "#{mod_signature}::*, "
-                else
-                    file.print "#{mod_signature}::*};\n\n"
-                end
-            }
-        end
-
-
-        if @mod_celltypes_list.length == 1 then
-            file.print "use crate::tecs_celltype::#{@mod_celltypes_list[0]}::*;\n"
-        elsif @mod_celltypes_list.length > 1 then
-            file.print "use crate::tecs_celltype::{"
-            @mod_celltypes_list.each{ |mod_celltype|
-                if mod_celltype != @mod_celltypes_list.last then
-                    file.print "#{mod_celltype}::*, "
-                else
-                    file.print "#{mod_celltype}::*};\n\n"
-                end
-            }
-        end
-    end
-
-    # セルタイプが属性最適化（定数化）対象かどうかを返す
-    def is_size_first?(celltype)
-        return @@size_first_celltypes[celltype.get_global_name] == true
-    end
-
-    def is_attribute_optimization?(celltype)
-        # 「省略されない属性」があり、かつ（「size_first 指定がない」または「シングルトンである」）場合に true
-        # シングルトンの場合はメモリ節約のため常に ZST 最適化を適用する
-        has_attr = celltype.get_attribute_list.any? { |attr| !attr.is_omit? }
-        return has_attr && (!is_size_first?(celltype) || is_singleton_optimization?(celltype))
-    end
-
-    # 属性の実体として ZST (定数) を使用すべきかどうか (is_attribute_optimization? の別名)
-    def is_zst_optimization?(celltype)
-        return is_attribute_optimization?(celltype)
-    end
-
-    # シングルトン最適化対象かどうかを返す
-    def is_singleton_optimization?(celltype)
-        celltype.get_cell_list.length == 1
-    end
-
-    # セルインスタンスに対応する Config 型名を返す
-    def get_rust_config_type(cell)
-        celltype = cell.get_celltype
-
-        has_attr = celltype.get_attribute_list.any? { |attr| !attr.is_omit? }
-        return nil if !has_attr
-
-        # プラグインが見つからない場合は、デフォルトで ZST 最適化されていると仮定する（従来互換）
-        # または、そのセルタイプが ZST 最適化されているかどうかを判定する
-        if is_zst_optimization?(celltype) then
-            return "Config#{camel_case(cell.get_name.to_s)}"
-        else
-            return "ConfigDefault#{get_rust_celltype_name(celltype)}"
-        end
-    end
-
-    def gen_rust_attribute_config file, celltype
-        # 属性があれば（最適化有無に関わらず）CONFIG トレイトは生成する
-        has_attr = celltype.get_attribute_list.any? { |attr| !attr.is_omit? }
-        return if !has_attr
-
-        celltype_name = get_rust_celltype_name(celltype)
-        file.print "pub trait #{celltype_name}Config: 'static {\n"
-        celltype.get_attribute_list.each do |attr|
-            next if attr.is_omit?
-            file.print "    const #{attr.get_name.to_s.upcase}: #{c_type_to_rust_type(attr.get_type)};\n"
-        end
-        file.print "}\n\n"
-
-        # ZST 最適化を行う場合のみ、Deref 実装ヘルパーを生成する
-        if is_zst_optimization?(celltype) then
-            celltype.get_attribute_list.each do |attr|
-                next if attr.is_omit?
-                attr_name = attr.get_name.to_s
-                attr_name_camel = camel_case(attr_name)
-                rust_type = c_type_to_rust_type(attr.get_type)
-
-                # ヘルパー構造体 (ZST)
-                file.print "pub struct #{celltype_name}#{attr_name_camel}<CONFIG: #{celltype_name}Config>(core::marker::PhantomData<CONFIG>);\n"
-                file.print "impl<CONFIG: #{celltype_name}Config> core::ops::Deref for #{celltype_name}#{attr_name_camel}<CONFIG> {\n"
-                file.print "    type Target = #{rust_type};\n"
-                file.print "    #[inline(always)]\n"
-                file.print "    fn deref(&self) -> &#{rust_type} {\n"
-                file.print "        &CONFIG::#{attr_name.upcase}\n"
-                file.print "    }\n"
-                file.print "}\n\n"
-            end
-        end
-
-        # インスタンスごとの Config 実装 (ZST 最適化時のみ)
-        if is_zst_optimization?(celltype) then
-            file.print "// Instance Configurations\n"
-            celltype.get_cell_list.each do |cell|
-                instance_name_camel = camel_case(cell.get_name.to_s)
-                file.print "pub struct Config#{instance_name_camel};\n"
-                file.print "impl #{celltype_name}Config for Config#{instance_name_camel} {\n"
-                celltype.get_attribute_list.each do |attr|
-                    next if attr.is_omit?
-                    # 初期値の取得
-                    # eval_const2 を使ってリテラル値を取得する
-                    initializer = cell.get_attr_initializer(attr.get_name)
-                    val = initializer.eval_const2(nil)
-                    file.print "    const #{attr.get_name.to_s.upcase}: #{c_type_to_rust_type(attr.get_type)} = #{val};\n"
-                end
-                file.print "}\n\n"
-            end
-        else
-            # size_first (非 ZST) 時はセルタイプごとに共通のデフォルト Config を1つだけ生成
-            file.print "// Default Configuration for Non-ZST (size_first) mode\n"
-            file.print "pub struct ConfigDefault#{celltype_name};\n"
-            file.print "impl #{celltype_name}Config for ConfigDefault#{celltype_name} {\n"
-            celltype.get_attribute_list.each do |attr|
-                next if attr.is_omit?
-                # 実体はフィールドに保持されるため、定数値は何でも良い（トレイト定義を満たすため）
-                rust_type = c_type_to_rust_type(attr.get_type)
-                default_val = "0"
-                if rust_type == "f64" || rust_type == "f32" then
-                    default_val = "0.0"
-                elsif ["bool"].include?(rust_type) then
-                    default_val = "false"
-                end
-                file.print "    const #{attr.get_name.to_s.upcase}: #{rust_type} = #{default_val};\n"
-            end
-            file.print "}\n\n"
-        end
-    end
-
-    # ロックガード構造体のライフタイムアノテーションが必要かどうかを返す
-    # 属性最適化（定数化）が行われ、ロックガードに属性以外の要素が存在しない場合、ライフタイムは不要
-    def is_lock_guard_lifetime_required?(celltype, callport_list, use_jenerics_alphabet)
-
-        # 呼び口がある場合はライフタイムが必要
-        if callport_list.length > 0 then
-            return true
-        end
-
-        # 変数がある場合はライフタイムが必要
-        if celltype.get_var_list.length > 0 then
-            return true
-        end
-
-        # 属性最適化が行われない場合で、属性がある場合はライフタイムが必要 (属性への参照を持つため)
-        if !is_attribute_optimization?(celltype) then
-            celltype.get_attribute_list.each do |attr|
-                if !attr.is_omit? then
-                    return true
-                end
-            end
-        end
-
-        return false
-    end
-
-    # tecs_celltype.rs と tecs_celltype ディレクトリを生成する
-    def gen_tecs_celltype_rs
-        # ディレクトリを生成する
-        if File.exist?("#{$gen}/tecs_celltype") == false then
-            FileUtils.mkdir_p("#{$gen}/tecs_celltype")
-        end
-
-        # tecs_celltype.rs を生成する
-        tecs_celltype_rs = CFile.open("#{$gen}/tecs_celltype.rs", "w")
-        @@mod_global_celltypes_list.each{ |mod_celltype|
-            tecs_celltype_rs.print "pub mod #{mod_celltype};\n"
-        }
-        tecs_celltype_rs.close
-
-        copy_gen_files_to_cargo "tecs_celltype.rs", nil
-    end
-
-    # tecs_signature.rs と tecs_signature ディレクトリを生成する
-    def gen_tecs_signature_rs
-        # ディレクトリを生成する
-        if File.exist?("#{$gen}/tecs_signature") == false then
-            FileUtils.mkdir_p("#{$gen}/tecs_signature")
-        end
-
-        # tecs_signature.rs を生成する
-        tecs_signature_rs = CFile.open("#{$gen}/tecs_signature.rs", "w")
-        @@mod_global_signatures_list.each{ |mod_signature|
-            tecs_signature_rs.print "pub mod #{mod_signature};\n"
-        }
-        tecs_signature_rs.close
-
-        copy_gen_files_to_cargo "tecs_signature.rs", nil
-    end
-
-    # tecs_impl.rs と tecs_impl ディレクトリを生成する
-    def gen_tecs_impl_rs
-        # ディレクトリを生成する
-        if File.exist?("#{$gen}/tecs_impl") == false then
-            FileUtils.mkdir_p("#{$gen}/tecs_impl")
-        end
-
-        @@mod_global_impls_list.uniq!
-
-        # tecs_impl.rs を生成する
-        tecs_impl_rs = CFile.open("#{$gen}/tecs_impl.rs", "w")
-        @@mod_global_impls_list.each{ |mod_impl|
-            tecs_impl_rs.print "pub mod #{mod_impl};\n"
-        }
-        tecs_impl_rs.close
-
-        copy_gen_files_to_cargo "tecs_impl.rs", nil
     end
 
     # get_bit_size の返り値を Rust の型に合わせて変換する
@@ -509,6 +85,27 @@ class RustGenCelltypePlugin < CelltypePlugin
         else
             return bit_size.abs
         end
+    end
+
+    def is_size_first?(celltype)
+        return RustGenCelltypePlugin.size_first_celltypes[celltype.get_global_name] == true
+    end
+
+    def is_attribute_optimization?(celltype)
+        # 「省略されない属性」があり、かつ（「size_first 指定がない」または「シングルトンである」）場合に true
+        # シングルトンの場合はメモリ節約のため常に ZST 最適化を適用する
+        has_attr = celltype.get_attribute_list.any? { |attr| !attr.is_omit? }
+        return has_attr && (!is_size_first?(celltype) || is_singleton_optimization?(celltype))
+    end
+
+    # 属性の実体として ZST (定数) を使用すべきかどうか (is_attribute_optimization? の別名)
+    def is_zst_optimization?(celltype)
+        return is_attribute_optimization?(celltype)
+    end
+
+    # シングルトン最適化対象かどうかを返す
+    def is_singleton_optimization?(celltype)
+        celltype.get_cell_list.length == 1
     end
 
     # 宣言されている型を Rust の型に変換する
@@ -546,7 +143,8 @@ class RustGenCelltypePlugin < CelltypePlugin
             # @@struct_type_list.push(c_type)
 
             # Rust のコード生成で使用されているオリジナル構造体のリストに追加する
-            @@used_in_rust_custom_struct_list[c_type.get_name.to_s] = c_type
+            # @@used_in_rust_custom_struct_list[c_type.get_name.to_s] = c_type
+            RustGenCelltypePlugin.add_used_in_rust_custom_struct_list(c_type.get_name.to_s, c_type)
 
             # @gen_use_global = true
         elsif c_type.kind_of?( PtrType ) then
@@ -567,7 +165,8 @@ class RustGenCelltypePlugin < CelltypePlugin
                     string = 256
                 end
 
-                @@gen_heapless_crate_dependency = true
+                # @@gen_heapless_crate_dependency = true
+                RustGenCelltypePlugin.set_gen_heapless_crate_dependency(true)
 
                 str = "heapless::String<#{string}>"
 
@@ -590,7 +189,6 @@ class RustGenCelltypePlugin < CelltypePlugin
                 # ポインタの中の型に対して，もう一度 c_type_to_rust_type を呼び出す
                 type = c_type_to_rust_type(c_type.get_type)
                 str = type.gsub("*", "")
-                str = convert_rust_type_string(str)
                 if str == "void" then
                     str = "unknown"
                 end
@@ -615,12 +213,12 @@ class RustGenCelltypePlugin < CelltypePlugin
             structs.each do |st|
                 if str.include?(st.get_name.to_s) then
                     # Rust のコード生成で使用されているオリジナル構造体のリストに追加する
-                    @@used_in_rust_custom_struct_list[st.get_name.to_s] = st
+                    # @@used_in_rust_custom_struct_list[st.get_name.to_s] = st
+                    RustGenCelltypePlugin.add_used_in_rust_custom_struct_list(st.get_name.to_s, st)
                 end
             end
         else
             str = c_type.get_type_str
-            str = convert_rust_type_string(str)
             if str == "void" then
                 str = "unknown"
             end
@@ -725,6 +323,1456 @@ class RustGenCelltypePlugin < CelltypePlugin
             nil
         end
     end
+end
+
+
+class Cell
+    include RustGenHelper
+
+    # 変数の初期値を得る
+    def get_var_initializer var_name
+        val = @join_list.get_item( var_name )
+        if val == nil then
+            v = @celltype.find( var_name )
+            val = v ? v.get_initializer : nil
+        else
+            val = val.get_rhs
+        end
+        return val
+    end
+
+    # 属性の初期値を得る
+    def get_attr_initializer attr_name
+        val = @join_list.get_item( attr_name )
+        if val == nil then
+            v = @celltype.find( attr_name )
+            val = v ? v.get_initializer : nil
+        else
+            val = val.get_rhs
+        end
+        return val
+    end
+
+    def get_rust_config_type
+        celltype = self.get_celltype
+
+        has_attr = celltype.get_attribute_list.any? { |attr| !attr.is_omit? }
+        return nil if !has_attr
+
+        # プラグインが見つからない場合は、デフォルトで ZST 最適化されていると仮定する（従来互換）
+        # または、そのセルタイプが ZST 最適化されているかどうかを判定する
+        if is_zst_optimization?(celltype) then
+            return "Config#{camel_case(self.get_name.to_s)}"
+        else
+            return "ConfigDefault#{get_rust_celltype_name(celltype)}"
+        end
+    end
+
+    # セルが複数のタスクからアクセスされているかどうかを判断する
+    def check_exclusive_control
+        # JSONファイルがパースされていない場合は、排他制御がいるものとして true を返す
+        json_result = RustGenCelltypePlugin.json_parse_result
+        if json_result.length == 0 then
+            return true
+        end
+
+        celltype_name = self.get_celltype.get_global_name.to_s
+        if json_result[self.get_global_name.to_s]["Celltype"] == celltype_name then
+            if json_result[self.get_global_name.to_s]["ExclusiveControl"] == "true" then
+                return true
+            end
+            return false
+        end
+        puts "Error: JSON file does not include #{self.get_global_name.to_s}"
+        return false
+    end
+
+    def check_multiple_accessed
+        # JSONファイルがパースされていない場合は、保守的に true を返す
+        json_result = RustGenCelltypePlugin.json_parse_result
+        if json_result.length == 0 then
+            return true
+        end
+
+        celltype_name = self.get_celltype.get_global_name.to_s
+        if json_result[self.get_global_name.to_s]["Celltype"] == celltype_name then
+            if json_result[self.get_global_name.to_s]["TaskList"].length > 1 then
+                return true
+            end
+            return false
+        end
+        puts "Error: JSON file does not include #{self.get_global_name.to_s}"
+        return false
+    end
+
+    # セルの構造体の初期化の先頭部を生成
+    def gen_rust_cell_structure_header_initialize file
+        file.print "#[unsafe(link_section = \".rodata\")]"
+        # 属性があれば CONFIG を出す
+        has_attr = self.get_celltype.get_attribute_list.any? { |attr| !attr.is_omit? }
+
+        if has_attr then
+            config_name = "Config#{camel_case(self.get_name.to_s)}"
+            if is_attribute_optimization?(self.get_celltype) then
+                file.print "static #{self.get_global_name.to_s.upcase}: #{get_rust_celltype_name(self.get_celltype)}<#{config_name}>"
+            else
+                # RAM 属性保持時（非 ZST）は、セル本体から CONFIG が消えているため、非ジェネリクスとして扱う
+                file.print "static #{self.get_global_name.to_s.upcase}: #{get_rust_celltype_name(self.get_celltype)}"
+            end
+        else
+            file.print "static #{self.get_global_name.to_s.upcase}: #{get_rust_celltype_name(self.get_celltype)}"
+        end
+    end
+
+    # セル構造体の初期化ためのジェネリクス代入部を生成
+    def gen_rust_cell_structure_jenerics_initialize file, callport_list, use_jenerics_alphabet
+        file.print " = #{get_rust_celltype_name(self.get_celltype)} "
+    end
+
+    # セルの構造体の呼び口フィールドの初期化を生成
+    def gen_rust_cell_structure_callport_initialize file, callport_list
+        callport_list.each{ |port|
+            if port.get_port_type == :CALL then
+                callee_port_name = camel_case(snake_case(self.get_join_list.get_item(port.get_name).get_port_name.to_s))
+                callee_cell_name = self.get_join_list.get_item(port.get_name).get_cell.get_global_name.to_s
+                file.print "\t#{snake_case(port.get_name.to_s)}: &#{callee_port_name.upcase}FOR#{callee_cell_name.upcase},\n"
+            end
+        }
+    end
+
+    # セルの構造体の属性フィールドの初期化を生成
+    def gen_rust_cell_structure_attribute_initialize file, plugin
+        celltype = self.get_celltype
+        if is_zst_optimization?(celltype) then
+            file.print "\t_phantom: core::marker::PhantomData,\n"
+            return
+        end
+
+        has_attr = false
+        array_number = 1
+        celltype.get_attribute_list.each{ |attr|
+            if attr.is_omit? then
+                next
+            else
+                has_attr = true
+                # セル記述で初期化されていても，反映する
+                attr_symbol = attr.get_name.to_s.to_sym
+                attr_array = self.get_attr_initializer(attr_symbol)
+                # 属性がポインタであるときに対応
+                if attr.get_type.kind_of?( PtrType ) && attr.get_type.get_size != nil then
+                    type = c_type_to_rust_type(attr.get_type).delete("[]")
+                    size = nil
+                    if celltype.get_attribute_list.any? { |a| a.get_name == attr.get_type.get_size.to_s.to_sym } then
+                        # 属性名をサイズに使っている場合は、その属性名を使う
+                        size = self.get_attr_initializer(attr.get_type.get_size.to_s.to_sym)
+                    else
+                        # それ以外は、size_is指定子に直接指定されている値を使う 
+                        # size_is(256) のように指定されている場合
+                        size = attr.get_type.get_size.to_s
+                    end
+                    # size = self.get_attr_initializer(attr.get_type.get_size.to_s.to_sym)
+                    name = "#{self.get_global_name.upcase}ATTRARRAY#{array_number}"
+                    plugin.push_pointer_array(name, type, size, attr_array)
+                    file.print "\t#{attr.get_name.to_s}: &#{name},\n"
+                    array_number += 1
+                elsif attr.get_type.kind_of?( StructType ) then
+                    # 構造体属性: 初期化子が配列ならフィールドごとに割当、
+                    # それ以外（PL_EXP/C_EXP など式）の場合は式をそのまま出力する
+                    if attr_array.is_a?(Array) then
+                        file.print "\t#{attr.get_name.to_s}: #{c_type_to_rust_type(attr.get_type)} {\n"
+                        struct_field_name = attr.get_type.get_members_decl.get_items
+                        struct_field_name.zip(attr_array).each{ |field, value|
+                            file.print "\t\t#{snake_case(field.get_name.to_s)}: #{value},\n"
+                        }
+                        file.print("},\n")
+                    else
+                        # 非配列（C_EXP 等）: そのまま式を埋め込む
+                        file.print "\t#{attr.get_name.to_s}: #{self.get_attr_initializer(attr_symbol).to_s},\n"
+                    end
+                # 属性が配列であるときに対応
+                elsif attr_array.is_a?(Array) then 
+                    file.print "\t#{attr.get_name.to_s}: ["
+                    attr_array.each{ |attr_array_item|
+                        if attr_array_item == attr_array.last then
+                            file.print "#{attr_array_item}"
+                        else
+                            file.print "#{attr_array_item}, "
+                        end
+                    }
+                    file.print "],\n"
+                else
+                    file.print "\t#{attr.get_name.to_s}: #{self.get_attr_initializer(attr_symbol).to_s},\n"
+                end
+            end
+        }
+    end
+
+    # セルの構造体の変数フィールドの初期化を生成
+    def gen_rust_cell_structure_variable_initialize file
+        celltype = self.get_celltype
+        if celltype.get_var_list.length != 0 then
+            file.print "\tvariable: &#{self.get_global_name.to_s.upcase}VAR,\n"
+        end
+    end
+
+    # 変数構造体の初期化を生成
+    # TODO: awkernel版のデータ構造と同じにできる
+    def gen_rust_variable_structure_initialize file, plugin
+        celltype = self.get_celltype
+        if celltype.get_var_list.length != 0 then
+            file.print "static #{self.get_global_name.to_s.upcase}VAR: Mutex<#{get_rust_celltype_name(celltype)}Var> = Mutex::new(#{get_rust_celltype_name(celltype)}Var {\n"
+
+            self.gen_rust_variable_structure_field_initialize(file, plugin)
+
+            file.print "});\n\n"
+
+        end
+    end
+
+    # 変数構造体のフィールドの初期化を生成 (オーバーライドのために分離)
+    def gen_rust_variable_structure_field_initialize file, plugin
+        celltype = self.get_celltype
+        array_number = 1
+        # 変数構造体のフィールドの初期化を生成
+        celltype.get_var_list.each{ |var|
+            var_array = var.get_initializer
+            # 変数がポインタであるときに対応
+            if var.get_type.kind_of?( PtrType ) && var.get_type.get_size != nil then
+
+                type = c_type_to_rust_type(var.get_type).delete("[]")
+                size = nil
+                if celltype.get_attribute_list.any? { |attr| attr.get_name == var.get_type.get_size.to_s.to_sym } then
+                    # 属性名をサイズに使っている場合は、その属性名を使う
+                    size = self.get_attr_initializer(var.get_type.get_size.to_s.to_sym)
+                else
+                    # それ以外は、size_is指定子に直接指定されている値を使う 
+                    # size_is(256) のように指定されている場合
+                    size = var.get_type.get_size.to_s
+                end
+                # size = cell.get_attr_initializer(var.get_type.get_size.to_s.to_sym)
+                name = "mut #{self.get_global_name.upcase}VARARRAY#{array_number}"
+                plugin.push_pointer_array(name, type, size, var_array)
+                file.print "\t\t#{var.get_name.to_s}: unsafe{ &mut *core::ptr::addr_of_mut!(#{self.get_global_name.upcase}VARARRAY#{array_number}) },\n"
+                array_number += 1
+            elsif var.get_type.kind_of?( StructType ) then
+                # 構造体属性: 初期化子が配列ならフィールドごとに割当、
+                # それ以外（PL_EXP/C_EXP など式）の場合は式をそのまま出力する
+                if var_array.is_a?(Array) then
+                    file.print "\t#{var.get_name.to_s}: #{c_type_to_rust_type(var.get_type)} {\n"
+                    struct_field_name = var.get_type.get_members_decl.get_items
+                    struct_field_name.zip(var_array).each{ |field, value|
+                        file.print "\t\t#{snake_case(field.get_name.to_s)}: #{value},\n"
+                    }
+                    file.print("\t},\n")
+                else
+                    # 非配列（C_EXP 等）: そのまま式を埋め込む
+                    file.print "\t#{var.get_name}: #{var.get_initializer},\n"
+                end
+            elsif var_array.is_a?(Array) then
+                # 属性が配列であるときに対応
+                file.print "\t#{var.get_name}: ["
+                var_array.each{ |var_array_item|
+                    if var_array_item == var_array.last then
+                        file.print "#{var_array_item.to_s}"
+                    else
+                        file.print "#{var_array_item.to_s}, "
+                    end
+                }
+                file.print "],\n"
+            else
+                file.print "\t#{var.get_name}: #{var.get_initializer},\n"
+            end
+        }
+    end
+
+    # rodataセクションに配置するための属性を付与する
+    def gen_rust_entryport_structure_initialize_specifier file
+        file.print "#[unsafe(link_section = \".rodata\")]"
+    end
+
+    # 受け口構造体の初期化を生成
+    def gen_rust_entryport_structure_initialize file
+        celltype = self.get_celltype
+        celltype.get_port_list.each{ |port|
+            if port.get_port_type == :ENTRY then
+
+                # 空のシグニチャの場合は、初期化を生成しない
+                if port.get_signature.get_function_head_array.length == 0 then
+                    next
+                end
+
+                # 受け口構造体の初期化を生成
+                gen_rust_entryport_structure_initialize_specifier(file)
+                config_type = self.get_rust_config_type
+                if config_type then
+                    # 属性を持つ場合は必ずジェネリクスを指定する
+                    file.print "pub static #{port.get_name.to_s.upcase}FOR#{self.get_global_name.to_s.upcase}: #{camel_case(snake_case(port.get_name.to_s))}For#{get_rust_celltype_name(celltype)}<#{config_type}> = #{camel_case(snake_case(port.get_name.to_s))}For#{get_rust_celltype_name(celltype)} {\n"
+                    file.print "\tcell: &#{self.get_global_name.to_s.upcase},\n"
+                    if !is_attribute_optimization?(celltype) then
+                        # RAM 属性保持時（非 ZST）は、PhantomData の初期化が必要
+                        file.print "\t_phantom: core::marker::PhantomData,\n"
+                    end
+                else
+                    file.print "pub static #{port.get_name.to_s.upcase}FOR#{self.get_global_name.to_s.upcase}: #{camel_case(snake_case(port.get_name.to_s))}For#{get_rust_celltype_name(celltype)} = #{camel_case(snake_case(port.get_name.to_s))}For#{get_rust_celltype_name(celltype)} {\n"
+                    file.print "\tcell: &#{self.get_global_name.to_s.upcase},\n"
+                end
+                file.print "};\n\n"
+            end
+        }
+    end
+
+end
+
+class Celltype
+    include RustGenHelper
+
+    # alias original_initialize initialize
+    # def initialize( name )
+    #     original_initialize( name ) # 元の(コア側の)処理を実行
+    #     @pointer_array = []         # 自分の追加処理
+    # end
+
+    # セルタイプ構造体にライフタイムアノテーションが必要かどうかを判定する関数
+    def check_lifetime_annotation_for_celltype_structure callport_list
+
+        # 呼び口は受け口構造体に繋がっており、受け口構造体は必ずライフタイムアノテーションが必要であるため、trueを返す
+        if callport_list.length >= 1 then
+            return true
+        end
+
+        # ライフタイムアノテーションが必要な属性があるかどうか
+        # 属性最適化が行われる場合は、celltype構造体に属性が定義されないため、チェックを省略する
+        if !is_attribute_optimization?(self) then
+            self.get_attribute_list.each{ |attr|
+                if attr.is_omit? then
+                    next
+                else
+                    attr_type_name = attr.get_type.get_type_str
+                    if check_lifetime_annotation_for_type(attr_type_name) then
+                        return true
+                    end
+                end
+            }
+        end
+
+        # ライフタイムアノテーションが必要な変数があるかどうか
+        self.get_var_list.each{ |var|
+            var_type_name = var.get_type.get_type_str
+            if check_lifetime_annotation_for_type(var_type_name) then
+                return true
+            end
+        }
+
+        return false
+    end
+
+    def gen_rust_attribute_config file
+        # 属性があれば（最適化有無に関わらず）CONFIG トレイトは生成する
+        has_attr = self.get_attribute_list.any? { |attr| !attr.is_omit? }
+        return if !has_attr
+
+        celltype_name = get_rust_celltype_name(self)
+        file.print "pub trait #{celltype_name}Config: 'static {\n"
+        self.get_attribute_list.each do |attr|
+            next if attr.is_omit?
+            file.print "    const #{attr.get_name.to_s.upcase}: #{c_type_to_rust_type(attr.get_type)};\n"
+        end
+        file.print "}\n\n"
+
+        # ZST 最適化を行う場合のみ、Deref 実装ヘルパーを生成する
+        if is_zst_optimization?(self) then
+            self.get_attribute_list.each do |attr|
+                next if attr.is_omit?
+                attr_name = attr.get_name.to_s
+                attr_name_camel = camel_case(attr_name)
+                rust_type = c_type_to_rust_type(attr.get_type)
+
+                # ヘルパー構造体 (ZST)
+                file.print "pub struct #{celltype_name}#{attr_name_camel}<CONFIG: #{celltype_name}Config>(core::marker::PhantomData<CONFIG>);\n"
+                file.print "impl<CONFIG: #{celltype_name}Config> core::ops::Deref for #{celltype_name}#{attr_name_camel}<CONFIG> {\n"
+                file.print "    type Target = #{rust_type};\n"
+                file.print "    #[inline(always)]\n"
+                file.print "    fn deref(&self) -> &#{rust_type} {\n"
+                file.print "        &CONFIG::#{attr_name.upcase}\n"
+                file.print "    }\n"
+                file.print "}\n\n"
+            end
+        end
+
+        # インスタンスごとの Config 実装 (ZST 最適化時のみ)
+        if is_zst_optimization?(self) then
+            file.print "// Instance Configurations\n"
+            self.get_cell_list.each do |cell|
+                instance_name_camel = camel_case(cell.get_name.to_s)
+                file.print "pub struct Config#{instance_name_camel};\n"
+                file.print "impl #{celltype_name}Config for Config#{instance_name_camel} {\n"
+                self.get_attribute_list.each do |attr|
+                    next if attr.is_omit?
+                    # 初期値の取得
+                    # eval_const2 を使ってリテラル値を取得する
+                    initializer = cell.get_attr_initializer(attr.get_name)
+                    val = initializer.eval_const2(nil)
+                    file.print "    const #{attr.get_name.to_s.upcase}: #{c_type_to_rust_type(attr.get_type)} = #{val};\n"
+                end
+                file.print "}\n\n"
+            end
+        else
+            # size_first (非 ZST) 時はセルタイプごとに共通のデフォルト Config を1つだけ生成
+            file.print "// Default Configuration for Non-ZST (size_first) mode\n"
+            file.print "pub struct ConfigDefault#{celltype_name};\n"
+            file.print "impl #{celltype_name}Config for ConfigDefault#{celltype_name} {\n"
+            self.get_attribute_list.each do |attr|
+                next if attr.is_omit?
+                # 実体はフィールドに保持されるため、定数値は何でも良い（トレイト定義を満たすため）
+                rust_type = c_type_to_rust_type(attr.get_type)
+                default_val = "0"
+                if rust_type == "f64" || rust_type == "f32" then
+                    default_val = "0.0"
+                elsif ["bool"].include?(rust_type) then
+                    default_val = "false"
+                end
+                file.print "    const #{attr.get_name.to_s.upcase}: #{rust_type} = #{default_val};\n"
+            end
+            file.print "}\n\n"
+        end
+    end
+
+    # ロックガード構造体のライフタイムアノテーションが必要かどうかを返す
+    # 属性最適化（定数化）が行われ、ロックガードに属性以外の要素が存在しない場合、ライフタイムは不要
+    def is_lock_guard_lifetime_required?(callport_list, use_jenerics_alphabet)
+
+        # 呼び口がある場合はライフタイムが必要
+        if callport_list.length > 0 then
+            return true
+        end
+
+        # 変数がある場合はライフタイムが必要
+        if self.get_var_list.length > 0 then
+            return true
+        end
+
+        # 属性最適化が行われない場合で、属性がある場合はライフタイムが必要 (属性への参照を持つため)
+        if !is_attribute_optimization?(self) then
+            self.get_attribute_list.each do |attr|
+                if !attr.is_omit? then
+                    return true
+                end
+            end
+        end
+
+        return false
+    end
+
+    # そのセルタイプの呼び口のリストを取得する
+    # omit 指定子がついている場合と、関数を持たない signature が接続されている場合は除外
+    def get_callport_list
+        callport_list = []
+        self.get_port_list.each{ |port|
+            # is_omit? は signature 含めて判定している
+            if port.get_port_type == :CALL && port.is_omit? == false then
+                callport_list.push(port)
+            end
+        }
+        return callport_list
+    end
+
+    # ジェネリクスに使うアルファベットのリストを生成
+    def get_jenerics_alphabet_list callport_list
+        jenerics_alphabet = ('T'..'Z').to_a + ('A'..'S').to_a
+        use_jenerics_alphabet = []
+        callport_list.each_with_index{ |callport, index|
+            if check_gen_dyn_for_port(callport) == nil then
+                callee_cell = callport.get_real_callee_cell
+                callee_port = callport.get_real_callee_port
+
+                callee_port_name = camel_case(snake_case(callee_port.get_name.to_s))
+                callee_celltype = callee_cell.get_celltype
+                callee_celltype_name = get_rust_celltype_name(callee_celltype)
+                
+                type_string = "#{callee_port_name}For#{callee_celltype_name}"
+                config_type = callee_cell.get_rust_config_type
+                if config_type then
+                    type_string += "<#{config_type}>"
+                end
+                use_jenerics_alphabet.push(type_string)
+            else
+                use_jenerics_alphabet.push(check_gen_dyn_for_port(callport))
+            end
+        }
+        return use_jenerics_alphabet
+    end
+
+    # セルの構造体の定義の先頭部を生成
+    def gen_rust_cell_structure_header file, callport_list, use_jenerics_alphabet
+        file.print "pub struct #{get_rust_celltype_name(self)}"
+
+        params = []
+        # 属性最適化（定数化）を行う場合のみ、CONFIG ジェネリクスをセル本体の引数に含める
+        if is_attribute_optimization?(self) then
+            params << "CONFIG"
+        end
+
+        if params.length > 0 then
+            file.print "<#{params.join(", ")}>"
+        end
+    end
+
+    # セル構造体のジェネリクスの where 句を生成
+    def gen_rust_cell_structure_jenerics file, callport_list, use_jenerics_alphabet
+        has_attr_optimized = is_attribute_optimization?(self)
+        has_jenerics = self.get_number_of_jenerics(use_jenerics_alphabet) != 0
+
+        if has_attr_optimized && has_jenerics then
+            file.print "\nwhere\n"
+            first = true
+            if has_attr_optimized then
+                file.print "\tCONFIG: #{get_rust_celltype_name(self)}Config"
+                first = false
+            end
+            file.print ",\n"
+        end
+    end
+
+    # use_jenerics_alphabet の実際のジェネリクスの数を取得
+    # use_jenerics_alphabet は dyn が含まれている場合があるため，それを除いた数を返す
+    def get_number_of_jenerics use_jenerics_alphabet
+        number = 0
+        use_jenerics_alphabet.each{ |alphabet|
+            if alphabet[0..2] != "dyn" then
+                number += 1
+            end
+        }
+        return number
+    end
+
+    # セル構造体の呼び口フィールドの定義を生成
+    def gen_rust_cell_structure_callport file, callport_list, use_jenerics_alphabet
+        callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
+            if check_gen_dyn_for_port(callport) == nil then
+                file.print "\t#{snake_case(callport.get_name.to_s)}: &'static #{alphabet},\n"
+            else
+                file.print "\t#{snake_case(callport.get_name.to_s)}: &'static (#{check_gen_dyn_for_port(callport)} + Sync + Send),\n"
+            end
+        end
+    end
+
+    # シングルトン最適化のための定数とユニット構造体の生成
+    def gen_singleton_attribute_optimizations file
+        return if !is_singleton_optimization?(self)
+        
+        cell = self.get_cell_list[0]
+        
+        # const の生成
+        self.get_attribute_list.each do |attr|
+            next if attr.is_omit?
+            attr_symbol = attr.get_name.to_s.to_sym
+            attr_value = cell.get_attr_initializer(attr_symbol)
+            
+            # 型の変換
+            rust_type = c_type_to_rust_type(attr.get_type)
+            
+            # 属性名を大文字のスネークケースに変換して定数名とする
+            const_name = snake_case(attr.get_name.to_s).upcase
+            
+            # 属性がポインタであるときに対応 (size_is 指定子がある場合など)
+            if attr.get_type.kind_of?( PtrType ) && attr.get_type.get_size != nil then
+                type = rust_type.delete("[]") # c_type_to_rust_type returns "[type]" for size_is
+                size = nil
+                if self.get_attribute_list.any? { |a| a.get_name == attr.get_type.get_size.to_s.to_sym } then
+                    # 属性名をサイズに使っている場合は、その属性名を使う
+                    size = cell.get_attr_initializer(attr.get_type.get_size.to_s.to_sym)
+                else
+                    # それ以外は、size_is指定子に直接指定されている値を使う 
+                    size = attr.get_type.get_size.to_s
+                end
+                
+                # シングルトンの時は @pointer_array を使わず直接定義
+                file.print "const #{const_name}: [#{type}; #{size}] = "
+                
+                if attr_value.nil? then
+                    if type == "f32" || type == "f64" then
+                        file.print "[0.0; #{size}];\n"
+                    else
+                        file.print "[0; #{size}];\n"
+                    end
+                elsif attr_value.is_a?(Array) then
+                    file.print "["
+                    attr_value.each_with_index do |item, index|
+                        file.print "#{item.to_s}"
+                        file.print ", " if index != attr_value.length - 1
+                    end
+                    file.print "];\n"
+                else
+                    # C_EXP など。ポインタ型への本来の期待は配列リテラルだが、
+                    # 式が指定されている場合はそのまま出力
+                    file.print "#{attr_value.to_s};\n"
+                end
+            elsif attr.get_type.kind_of?( StructType ) then
+                file.print "const #{const_name}: #{rust_type} = "
+                # 構造体属性: 初期化子が配列ならフィールドごとに割当、
+                # それ以外（PL_EXP/C_EXP など式）の場合は式をそのまま出力する
+                if attr_value.is_a?(Array) then
+                    file.print "#{rust_type} {\n"
+                    struct_field_name = attr.get_type.get_members_decl.get_items
+                    struct_field_name.zip(attr_value).each{ |field, val|
+                        file.print "\t\t#{snake_case(field.get_name.to_s)}: #{val},\n"
+                    }
+                    file.print("\t};\n")
+                else
+                    # 非配列（C_EXP 等）: そのまま式を埋め込む
+                    file.print "#{attr_value.to_s};\n"
+                end
+            # 属性が本来の配列であるときに対応
+            elsif attr_value.is_a?(Array) then 
+                file.print "const #{const_name}: #{rust_type} = ["
+                attr_value.each_with_index do |item, index|
+                    file.print "#{item.to_s}"
+                    file.print ", " if index != attr_value.length - 1
+                end
+                file.print "];\n"
+            else
+                file.print "const #{const_name}: #{rust_type} = #{attr_value.to_s};\n"
+            end
+        end
+        file.print "\n"
+        
+        # ユニット構造体と Deref 実装の生成
+        celltype_name_camel = get_rust_celltype_name(self)
+        self.get_attribute_list.each do |attr|
+            next if attr.is_omit?
+            attr_name_camel = camel_case(attr.get_name.to_s)
+            struct_name = "Singleton#{celltype_name_camel}#{attr_name_camel}"
+            const_name = snake_case(attr.get_name.to_s).upcase
+            
+            # 各定数に対応する Deref Target 型を決定
+            target_type = c_type_to_rust_type(attr.get_type)
+            
+            file.print "pub struct #{struct_name};\n\n"
+            file.print "impl core::ops::core::ops::Deref for #{struct_name} {\n"
+            file.print "    type Target = #{target_type};\n"
+            file.print "    #[inline(always)]\n"
+            file.print "    fn deref(&self) -> &Self::Target {\n"
+            file.print "        &#{const_name}\n"
+            file.print "    }\n"
+            file.print "}\n\n"
+        end
+    end
+
+    # セル構造体の属性フィールドの定義を生成
+    def gen_rust_cell_structure_attribute file
+        # 属性最適化（定数化）を行う場合のみ、_phantom フィールドを出力する
+        if is_attribute_optimization?(self) then
+            file.print "\t_phantom: core::marker::PhantomData<CONFIG>,\n"
+            return
+        end
+        
+        self.get_attribute_list.each{ |attr|
+            next if attr.is_omit?
+
+            attr_type = c_type_to_rust_type(attr.get_type)
+            if attr.get_type.kind_of?( PtrType ) && attr.get_type.get_size != nil then
+                # ポインタ型の場合は，ポインタにする
+                attr_type.prepend("&'static ")
+            end
+            gen_attribute_field(file, attr.get_name.to_s, attr_type)
+        }
+    end
+
+    # ITRONプラグインでオーバーライドされるため、分離
+    def gen_attribute_field file, attr_name, attr_type_str
+        file.print "\t#{attr_name}: #{attr_type_str},\n"
+    end
+
+    # セル構造体の変数フィールドの定義を生成
+    def gen_rust_cell_structure_variable file
+        if self.get_var_list.length != 0 then
+            file.print "\tvariable: &'static Mutex<#{get_rust_celltype_name(self)}Var>,\n"
+        end
+    end
+
+    # 変数構造体の定義を生成
+    def gen_rust_variable_structure file
+        if self.get_var_list.length != 0 then
+            file.print "pub struct #{get_rust_celltype_name(self)}Var {\n"
+
+            # 変数構造体のフィールドの定義を生成
+            self.get_var_list.each{ |var|
+                var_type = c_type_to_rust_type(var.get_type)
+                if var.get_type.kind_of?( PtrType ) && var.get_type.get_size != nil then
+                    var_type.prepend("&'static mut ")
+                end
+                file.print "\tpub #{var.get_name}: #{var_type},\n"
+            }
+
+            file.print "}\n\n"
+        end
+    end
+
+    # 受け口構造体の定義を生成
+    def gen_rust_entry_structure file, callport_list
+        # シングルトンの場合は定数化されているため、ジェネリクスを固定化する
+        is_singleton = is_singleton_optimization?(self)
+
+        self.get_port_list.each{ |port|
+            if port.get_port_type == :ENTRY then
+                next if port.get_signature.get_function_head_array.length == 0
+
+                has_attr = self.get_attribute_list.any? { |attr| !attr.is_omit? }
+                
+                # 構造体名の生成
+                struct_name = "#{camel_case(snake_case(port.get_name.to_s))}For#{get_rust_celltype_name(self)}"
+                
+                if has_attr then
+                    # 属性を持つ場合は、シングルトンであっても CONFIG ジェネリクスを持つようにする
+                    file.print "pub struct #{struct_name}<CONFIG: #{get_rust_celltype_name(self)}Config> {\n"
+                    if is_attribute_optimization?(self) then
+                        file.print "\tpub cell: &'static #{get_rust_celltype_name(self)}<CONFIG"
+                        # ここで閉じずに、後続のジェネリクス解決に任せる
+                    else
+                        # RAM 属性保持時（非 ZST）は、セル本体から CONFIG が消えているため、
+                        # ここで CONFIG を保持し、PhantomData (private) を追加する
+                        file.print "\tpub cell: &'static #{get_rust_celltype_name(self)},\n"
+                        file.print "\t_phantom: core::marker::PhantomData<CONFIG>,\n"
+                    end
+                else
+                    file.print "pub struct #{struct_name} {\n"
+                    file.print "\tpub cell: &'static #{get_rust_celltype_name(self)}"
+                    # ここで閉じずに、後続のジェネリクス解決に任せる
+                end
+
+                # セルタイプが持つ呼び口のジェネリクスを解決
+                generics_added = false
+                
+                # has_attr && is_attribute_optimization? の場合で、ジェネリクスがこれ以上追加されなかった場合は閉じる
+                if has_attr && is_attribute_optimization?(self) && !generics_added then
+                    file.print ">"
+                end
+                
+                # cell フィールドにカンマをつける (has_attr && !is_attribute_optimization? の場合は既に _phantom があるので不要)
+                if !has_attr || is_attribute_optimization?(self) then
+                    file.print ",\n"
+                end
+                file.print "}\n\n"
+            end
+        }
+    end
+
+    # セルタイプに受け口がある場合，受け口関数を生成する
+    def gen_rust_entryport_function file, callport_list
+        # セルタイプに受け口がある場合，impl を生成する
+        self.get_port_list.each{ |port|
+            if port.get_port_type == :ENTRY then
+                sig = port.get_signature
+
+                # 空のシグニチャの場合は、impl を生成しない
+                if sig.get_function_head_array.length == 0 then
+                    next
+                end
+
+                if is_attribute_optimization?(self) then
+                    file.print "impl<CONFIG: #{get_rust_celltype_name(self)}Config> #{camel_case(snake_case(port.get_signature.get_global_name.to_s))} for #{camel_case(snake_case(port.get_name.to_s))}For#{get_rust_celltype_name(self)}<CONFIG> {\n\n"
+                else
+                    file.print "impl #{camel_case(snake_case(port.get_signature.get_global_name.to_s))} for #{camel_case(snake_case(port.get_name.to_s))}For#{get_rust_celltype_name(self)} {\n\n"
+                end
+
+                sig_param_str_list, _, lifetime_flag = sig.get_sig_param_str
+
+                # 空の関数を生成
+                sig.get_function_head_array.each{ |func_head|
+                    # 関数のインライン化
+                    if port.is_inline? then
+                        file.print "\t#[inline]\n"
+                    end
+                    file.print "\tfn #{get_rust_function_name(func_head)}"
+                    file.print"(&self"
+                    # param_num と sig_param_str_list の要素数が等しいことを前提としている
+                    param_num = func_head.get_paramlist.get_items.size
+                    param_num.times do
+                        current_param = sig_param_str_list.shift
+                        if current_param == "ignore" then
+                            next
+                        end
+                        file.print "#{current_param}"
+                    end
+                    file.print ") "
+
+                    # 返り値の型がunknown,つまりvoidのときは，-> を生成しない
+                    if c_type_to_rust_type(func_head.get_return_type) != "unknown" then
+                        file.print "-> #{c_type_to_rust_type(func_head.get_return_type)}"
+                    end
+
+                    file.print "{\n"
+
+                    if check_only_entryport_celltype then
+                    else
+                        # get_cell_ref 関数の呼び出しを生成
+                        file.print "\t\tlet "
+
+                        # get_cell_ref 関数の返り値を格納するタプルを生成
+                        tuple_name_list = []
+                        callport_list.each{ |callport|
+                            tuple_name_list.push "#{snake_case(callport.get_name.to_s)}"
+                        }
+                        self.get_attribute_list.each{ |attr|
+                            if attr.is_omit? then
+                                next
+                            end
+                            tuple_name_list.push "#{attr.get_name.to_s}"
+                        }
+                        if self.get_var_list.length != 0 then
+                            tuple_name_list.push "var"
+                        end
+
+                        if tuple_name_list.length != 1 then
+                            file.print "("
+                        end
+
+                        tuple_name_list.each_with_index do |tuple_name, index|
+                            if index == tuple_name_list.length - 1 then
+                                file.print "#{tuple_name}"
+                                break
+                            end
+                            file.print "#{tuple_name}, "
+                        end
+
+                        if tuple_name_list.length != 1 then
+                            file.print ")"
+                        end
+
+                        file.print " = self.cell.get_cell_ref();\n"
+                    end
+                    file.print "\n"
+                    file.print"\t}\n"
+                }
+
+                file.print "}\n\n"
+            else
+            end
+        }
+    end
+
+    # セルタイプに受け口以外に生成する要素（呼び口、属性、変数）があるかどうかを判断する
+    def check_only_entryport_celltype
+        self.get_port_list.each{ |port|
+            if port.get_port_type == :CALL then
+                next if port.is_omit?
+                return false
+            end
+        }
+        self.get_attribute_list.each{ |attr|
+            next if attr.is_omit?
+            return false
+        }
+        if self.get_var_list.length != 0 then
+            return false
+        end
+        return true
+    end
+
+    # get_cell_ref 関数を生成する
+    def gen_rust_get_cell_ref file, callport_list, use_jenerics_alphabet
+        # セルタイプに受け口がない場合は，生成しない
+        # 受け口がないならば，get_cell_ref 関数が呼ばれることは現状無いため
+        self.get_port_list.each{ |port|
+            if port.get_port_type == :ENTRY then
+                jenerics_flag = true
+                file.print "impl"
+                
+                # 属性があれば CONFIG を出す
+                # ただし、属性最適化（定数化）を行わない場合は構造体が非ジェネリクスなので、
+                # impl ヘッダの CONFIG は後で関数のジェネリクスに移譲する
+                has_attr = self.get_attribute_list.any? { |attr| !attr.is_omit? }
+                is_attr_opt = is_attribute_optimization?(self)
+                if has_attr && is_attr_opt then
+                    file.print "<CONFIG: #{get_rust_celltype_name(self)}Config"
+                    jenerics_flag = false
+                end
+                
+                file.print ">" if jenerics_flag == false
+
+                # impl する型を生成
+                file.print " #{get_rust_celltype_name(self)}"
+                jenerics_first = true
+                if is_attribute_optimization?(self) then
+                    file.print "<CONFIG"
+                    jenerics_first = false
+                end
+
+                file.print ">" if jenerics_first == false
+
+                file.print " {\n"
+
+                file.print "\t#[inline]\n"
+
+                # get_cell_ref 関数の定義を生成
+                file.print "\tpub fn get_cell_ref"
+
+                # 関数のジェネリクス引数を整理
+                fn_params = []
+                if fn_params.length > 0 then
+                    file.print "<#{fn_params.join(", ")}>"
+                end
+
+                file.print "(&'static self) -> "
+
+                # 返り値のタプル型の要素をまとめるための配列
+                return_tuple_type_list = []
+                return_tuple_list = []
+
+                # 呼び口をタプルの配列に追加
+                callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
+                    return_tuple_type_list.push("&'static #{alphabet}")
+                    return_tuple_list.push("self.#{snake_case(callport.get_name.to_s)}")
+                end
+
+                # 属性をタプルの配列に追加
+                self.get_attribute_list.each{ |attr|
+                    if attr.is_omit? then
+                        next
+                    end
+                    if is_zst_optimization?(self) then
+                        celltype_name_camel = get_rust_celltype_name(self)
+                        attr_name_camel = camel_case(attr.get_name.to_s)
+                        return_tuple_type_list.push("#{celltype_name_camel}#{attr_name_camel}<CONFIG>")
+                        return_tuple_list.push("#{celltype_name_camel}#{attr_name_camel}(core::marker::PhantomData)")
+                    else
+                        return_tuple_type_list.push("&'static #{c_type_to_rust_type(attr.get_type)}")
+                        return_tuple_list.push("&self.#{attr.get_name.to_s}")
+                    end
+                }
+
+                # 変数をタプルの配列に追加
+                if self.get_var_list.length != 0 then
+                    return_tuple_type_list.push("&Mutex<#{get_rust_celltype_name(self)}Var")
+                    return_tuple_type_list[-1].concat(">")
+                    return_tuple_list.push("&self.variable")
+                end
+
+                if return_tuple_type_list.length != 1 then
+                    file.print "("
+                end
+
+                # 返り値のタプル型を生成
+                return_tuple_type_list.each_with_index do |return_tuple_type, index|
+                    if index == return_tuple_type_list.length - 1 then
+                        file.print "#{return_tuple_type}"
+                        break
+                    end
+                    file.print "#{return_tuple_type}, "
+                end
+
+                if return_tuple_type_list.length != 1 then
+                    file.print ")"
+                end
+                file.print " {\n"
+
+                file.print "\t\t"
+                
+                if return_tuple_list.length != 1 then
+                    file.print "("
+                end
+
+                # 返り値のタプルを生成
+                return_tuple_list.each_with_index do |return_tuple, index|
+                    if index == return_tuple_list.length - 1 then
+                        file.print "#{return_tuple}"
+                        break
+                    end
+                    file.print "#{return_tuple}, "
+                end
+
+                if return_tuple_list.length != 1 then
+                    file.print ")"
+                end
+                
+                file.print"\n\t}\n}\n"
+                # get_cell_ref 関数を生成するのは1回だけでいいため，break する
+                break
+
+            end # if port.get_port_type == :ENTRY then
+        } # celltype.get_port_list.each
+    end
+
+    # implファイルのuse文を生成する（ベース実装）
+    def gen_use_for_impl_file_base file
+        signature_list = []
+        self.get_port_list.each{ |port|
+            # 空のシグニチャの場合は、use文を生成しない
+            if port.get_signature.get_function_head_array.length != 0 then
+                signature_list.push("#{snake_case(port.get_signature.get_global_name.to_s)}")
+            end
+        }
+        signature_list.uniq!
+
+        # 必ず tecs_global を use する
+        #TODO: 必要なときにだけ use するようにする
+        file.print "use crate::tecs_global::*;\n"
+
+        file.print "use crate::tecs_celltype::#{snake_case(self.get_global_name.to_s)}::*;\n"
+
+        if signature_list.length == 1 then
+            file.print "use crate::tecs_signature::#{signature_list[0]}::*;\n"
+        elsif signature_list.length > 1 then
+            file.print "use crate::tecs_signature::{"
+            signature_list.each{ |signature|
+                if signature == signature_list.last then
+                    file.print "#{signature}::*};\n"
+                else
+                    file.print "#{signature}::*, "
+                end
+            }
+        end
+    end
+
+    # implファイルのuse文を生成する
+    def gen_use_for_impl_file file
+        gen_use_for_impl_file_base file
+    end
+
+    # セルタイプの呼び出し先が一意であるかどうかを判断する
+    def check_gen_dyn_for_celltype
+
+        self.get_port_list.each{ |port|
+            if port.get_port_type == :CALL then
+                if port.get_real_callee_cell == nil then
+                    self.get_port_list.each{ |entryport|
+                        if entryport.get_port_type == :ENTRY then
+                            return true
+                        end
+                    }
+                else
+                    return false
+                end
+            end
+        }
+
+    end
+
+
+    # ポートの接続先が一意であるかどうかを判断し，一意でない場合は，そのシグニチャの名前を返す -> 動的ディスパッチを適用するため
+    def check_gen_dyn_for_port port
+        if port.get_port_type == :CALL then
+            if !port.is_cell_unique? then
+                return "dyn " + port.get_signature.get_rust_signature_name
+            end
+        end
+        # 受け口だった場合nilを返すが、この関数は実装を分離すべき
+        return nil
+    end
+
+    def gen_impl_sync_send_trait file
+        file.print "unsafe impl Sync for #{get_rust_celltype_name(self)} {}\n"
+        file.print "unsafe impl Send for #{get_rust_celltype_name(self)} {}\n"
+    end
+
+    # 引数のセルタイプの ex_ctrl_ref に動的ディスパッチが必要かどうかを判断し、いる場合は dyn を、いらない場合は、ダミーかどうかを返す
+    def check_gen_dyn_for_ex_ctrl_ref
+        dyn_check_results = self.get_cell_list.map { |cell| cell.check_exclusive_control }
+        
+        if dyn_check_results.all?(true) then
+            return "no_dummy"
+        elsif dyn_check_results.all?(false) then
+            return "dummy"
+        else
+            return "dyn"
+        end
+    end
+
+    # セルタイプ構造体の ex_ctrl_ref フィールドの定義を生成
+    # TODO: awkernel版のデータ構造と同じにすることで、将来的にこの関数を削除できる
+    def gen_rust_cell_structure_ex_ctrl_ref file
+        # ItronrsPlugin で実装
+        # TODO: spinクレート版を実装する場合はこの関数を使う
+    end
+
+    # Sync変数構造体の定義を生成
+    def gen_rust_sync_variable_structure file
+        # ItronrsPlugin で実装
+        # TODO: spinクレート版を実装する場合はこの関数を使う
+    end
+
+    # Syncトレイトの実装を生成
+    def gen_rust_impl_sync_trait_for_sync_variable_structure file
+        # ItronrsPlugin で実装
+        # TODO: spinクレート版を実装する場合はこの関数を使う
+    end
+
+    # ロックガード構造体の定義を生成
+    def gen_rust_lock_guard_structure file, callport_list, use_jenerics_alphabet
+        # ItronrsPlugin で実装
+        # TODO: spinクレート版を実装する場合はこの関数を使う
+        if check_only_entryport_celltype then
+            return
+        end
+
+        gen_rust_lock_guard_structure_header file, callport_list, use_jenerics_alphabet
+
+        gen_rust_cell_structure_jenerics file, callport_list, use_jenerics_alphabet
+
+        file.print "{\n"
+
+        gen_rust_lock_guard_structure_callport file, callport_list, use_jenerics_alphabet
+
+        gen_rust_lock_guard_structure_attribute file
+
+        gen_rust_lock_guard_structure_variable file
+
+        gen_rust_cell_structure_ex_ctrl_ref file
+
+        file.print "}\n\n"
+    end
+
+    # ロックガード構造体のヘッダーを生成
+    def gen_rust_lock_guard_structure_header file, callport_list, use_jenerics_alphabet
+        # ItronrsPlugin で実装
+        # TODO: spinクレート版を実装する場合はこの関数を使う
+    end
+
+    # ロックガード構造体の呼び口への参照の定義を生成
+    def gen_rust_lock_guard_structure_callport file, callport_list, use_jenerics_alphabet
+        # ItronrsPlugin で実装
+        # TODO: spinクレート版を実装する場合はこの関数を使う
+    end
+
+    # ロックガード構造体の属性への参照の定義を生成
+    def gen_rust_lock_guard_structure_attribute file
+        # ItronrsPlugin で実装
+        # TODO: spinクレート版を実装する場合はこの関数を使う
+    end
+
+    # ロックガード構造体の変数への参照の定義を生成
+    def gen_rust_lock_guard_structure_variable file
+        # ItronrsPlugin で実装
+        # TODO: spinクレート版を実装する場合はこの関数を使う
+    end
+
+    # ポインタ配列を生成
+    def gen_pointer_array file, pointer_array
+        pointer_array.each{ |pointer|
+            name = pointer[0]
+            type = pointer[1]
+            size = pointer[2]
+            initializer = pointer[3]
+
+            file.print "static #{name}: [#{type}; #{size}] = "
+
+            # 未初期化の場合 0 で埋める
+            if initializer.nil? then
+                if type == "f32" || type == "f64" then
+                    file.print "[0.0; #{size}];\n"
+                else
+                    file.print "[0; #{size}];\n"
+                end
+            elsif initializer.is_a?(Array) then
+                # 初期化子の数が配列のサイズと異なる場合、0で埋める
+                if initializer.length != size then
+                    if type == "f32" || type == "f64" then
+                        file.print "[0.0; #{size}];\n"
+                    else
+                        file.print "[0; #{size}];\n"
+                    end
+                else
+                    file.print "["
+                    initializer.each{ |item|
+                        if item == initializer.last then
+                            file.print "#{item.to_s}"
+                        else
+                            file.print "#{item.to_s}, "
+                        end
+                    }
+                    file.print "];\n"
+                end
+            end
+
+            file.print "\n"
+        }
+    end
+
+end
+
+class Signature
+    include RustGenHelper
+
+    # シグニチャ名をRustの命名規則に変換する
+    def get_rust_signature_name
+        return camel_case(snake_case(self.get_global_name.to_s))
+    end
+
+    # シグニチャの引数リストを文字列にする
+    def get_sig_param_str
+        param_decl_list = []
+        lifetime_annotation_flag = false
+        # シグニチャの param_decl を取得する
+        self.each_param{ |func_decl, param_decl|
+            case param_decl.get_direction
+            when :IN, :INOUT, :OUT
+                param_decl_list.push(param_decl)
+            when :SEND
+                param_decl_list.push(param_decl)
+                # TODO: send 引数への対応
+            when :RECEIVE
+                param_decl_list.push(param_decl)
+                # TODO：receive 引数への対応
+            end
+        }
+
+        # [out,string(len)]などのlenを削除する
+        param_decl_list.each{ |param_decl|
+            if param_decl.get_type.kind_of?( PtrType ) && param_decl.get_type.get_string != nil then
+                param_decl_list.each_with_index{ |param_decl2, index|
+                    if param_decl2.get_name.to_s == param_decl.get_type.get_string.to_s then
+                        param_decl_list.delete_at(index)
+                    end
+                }
+            end
+        }
+
+        # param_decl を文字列にする
+        param_list_str =[]
+        return_param_str =[]
+        param_decl_list.each{ |param_decl|
+            param_type = param_decl.get_type.get_type_str
+            if check_lifetime_annotation_for_type(param_type) then
+                lifetime_annotation_flag = true
+            end
+            if param_decl == "return" then
+                next
+            else
+                case param_decl.get_direction
+                when :IN
+                    type_str = c_type_to_rust_type(param_decl.get_type)
+                    if type_str.start_with?("&mut ") then
+                       puts "Don't use &mut for [in] parameter: #{param_decl.get_name} in #{self.get_global_name}" 
+                       exit(1)
+                    end
+                    if param_decl.get_type.kind_of?( PtrType ) then
+                        param_list_str.push(", #{param_decl.get_name}: &#{type_str}")
+                    else
+                        param_list_str.push(", #{param_decl.get_name}: #{type_str}")
+                    end
+                when :INOUT
+                    type_str = c_type_to_rust_type(param_decl.get_type)
+                    if type_str.start_with?("&mut ") then
+                        param_list_str.push(", #{param_decl.get_name}: #{type_str}")
+                    else
+                        param_list_str.push(", #{param_decl.get_name}: &mut #{type_str}")
+                    end
+                when :OUT
+                    type_str = c_type_to_rust_type(param_decl.get_type)
+                    if type_str.start_with?("&mut ") then
+                        param_list_str.push(", #{param_decl.get_name}: #{type_str}")
+                    else
+                        param_list_str.push(", #{param_decl.get_name}: &mut #{type_str}")
+                    end
+                when :SEND
+                    # TODO: send 引数への対応
+                    # 引数の数自体を変えないようにするために，ignore を入れる
+                    param_list_str.push("ignore")
+                when :RECEIVE
+                    # TODO： receive 引数への対応
+                    # 引数の数自体を変えないようにするために，ignore を入れる
+                    param_list_str.push("ignore")
+                end
+            end
+        }
+        return param_list_str, return_param_str, lifetime_annotation_flag
+    end
+end
+
+
+#== celltype プラグインの共通の親クラス
+class RustGenCelltypePlugin < CelltypePlugin
+    include RustGenHelper
+    extend RustGenHelper
+    
+    # helper accessor for RustGenHelper
+    def self.add_used_in_rust_custom_struct_list(key, value)
+        @@used_in_rust_custom_struct_list[key] = value
+    end
+
+    def self.set_gen_heapless_crate_dependency(value)
+        @@gen_heapless_crate_dependency = value
+    end
+
+    def self.size_first_celltypes
+        @@size_first_celltypes
+    end
+    CLASS_NAME_SUFFIX = ""
+    @@size_first_celltypes = {}
+    @@b_signature_header_generated = false
+    @@module_generated = false
+    @@ex_ctrl_ref_id = 1
+    @@json_parse_result = []
+    def self.json_parse_result
+        @@json_parse_result
+    end
+    @@main_lib_rs_cleaned = false
+    @@cargo_path = "#{$gen}/../#{$target}"
+    @@diff_src_and_gen = Hash.new { |hash, key| hash[key] = [] }
+    @@rust_src_list = []
+    @@makefile_generated = false
+    @@mod_global_signatures_list = []
+    @@mod_global_celltypes_list = []
+    @@mod_global_impls_list = []
+    @@struct_type_list = []
+    # tecs_global.rs を 1 度だけ生成したかどうかを示すフラグ
+    @@global_generated = false
+
+    @@gen_heapless_crate_dependency = false
+    @@const_init_catalog_loaded = false
+    @@const_init_impled_custom_struct_list = Hash.new { |hash, key| hash[key] = [] }
+    @@used_in_rust_custom_struct_list = Hash.new
+
+    #celltype::     Celltype        セルタイプ（インスタンス）
+    def initialize( celltype, option )
+      super
+      @celltype = celltype
+      @plugin_arg_str = option.gsub( /\A"(.*)/, '\1' )    # 前後の "" を取り除く
+      @plugin_arg_str.sub!( /(.*)"\z/, '\1' )
+      @plugin_arg_str = CDLString.remove_dquote option
+      @plugin_arg_list = {}
+      @cell_list =[]
+      @dyn_mutex_ref = false
+      @mod_signatures_list = []
+      @mod_celltypes_list = []
+      @mod_impls_list = []
+      @gen_use_global = false
+      @pointer_array = [] #配列を指すポインタのリスト   [[セル名, シンボル, 名前]]
+
+      plugin_option = @plugin_arg_str.split(",").map(&:strip)
+      if plugin_option.include?("size_first") then
+        @@size_first_celltypes[celltype.get_global_name] = true
+      end
+
+      require_tecsgen_lib 'lib/RustDefaultTypeChecker.rb'
+      @@default_type_checker = Default.load!(File.expand_path(File.join(__dir__, 'lib', 'RustDefaultTypeList.json')))
+
+      require 'fileutils'
+
+      celltype.set_impl_lang :Rust
+    end
+
+    #=== 新しいセル
+    #cell::        Cell            セル
+    #
+    # celltype プラグインを指定されたセルタイプのセルが生成された
+    # セルタイププラグインに対する新しいセルの報告
+    def new_cell( cell )
+        @cell_list << cell
+    end
+
+    #=== 後ろの CDL コードを生成
+    #プラグインの後ろの CDL コードを生成
+    #file:: File:
+    def self.gen_post_code( file )
+      # 複数のプラグインの post_code が一つのファイルに含まれるため、以下のような見出しをつけること
+      # file.print "/* '#{self.class.name}' post code */\n"
+    end
+
+    def push_pointer_array(name, type, size, var_array)
+        @pointer_array.push([name, type, size, var_array])
+    end
+
+    def gen_use_mutex file
+        file.print "use spin::Mutex;\n"
+    end
+
+    # @use_string_list に格納されている文字列を元に use 文を生成する
+    def gen_use_header file
+        if @celltype.get_var_list.length != 0 then
+            gen_use_mutex file
+        end
+
+        # TODO: 必要な時だけ use するようにする
+        # if @gen_use_global then
+            file.print "use crate::tecs_global::*;\n"
+        # end
+
+        if @mod_signatures_list.length == 1 then
+            file.print "use crate::tecs_signature::#{@mod_signatures_list[0]}::*;\n"
+        elsif @mod_signatures_list.length > 1 then
+            file.print "use crate::tecs_signature::{"
+            @mod_signatures_list.each{ |mod_signature|
+                if mod_signature != @mod_signatures_list.last then
+                    file.print "#{mod_signature}::*, "
+                else
+                    file.print "#{mod_signature}::*};\n\n"
+                end
+            }
+        end
+
+
+        if @mod_celltypes_list.length == 1 then
+            file.print "use crate::tecs_celltype::#{@mod_celltypes_list[0]}::*;\n"
+        elsif @mod_celltypes_list.length > 1 then
+            file.print "use crate::tecs_celltype::{"
+            @mod_celltypes_list.each{ |mod_celltype|
+                if mod_celltype != @mod_celltypes_list.last then
+                    file.print "#{mod_celltype}::*, "
+                else
+                    file.print "#{mod_celltype}::*};\n\n"
+                end
+            }
+        end
+    end
+
+
+    # tecs_celltype.rs と tecs_celltype ディレクトリを生成する
+    def gen_tecs_celltype_rs
+        # ディレクトリを生成する
+        if File.exist?("#{$gen}/tecs_celltype") == false then
+            FileUtils.mkdir_p("#{$gen}/tecs_celltype")
+        end
+
+        # tecs_celltype.rs を生成する
+        tecs_celltype_rs = CFile.open("#{$gen}/tecs_celltype.rs", "w")
+        @@mod_global_celltypes_list.each{ |mod_celltype|
+            tecs_celltype_rs.print "pub mod #{mod_celltype};\n"
+        }
+        tecs_celltype_rs.close
+
+        copy_gen_files_to_cargo "tecs_celltype.rs", nil
+    end
+
+    # tecs_signature.rs と tecs_signature ディレクトリを生成する
+    def gen_tecs_signature_rs
+        # ディレクトリを生成する
+        if File.exist?("#{$gen}/tecs_signature") == false then
+            FileUtils.mkdir_p("#{$gen}/tecs_signature")
+        end
+
+        # tecs_signature.rs を生成する
+        tecs_signature_rs = CFile.open("#{$gen}/tecs_signature.rs", "w")
+        @@mod_global_signatures_list.each{ |mod_signature|
+            tecs_signature_rs.print "pub mod #{mod_signature};\n"
+        }
+        tecs_signature_rs.close
+
+        copy_gen_files_to_cargo "tecs_signature.rs", nil
+    end
+
+    # tecs_impl.rs と tecs_impl ディレクトリを生成する
+    def gen_tecs_impl_rs
+        # ディレクトリを生成する
+        if File.exist?("#{$gen}/tecs_impl") == false then
+            FileUtils.mkdir_p("#{$gen}/tecs_impl")
+        end
+
+        @@mod_global_impls_list.uniq!
+
+        # tecs_impl.rs を生成する
+        tecs_impl_rs = CFile.open("#{$gen}/tecs_impl.rs", "w")
+        @@mod_global_impls_list.each{ |mod_impl|
+            tecs_impl_rs.print "pub mod #{mod_impl};\n"
+        }
+        tecs_impl_rs.close
+
+        copy_gen_files_to_cargo "tecs_impl.rs", nil
+    end
+
+
+
+
 
     # tecs_global.rs に use 文を生成する
     def gen_use_in_tecs_global_rs file
@@ -886,7 +1934,6 @@ class RustGenCelltypePlugin < CelltypePlugin
             puts "#{@celltype.get_global_name.to_s}: get_diff_between_gen_and_src"
             get_diff_between_gen_and_src "#{snake_case(sig_name)}.rs", "signature"
 
-            # gen_mod_in_main_lib_rs_for_signature sig
             trait_file = CFile.open( "#{$gen}/tecs_signature/#{snake_case(sig_name)}.rs", "w" )
             # gen_use_mutex trait_file
 
@@ -897,15 +1944,15 @@ class RustGenCelltypePlugin < CelltypePlugin
             trait_file.print "pub trait #{camel_case(snake_case(sig_name))} {\n"
 
             # シグニチャの引数の文字列を取得する
-            param_list_str, return_param_str, lifetime_flag = get_sig_param_str sig
+            param_list_str, return_param_str, lifetime_flag = sig.get_sig_param_str
 
             sig.get_function_head_array.each{ |func_head|
                 return_flag = false
                 trait_file.print "\tfn #{get_rust_function_name(func_head)}"
 
-                if lifetime_flag then
-                    trait_file.print("<'a>")
-                end
+                # if lifetime_flag then
+                #     trait_file.print("<'a>")
+                # end
 
                 # 関数の引数部分を生成
                 # trait_file.print "(&'static self"
@@ -996,30 +2043,6 @@ class RustGenCelltypePlugin < CelltypePlugin
         file.print "mod tecs_global;\n"
     end
 
-    def gen_mod_in_main_lib_rs_for_signature signature
-
-        # file_name = check_option_main_or_lib
-
-        # if file_name != nil then
-        #     # File.write("#{$gen}/#{file_name}.rs", "") unless File.exist?("#{$gen}/#{file_name}.rs")
-        #     lib_file = File.read("#{$gen}/tecs_signature.rs")
-        #     return if lib_file.include?("mod #{snake_case(signature.get_global_name.to_s)};")
-
-        #     last_mod_line = lib_file.rindex(/^mod\s+\w+;/)
-
-        #     # mod記述の最後に新しいmodを挿入
-        #     if last_mod_line
-        #         insert_position = last_mod_line + lib_file[last_mod_line..].index("\n") + 1
-        #         lib_file.insert(insert_position, "mod #{snake_case(signature.get_global_name.to_s)};\n")
-        #     else
-        #         # もしmod記述が見つからなければ、ファイルの末尾に追加
-        #         lib_file << "mod #{snake_case(signature.get_global_name.to_s)};"
-        #     end
-
-        #     File.write("#{$gen}/#{file_name}.rs", lib_file)
-        # end
-    end
-
     # セルタイプに受け口がある場合，その受け口につながっているシグニチャなどをクラス変数とインスタンス変数に追加する
     def extract_mod_list
 
@@ -1048,980 +2071,6 @@ class RustGenCelltypePlugin < CelltypePlugin
                 # @@mod_global_signatures_list.push(snake_case(port.get_signature.get_global_name.to_s))
             end
         }
-    end
-
-    # そのセルタイプの呼び口のリストを取得する
-    # omit 指定子がついている場合と、関数を持たない signature が接続されている場合は除外
-    def get_callport_list
-        callport_list = []
-        @celltype.get_port_list.each{ |port|
-            # is_omit? は signature 含めて判定している
-            if port.get_port_type == :CALL && port.is_omit? == false then
-                callport_list.push(port)
-            end
-        }
-        return callport_list
-    end
-
-    # ジェネリクスに使うアルファベットのリストを生成
-    def get_jenerics_alphabet_list callport_list
-        jenerics_alphabet = ('T'..'Z').to_a + ('A'..'S').to_a
-        use_jenerics_alphabet = []
-        # 呼び口の数と等しくする
-        # if callport_list.length != 0 then
-        #     use_jenerics_alphabet = jenerics_alphabet[0..callport_list.length-1]
-        # end
-        callport_list.each_with_index{ |callport, index|
-            if check_gen_dyn_for_port(callport) == nil then
-                # use_jenerics_alphabet.push(jenerics_alphabet[index])
-
-                callee_cell = callport.get_real_callee_cell
-                callee_port = callport.get_real_callee_port
-
-                callee_port_name = camel_case(snake_case(callee_port.get_name.to_s))
-                callee_celltype = callee_cell.get_celltype
-                callee_celltype_name = get_rust_celltype_name(callee_celltype)
-                
-                type_string = "#{callee_port_name}For#{callee_celltype_name}"
-                config_type = get_rust_config_type(callee_cell)
-                if config_type then
-                    type_string += "<#{config_type}>"
-                end
-                use_jenerics_alphabet.push(type_string)
-            else
-                use_jenerics_alphabet.push(check_gen_dyn_for_port(callport))
-            end
-        }
-        return use_jenerics_alphabet
-    end
-
-    def get_rust_celltype_name celltype
-        return camel_case(snake_case(celltype.get_global_name.to_s))
-    end
-
-    def get_rust_function_name func_head
-        return snake_case(func_head.get_name.to_s)
-    end
-
-    # セルの構造体の定義の先頭部を生成
-    def gen_rust_cell_structure_header file, celltype, callport_list, use_jenerics_alphabet
-        file.print "pub struct #{get_rust_celltype_name(celltype)}"
-
-        params = []
-        # 属性最適化（定数化）を行う場合のみ、CONFIG ジェネリクスをセル本体の引数に含める
-        if is_attribute_optimization?(celltype) then
-            params << "CONFIG"
-        end
-        
-        # callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
-            # if check_gen_dyn_for_port(callport) == nil then
-            #     params << alphabet
-            # end
-        # end
-
-        if params.length > 0 then
-            file.print "<#{params.join(", ")}>"
-        end
-    end
-
-    # セル構造体のジェネリクスの where 句を生成
-    def gen_rust_cell_structure_jenerics file, callport_list, use_jenerics_alphabet
-        has_attr_optimized = is_attribute_optimization?(@celltype)
-        has_jenerics = get_number_of_jenerics(use_jenerics_alphabet) != 0
-
-        if has_attr_optimized && has_jenerics then
-            file.print "\nwhere\n"
-            first = true
-            if has_attr_optimized then
-                file.print "\tCONFIG: #{get_rust_celltype_name(@celltype)}Config"
-                first = false
-            end
-
-            # callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
-            #     if check_gen_dyn_for_port(callport) == nil then
-            #         if first then
-            #             file.print "\t#{alphabet}: #{get_rust_signature_name(callport.get_signature)} + 'static"
-            #             first = false
-            #         else
-            #             file.print ",\n\t#{alphabet}: #{get_rust_signature_name(callport.get_signature)} + 'static"
-            #         end
-            #     end
-            # end
-            file.print ",\n"
-        end
-    end
-
-    def get_rust_signature_name signature
-        return camel_case(snake_case(signature.get_global_name.to_s))
-    end
-
-    # use_jenerics_alphabet の実際のジェネリクスの数を取得
-    # use_jenerics_alphabet は dyn が含まれている場合があるため，それを除いた数を返す
-    def get_number_of_jenerics use_jenerics_alphabet
-        number = 0
-        use_jenerics_alphabet.each{ |alphabet|
-            if alphabet[0..2] != "dyn" then
-                number += 1
-            end
-        }
-        return number
-    end
-
-    # セル構造体の呼び口フィールドの定義を生成
-    def gen_rust_cell_structure_callport file, callport_list, use_jenerics_alphabet
-        callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
-            if check_gen_dyn_for_port(callport) == nil then
-                file.print "\t#{snake_case(callport.get_name.to_s)}: &'static #{alphabet},\n"
-            else
-                file.print "\t#{snake_case(callport.get_name.to_s)}: &'static (#{check_gen_dyn_for_port(callport)} + Sync + Send),\n"
-            end
-        end
-    end
-
-    # シングルトン最適化のための定数とユニット構造体の生成
-    def gen_singleton_attribute_optimizations file, celltype
-        return if !is_singleton_optimization?(celltype)
-        
-        cell = celltype.get_cell_list[0]
-        
-        # const の生成
-        celltype.get_attribute_list.each do |attr|
-            next if attr.is_omit?
-            attr_symbol = attr.get_name.to_s.to_sym
-            attr_value = cell.get_attr_initializer(attr_symbol)
-            
-            # 型の変換
-            rust_type = c_type_to_rust_type(attr.get_type)
-            
-            # 属性名を大文字のスネークケースに変換して定数名とする
-            const_name = snake_case(attr.get_name.to_s).upcase
-            
-            # 属性がポインタであるときに対応 (size_is 指定子がある場合など)
-            if attr.get_type.kind_of?( PtrType ) && attr.get_type.get_size != nil then
-                type = rust_type.delete("[]") # c_type_to_rust_type returns "[type]" for size_is
-                size = nil
-                if celltype.get_attribute_list.any? { |a| a.get_name == attr.get_type.get_size.to_s.to_sym } then
-                    # 属性名をサイズに使っている場合は、その属性名を使う
-                    size = cell.get_attr_initializer(attr.get_type.get_size.to_s.to_sym)
-                else
-                    # それ以外は、size_is指定子に直接指定されている値を使う 
-                    size = attr.get_type.get_size.to_s
-                end
-                
-                # シングルトンの時は @pointer_array を使わず直接定義
-                file.print "const #{const_name}: [#{type}; #{size}] = "
-                
-                if attr_value.nil? then
-                    if type == "f32" || type == "f64" then
-                        file.print "[0.0; #{size}];\n"
-                    else
-                        file.print "[0; #{size}];\n"
-                    end
-                elsif attr_value.is_a?(Array) then
-                    file.print "["
-                    attr_value.each_with_index do |item, index|
-                        file.print "#{item.to_s}"
-                        file.print ", " if index != attr_value.length - 1
-                    end
-                    file.print "];\n"
-                else
-                    # C_EXP など。ポインタ型への本来の期待は配列リテラルだが、
-                    # 式が指定されている場合はそのまま出力
-                    file.print "#{attr_value.to_s};\n"
-                end
-            elsif attr.get_type.kind_of?( StructType ) then
-                file.print "const #{const_name}: #{rust_type} = "
-                # 構造体属性: 初期化子が配列ならフィールドごとに割当、
-                # それ以外（PL_EXP/C_EXP など式）の場合は式をそのまま出力する
-                if attr_value.is_a?(Array) then
-                    file.print "#{rust_type} {\n"
-                    struct_field_name = attr.get_type.get_members_decl.get_items
-                    struct_field_name.zip(attr_value).each{ |field, val|
-                        file.print "\t\t#{snake_case(field.get_name.to_s)}: #{val},\n"
-                    }
-                    file.print("\t};\n")
-                else
-                    # 非配列（C_EXP 等）: そのまま式を埋め込む
-                    file.print "#{attr_value.to_s};\n"
-                end
-            # 属性が本来の配列であるときに対応
-            elsif attr_value.is_a?(Array) then 
-                file.print "const #{const_name}: #{rust_type} = ["
-                attr_value.each_with_index do |item, index|
-                    file.print "#{item.to_s}"
-                    file.print ", " if index != attr_value.length - 1
-                end
-                file.print "];\n"
-            else
-                file.print "const #{const_name}: #{rust_type} = #{attr_value.to_s};\n"
-            end
-        end
-        file.print "\n"
-        
-        # ユニット構造体と Deref 実装の生成
-        celltype_name_camel = get_rust_celltype_name(celltype)
-        celltype.get_attribute_list.each do |attr|
-            next if attr.is_omit?
-            attr_name_camel = camel_case(attr.get_name.to_s)
-            struct_name = "Singleton#{celltype_name_camel}#{attr_name_camel}"
-            const_name = snake_case(attr.get_name.to_s).upcase
-            
-            # 各定数に対応する Deref Target 型を決定
-            target_type = c_type_to_rust_type(attr.get_type)
-            
-            file.print "pub struct #{struct_name};\n\n"
-            file.print "impl core::ops::core::ops::Deref for #{struct_name} {\n"
-            file.print "    type Target = #{target_type};\n"
-            file.print "    #[inline(always)]\n"
-            file.print "    fn deref(&self) -> &Self::Target {\n"
-            file.print "        &#{const_name}\n"
-            file.print "    }\n"
-            file.print "}\n\n"
-        end
-    end
-
-    # セル構造体の属性フィールドの定義を生成
-    def gen_rust_cell_structure_attribute file, celltype
-        # 属性最適化（定数化）を行う場合のみ、_phantom フィールドを出力する
-        if is_attribute_optimization?(celltype) then
-            file.print "\t_phantom: core::marker::PhantomData<CONFIG>,\n"
-            return
-        end
-        
-        celltype.get_attribute_list.each{ |attr|
-            next if attr.is_omit?
-
-            attr_type = c_type_to_rust_type(attr.get_type)
-            if attr.get_type.kind_of?( PtrType ) && attr.get_type.get_size != nil then
-                # ポインタ型の場合は，ポインタにする
-                attr_type.prepend("&'static ")
-            end
-            gen_attribute_field(file, attr.get_name.to_s, attr_type)
-        }
-    end
-
-    # ITRONプラグインでオーバーライドされるため、分離
-    def gen_attribute_field file, attr_name, attr_type_str
-        file.print "\t#{attr_name}: #{attr_type_str},\n"
-    end
-
-    # セル構造体の変数フィールドの定義を生成
-    def gen_rust_cell_structure_variable file, celltype
-        if celltype.get_var_list.length != 0 then
-            file.print "\tvariable: &'static Mutex<#{get_rust_celltype_name(celltype)}Var>,\n"
-        end
-    end
-
-    # 変数構造体の定義を生成
-    def gen_rust_variable_structure file, celltype
-        if celltype.get_var_list.length != 0 then
-            file.print "pub struct #{get_rust_celltype_name(celltype)}Var {\n"
-
-            # 変数構造体のフィールドの定義を生成
-            celltype.get_var_list.each{ |var|
-                var_type = c_type_to_rust_type(var.get_type)
-                if var.get_type.kind_of?( PtrType ) && var.get_type.get_size != nil then
-                    var_type.prepend("&'static mut ")
-                end
-                file.print "\tpub #{var.get_name}: #{var_type},\n"
-            }
-
-            file.print "}\n\n"
-        end
-    end
-
-    # セルの構造体の初期化の先頭部を生成
-    def gen_rust_cell_structure_header_initialize file, cell
-        file.print "#[unsafe(link_section = \".rodata\")]"
-        # 属性があれば CONFIG を出す
-        has_attr = cell.get_celltype.get_attribute_list.any? { |attr| !attr.is_omit? }
-
-        if has_attr then
-            config_name = "Config#{camel_case(cell.get_name.to_s)}"
-            if is_attribute_optimization?(cell.get_celltype) then
-                file.print "static #{cell.get_global_name.to_s.upcase}: #{get_rust_celltype_name(cell.get_celltype)}<#{config_name}>"
-            else
-                # RAM 属性保持時（非 ZST）は、セル本体から CONFIG が消えているため、非ジェネリクスとして扱う
-                file.print "static #{cell.get_global_name.to_s.upcase}: #{get_rust_celltype_name(cell.get_celltype)}"
-            end
-            # 呼び口がない場合はここで閉じる
-            # if is_attribute_optimization?(cell.get_celltype) && get_number_of_jenerics(get_jenerics_alphabet_list(get_callport_list)) == 0 then
-            #     file.print ">"
-            # end
-        else
-            file.print "static #{cell.get_global_name.to_s.upcase}: #{get_rust_celltype_name(cell.get_celltype)}"
-        end
-    end
-
-    # セル構造体の初期化ためのジェネリクス代入部を生成
-    def gen_rust_cell_structure_jenerics_initialize file, cell, callport_list, use_jenerics_alphabet
-        # has_attr = cell.get_celltype.get_attribute_list.any? { |attr| !attr.is_omit? }
-        # if get_number_of_jenerics(use_jenerics_alphabet) != 0 then
-        #     if is_attribute_optimization?(cell.get_celltype) then
-        #         file.print ", "
-        #     else
-        #         file.print "<"
-        #     end
-
-        #     first = true
-            # ジェネリクスを代入
-            # callport_list.each_with_index do |callport, index|
-            #     if check_gen_dyn_for_port(callport) == nil then
-            #         joined_item = cell.get_join_list.get_item(callport.get_name)
-            #         callee_port_name = camel_case(snake_case(joined_item.get_port_name.to_s))
-            #         callee_cell = joined_item.get_cell
-            #         callee_celltype = callee_cell.get_celltype
-            #         callee_celltype_name = camel_case(snake_case(callee_celltype.get_global_name.to_s))
-                    
-            #         type_string = "#{callee_port_name}For#{callee_celltype_name}"
-            #         config_type = get_rust_config_type(callee_cell)
-            #         if config_type then
-            #             type_string += "<#{config_type}>"
-            #         end
-
-            #         if first then
-            #             file.print "#{type_string}"
-            #             first = false
-            #         else
-            #             file.print ", #{type_string}"
-            #         end
-            #     end
-            # end
-        #     file.print ">"
-        # end
-        file.print " = #{get_rust_celltype_name(cell.get_celltype)} "
-    end
-
-    # セルの構造体の呼び口フィールドの初期化を生成
-    def gen_rust_cell_structure_callport_initialize file, cell, callport_list
-        callport_list.each{ |port|
-            if port.get_port_type == :CALL then
-                callee_port_name = camel_case(snake_case(cell.get_join_list.get_item(port.get_name).get_port_name.to_s))
-                callee_cell_name = cell.get_join_list.get_item(port.get_name).get_cell.get_global_name.to_s
-                file.print "\t#{snake_case(port.get_name.to_s)}: &#{callee_port_name.upcase}FOR#{callee_cell_name.upcase},\n"
-            end
-        }
-    end
-
-    # セルの構造体の属性フィールドの初期化を生成
-    def gen_rust_cell_structure_attribute_initialize file, celltype, cell
-        if is_zst_optimization?(celltype) then
-            file.print "\t_phantom: core::marker::PhantomData,\n"
-            return
-        end
-
-        has_attr = false
-        array_number = 1
-        celltype.get_attribute_list.each{ |attr|
-            if attr.is_omit? then
-                next
-            else
-                has_attr = true
-                # セル記述で初期化されていても，反映する
-                attr_symbol = attr.get_name.to_s.to_sym
-                attr_array = cell.get_attr_initializer(attr_symbol)
-                # 属性がポインタであるときに対応
-                if attr.get_type.kind_of?( PtrType ) && attr.get_type.get_size != nil then
-                    type = c_type_to_rust_type(attr.get_type).delete("[]")
-                    size = nil
-                    if @celltype.get_attribute_list.any? { |a| a.get_name == attr.get_type.get_size.to_s.to_sym } then
-                        # 属性名をサイズに使っている場合は、その属性名を使う
-                        size = cell.get_attr_initializer(attr.get_type.get_size.to_s.to_sym)
-                    else
-                        # それ以外は、size_is指定子に直接指定されている値を使う 
-                        # size_is(256) のように指定されている場合
-                        size = attr.get_type.get_size.to_s
-                    end
-                    # size = cell.get_attr_initializer(attr.get_type.get_size.to_s.to_sym)
-                    name = "#{cell.get_global_name.upcase}ATTRARRAY#{array_number}"
-                    @pointer_array.push([name, type, size, attr_array])
-                    file.print "\t#{attr.get_name.to_s}: &#{name},\n"
-                    array_number += 1
-                elsif attr.get_type.kind_of?( StructType ) then
-                    # 構造体属性: 初期化子が配列ならフィールドごとに割当、
-                    # それ以外（PL_EXP/C_EXP など式）の場合は式をそのまま出力する
-                    if attr_array.is_a?(Array) then
-                        file.print "\t#{attr.get_name.to_s}: #{c_type_to_rust_type(attr.get_type)} {\n"
-                        struct_field_name = attr.get_type.get_members_decl.get_items
-                        struct_field_name.zip(attr_array).each{ |field, value|
-                            file.print "\t\t#{snake_case(field.get_name.to_s)}: #{value},\n"
-                        }
-                        file.print("},\n")
-                    else
-                        # 非配列（C_EXP 等）: そのまま式を埋め込む
-                        file.print "\t#{attr.get_name.to_s}: #{cell.get_attr_initializer(attr_symbol).to_s},\n"
-                    end
-                # 属性が配列であるときに対応
-                elsif attr_array.is_a?(Array) then 
-                    file.print "\t#{attr.get_name.to_s}: ["
-                    attr_array.each{ |attr_array_item|
-                        if attr_array_item == attr_array.last then
-                            file.print "#{attr_array_item}"
-                        else
-                            file.print "#{attr_array_item}, "
-                        end
-                    }
-                    file.print "],\n"
-                else
-                    file.print "\t#{attr.get_name.to_s}: #{cell.get_attr_initializer(attr_symbol).to_s},\n"
-                end
-            end
-        }
-    end
-
-    # セルの構造体の変数フィールドの初期化を生成
-    def gen_rust_cell_structure_variable_initialize file, celltype ,cell
-        if celltype.get_var_list.length != 0 then
-            file.print "\tvariable: &#{cell.get_global_name.to_s.upcase}VAR,\n"
-        end
-    end
-
-    # 変数構造体の初期化を生成
-    # TODO: awkernel版のデータ構造と同じにできる
-    def gen_rust_variable_structure_initialize file, cell
-        if @celltype.get_var_list.length != 0 then
-            file.print "static #{cell.get_global_name.to_s.upcase}VAR: Mutex<#{get_rust_celltype_name(cell.get_celltype)}Var> = Mutex::new(#{get_rust_celltype_name(cell.get_celltype)}Var {\n"
-
-            gen_rust_variable_structure_field_initialize(file, cell)
-
-            file.print "});\n\n"
-
-        end
-    end
-
-    # 変数構造体のフィールドの初期化を生成 (オーバーライドのために分離)
-    def gen_rust_variable_structure_field_initialize file, cell
-        array_number = 1
-        # 変数構造体のフィールドの初期化を生成
-        @celltype.get_var_list.each{ |var|
-            var_array = var.get_initializer
-            # 変数がポインタであるときに対応
-            if var.get_type.kind_of?( PtrType ) && var.get_type.get_size != nil then
-
-                type = c_type_to_rust_type(var.get_type).delete("[]")
-                size = nil
-                if @celltype.get_attribute_list.any? { |attr| attr.get_name == var.get_type.get_size.to_s.to_sym } then
-                    # 属性名をサイズに使っている場合は、その属性名を使う
-                    size = cell.get_attr_initializer(var.get_type.get_size.to_s.to_sym)
-                else
-                    # それ以外は、size_is指定子に直接指定されている値を使う 
-                    # size_is(256) のように指定されている場合
-                    size = var.get_type.get_size.to_s
-                end
-                # size = cell.get_attr_initializer(var.get_type.get_size.to_s.to_sym)
-                name = "mut #{cell.get_global_name.upcase}VARARRAY#{array_number}"
-                @pointer_array.push([name, type, size, var_array])
-                file.print "\t\t#{var.get_name.to_s}: unsafe{ &mut *core::ptr::addr_of_mut!(#{cell.get_global_name.upcase}VARARRAY#{array_number}) },\n"
-                array_number += 1
-            elsif var.get_type.kind_of?( StructType ) then
-                # 構造体属性: 初期化子が配列ならフィールドごとに割当、
-                # それ以外（PL_EXP/C_EXP など式）の場合は式をそのまま出力する
-                if var_array.is_a?(Array) then
-                    file.print "\t#{var.get_name.to_s}: #{c_type_to_rust_type(var.get_type)} {\n"
-                    struct_field_name = var.get_type.get_members_decl.get_items
-                    struct_field_name.zip(var_array).each{ |field, value|
-                        file.print "\t\t#{snake_case(field.get_name.to_s)}: #{value},\n"
-                    }
-                    file.print("\t},\n")
-                else
-                    # 非配列（C_EXP 等）: そのまま式を埋め込む
-                    file.print "\t#{var.get_name}: #{var.get_initializer},\n"
-                end
-            elsif var_array.is_a?(Array) then
-                # 属性が配列であるときに対応
-                file.print "\t#{var.get_name}: ["
-                var_array.each{ |var_array_item|
-                    if var_array_item == var_array.last then
-                        file.print "#{var_array_item.to_s}"
-                    else
-                        file.print "#{var_array_item.to_s}, "
-                    end
-                }
-                file.print "],\n"
-            else
-                file.print "\t#{var.get_name}: #{var.get_initializer},\n"
-            end
-        }
-    end
-
-    # 受け口構造体の定義を生成
-    def gen_rust_entry_structure file, celltype, callport_list
-        # シングルトンの場合は定数化されているため、ジェネリクスを固定化する
-        is_singleton = is_singleton_optimization?(celltype)
-
-        celltype.get_port_list.each{ |port|
-            if port.get_port_type == :ENTRY then
-                next if port.get_signature.get_function_head_array.length == 0
-
-                has_attr = celltype.get_attribute_list.any? { |attr| !attr.is_omit? }
-                
-                # 構造体名の生成
-                struct_name = "#{camel_case(snake_case(port.get_name.to_s))}For#{get_rust_celltype_name(celltype)}"
-                
-                if has_attr then
-                    # 属性を持つ場合は、シングルトンであっても CONFIG ジェネリクスを持つようにする
-                    file.print "pub struct #{struct_name}<CONFIG: #{get_rust_celltype_name(celltype)}Config> {\n"
-                    if is_attribute_optimization?(celltype) then
-                        file.print "\tpub cell: &'static #{get_rust_celltype_name(celltype)}<CONFIG"
-                        # ここで閉じずに、後続のジェネリクス解決に任せる
-                    else
-                        # RAM 属性保持時（非 ZST）は、セル本体から CONFIG が消えているため、
-                        # ここで CONFIG を保持し、PhantomData (private) を追加する
-                        file.print "\tpub cell: &'static #{get_rust_celltype_name(celltype)},\n"
-                        file.print "\t_phantom: core::marker::PhantomData<CONFIG>,\n"
-                    end
-                else
-                    file.print "pub struct #{struct_name} {\n"
-                    file.print "\tpub cell: &'static #{get_rust_celltype_name(celltype)}"
-                    # ここで閉じずに、後続のジェネリクス解決に任せる
-                end
-
-                # セルタイプが持つ呼び口のジェネリクスを解決
-                generics_added = false
-                # if !is_singleton && check_only_entryport_celltype(celltype) == false then
-                #     # マルチインスタンスの場合は、呼び口のジェネリクスも構造体のジェネリクスとして引き継ぐ必要がある
-                #     # （現状の実装では不完全な可能性があるが、今回は Config 共通化に注力する）
-                # elsif is_singleton && check_only_entryport_celltype(celltype) == false then
-                #     # シングルトンの場合は、具体的な接続先の型を埋め込む
-                #     first = true
-                #     cell = celltype.get_cell_list[0]
-                #     callport_list.each{ |cport|
-                #         if check_gen_dyn_for_port(cport) == nil then
-                #             joined_item = cell.get_join_list.get_item(cport.get_name)
-                #             callee_port_name = camel_case(snake_case(joined_item.get_port_name.to_s))
-                #             callee_cell = joined_item.get_cell
-                #             callee_celltype = callee_cell.get_celltype
-                #             callee_celltype_name = camel_case(snake_case(callee_celltype.get_global_name.to_s))
-                            
-                #             type_string = "#{callee_port_name}For#{callee_celltype_name}"
-                #             config_type = get_rust_config_type(callee_cell)
-                #             if config_type then
-                #                 type_string += "<#{config_type}>"
-                #             end
-
-                #             if first then
-                #                 # すでに CONFIG が入っている場合はカンマで繋ぐ
-                #                 if has_attr && is_attribute_optimization?(celltype) then
-                #                     file.print ", "
-                #                 else
-                #                     file.print "<"
-                #                 end
-                #                 file.print "#{type_string}"
-                #                 first = false
-                #                 generics_added = true
-                #             else
-                #                 file.print ", #{type_string}"
-                #             end
-                #         end
-                #     }
-                #     file.print ">" if first == false
-                # end
-                
-                # has_attr && is_attribute_optimization? の場合で、ジェネリクスがこれ以上追加されなかった場合は閉じる
-                if has_attr && is_attribute_optimization?(celltype) && !generics_added then
-                    file.print ">"
-                end
-                
-                # cell フィールドにカンマをつける (has_attr && !is_attribute_optimization? の場合は既に _phantom があるので不要)
-                if !has_attr || is_attribute_optimization?(celltype) then
-                    file.print ",\n"
-                end
-                file.print "}\n\n"
-            end
-        }
-    end
-
-    # rodataセクションに配置するための属性を付与する
-    def gen_rust_entryport_structure_initialize_specifier file
-        file.print "#[unsafe(link_section = \".rodata\")]"
-    end
-
-    # 受け口構造体の初期化を生成
-    def gen_rust_entryport_structure_initialize file, celltype, cell
-        celltype.get_port_list.each{ |port|
-            if port.get_port_type == :ENTRY then
-
-                # 空のシグニチャの場合は、初期化を生成しない
-                if port.get_signature.get_function_head_array.length == 0 then
-                    next
-                end
-
-                # 受け口構造体の初期化を生成
-                gen_rust_entryport_structure_initialize_specifier(file)
-                config_type = get_rust_config_type(cell)
-                if config_type then
-                    # 属性を持つ場合は必ずジェネリクスを指定する
-                    file.print "pub static #{port.get_name.to_s.upcase}FOR#{cell.get_global_name.to_s.upcase}: #{camel_case(snake_case(port.get_name.to_s))}For#{get_rust_celltype_name(celltype)}<#{config_type}> = #{camel_case(snake_case(port.get_name.to_s))}For#{get_rust_celltype_name(celltype)} {\n"
-                    file.print "\tcell: &#{cell.get_global_name.to_s.upcase},\n"
-                    if !is_attribute_optimization?(celltype) then
-                        # RAM 属性保持時（非 ZST）は、PhantomData の初期化が必要
-                        file.print "\t_phantom: core::marker::PhantomData,\n"
-                    end
-                else
-                    file.print "pub static #{port.get_name.to_s.upcase}FOR#{cell.get_global_name.to_s.upcase}: #{camel_case(snake_case(port.get_name.to_s))}For#{get_rust_celltype_name(celltype)} = #{camel_case(snake_case(port.get_name.to_s))}For#{get_rust_celltype_name(celltype)} {\n"
-                    file.print "\tcell: &#{cell.get_global_name.to_s.upcase},\n"
-                end
-                file.print "};\n\n"
-            end
-        }
-    end
-
-    # セルタイプに受け口がある場合，受け口関数を生成する
-    def gen_rust_entryport_function file, celltype, callport_list
-        # セルタイプに受け口がある場合，impl を生成する
-        celltype.get_port_list.each{ |port|
-            if port.get_port_type == :ENTRY then
-                sig = port.get_signature
-
-                # 空のシグニチャの場合は、impl を生成しない
-                if sig.get_function_head_array.length == 0 then
-                    next
-                end
-
-                if is_attribute_optimization?(celltype) then
-                    file.print "impl<CONFIG: #{get_rust_celltype_name(celltype)}Config> #{camel_case(snake_case(port.get_signature.get_global_name.to_s))} for #{camel_case(snake_case(port.get_name.to_s))}For#{get_rust_celltype_name(celltype)}<CONFIG> {\n\n"
-                else
-                    file.print "impl #{camel_case(snake_case(port.get_signature.get_global_name.to_s))} for #{camel_case(snake_case(port.get_name.to_s))}For#{get_rust_celltype_name(celltype)} {\n\n"
-                end
-
-                sig_param_str_list, _, lifetime_flag = get_sig_param_str sig
-
-                # 空の関数を生成
-                sig.get_function_head_array.each{ |func_head|
-                    # 関数のインライン化
-                    if port.is_inline? then
-                        file.print "\t#[inline]\n"
-                    end
-                    file.print "\tfn #{get_rust_function_name(func_head)}"
-                    # おそらくこのアノテーションは不要
-                    # if lifetime_flag then
-                    #     file.print "<'a>"
-                    # end
-                    # file.print"(&'static self"
-                    file.print"(&self"
-                    # param_num と sig_param_str_list の要素数が等しいことを前提としている
-                    param_num = func_head.get_paramlist.get_items.size
-                    param_num.times do
-                        current_param = sig_param_str_list.shift
-                        if current_param == "ignore" then
-                            next
-                        end
-                        file.print "#{current_param}"
-                    end
-                    file.print ") "
-
-                    # 返り値の型がunknown,つまりvoidのときは，-> を生成しない
-                    if c_type_to_rust_type(func_head.get_return_type) != "unknown" then
-                        file.print "-> #{c_type_to_rust_type(func_head.get_return_type)}"
-                    end
-
-                    file.print "{\n"
-
-                    if check_only_entryport_celltype(celltype) then
-                    else
-                        # get_cell_ref 関数の呼び出しを生成
-                        file.print "\t\tlet "
-
-                        # get_cell_ref 関数の返り値を格納するタプルを生成
-                        tuple_name_list = []
-                        callport_list.each{ |callport|
-                            tuple_name_list.push "#{snake_case(callport.get_name.to_s)}"
-                        }
-                        celltype.get_attribute_list.each{ |attr|
-                            if attr.is_omit? then
-                                next
-                            end
-                            tuple_name_list.push "#{attr.get_name.to_s}"
-                        }
-                        if celltype.get_var_list.length != 0 then
-                            tuple_name_list.push "var"
-                        end
-
-                        if tuple_name_list.length != 1 then
-                            file.print "("
-                        end
-
-                        tuple_name_list.each_with_index do |tuple_name, index|
-                            if index == tuple_name_list.length - 1 then
-                                file.print "#{tuple_name}"
-                                break
-                            end
-                            file.print "#{tuple_name}, "
-                        end
-
-                        if tuple_name_list.length != 1 then
-                            file.print ")"
-                        end
-
-                        file.print " = self.cell.get_cell_ref();\n"
-                    end
-                    file.print "\n"
-                    file.print"\t}\n"
-                }
-
-                file.print "}\n\n"
-            else
-            end
-        }
-    end
-    # セルタイプに受け口以外に生成する要素（呼び口、属性、変数）があるかどうかを判断する
-    def check_only_entryport_celltype celltype
-        celltype.get_port_list.each{ |port|
-            if port.get_port_type == :CALL then
-                next if port.is_omit?
-                # if check_gen_dyn_for_port(port) != nil then
-                #     next
-                # end
-                return false
-            end
-        }
-        celltype.get_attribute_list.each{ |attr|
-            next if attr.is_omit?
-            return false
-        }
-        if celltype.get_var_list.length != 0 then
-            return false
-        end
-        return true
-    end
-
-    # get_cell_ref 関数を生成する
-    def gen_rust_get_cell_ref file, celltype, callport_list, use_jenerics_alphabet
-        # セルタイプに受け口がない場合は，生成しない
-        # 受け口がないならば，get_cell_ref 関数が呼ばれることは現状無いため
-        celltype.get_port_list.each{ |port|
-            if port.get_port_type == :ENTRY then
-                jenerics_flag = true
-                file.print "impl"
-                
-                # 属性があれば CONFIG を出す
-                # ただし、属性最適化（定数化）を行わない場合は構造体が非ジェネリクスなので、
-                # impl ヘッダの CONFIG は後で関数のジェネリクスに移譲する
-                has_attr = celltype.get_attribute_list.any? { |attr| !attr.is_omit? }
-                is_attr_opt = is_attribute_optimization?(celltype)
-                if has_attr && is_attr_opt then
-                    file.print "<CONFIG: #{get_rust_celltype_name(celltype)}Config"
-                    jenerics_flag = false
-                end
-                
-                # # impl のジェネリクスを生成
-                # callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
-                #     if check_gen_dyn_for_port(callport) == nil then
-                #         if jenerics_flag then
-                #             jenerics_flag = false
-                #             file.print "<#{alphabet}: #{get_rust_signature_name(callport.get_signature)}"
-                #         else
-                #             file.print ", #{alphabet}: #{get_rust_signature_name(callport.get_signature)}"
-                #         end
-                #     end
-                # end
-                file.print ">" if jenerics_flag == false
-
-                # impl する型を生成
-                file.print " #{get_rust_celltype_name(celltype)}"
-                jenerics_first = true
-                if is_attribute_optimization?(celltype) then
-                    file.print "<CONFIG"
-                    jenerics_first = false
-                end
-
-                # if check_only_entryport_celltype(celltype) then
-                # else
-                #     callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
-                #         if check_gen_dyn_for_port(callport) == nil then
-                #             if jenerics_first then
-                #                 file.print "<#{alphabet}"
-                #                 jenerics_first = false
-                #             else
-                #                 file.print ", #{alphabet}"
-                #             end
-                #         end
-                #     end
-                # end
-                file.print ">" if jenerics_first == false
-
-                file.print " {\n"
-
-                file.print "\t#[inline]\n"
-
-                # get_cell_ref 関数の定義を生成
-                file.print "\tpub fn get_cell_ref"
-
-                # 関数のジェネリクス引数を整理
-                # fn_params = []
-                # if has_attr && !is_attr_opt then
-                #     fn_params << "CONFIG: #{get_rust_celltype_name(celltype)}Config"
-                # end
-                if fn_params.length > 0 then
-                    file.print "<#{fn_params.join(", ")}>"
-                end
-
-                file.print "(&'static self) -> "
-
-                # 返り値のタプル型の要素をまとめるための配列
-                return_tuple_type_list = []
-                return_tuple_list = []
-
-                # 呼び口をタプルの配列に追加
-                callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
-                    return_tuple_type_list.push("&'static #{alphabet}")
-                    return_tuple_list.push("self.#{snake_case(callport.get_name.to_s)}")
-                end
-
-                # 属性をタプルの配列に追加
-                celltype.get_attribute_list.each{ |attr|
-                    if attr.is_omit? then
-                        next
-                    end
-                    if is_zst_optimization?(celltype) then
-                        celltype_name_camel = get_rust_celltype_name(celltype)
-                        attr_name_camel = camel_case(attr.get_name.to_s)
-                        return_tuple_type_list.push("#{celltype_name_camel}#{attr_name_camel}<CONFIG>")
-                        return_tuple_list.push("#{celltype_name_camel}#{attr_name_camel}(core::marker::PhantomData)")
-                    else
-                        return_tuple_type_list.push("&'static #{c_type_to_rust_type(attr.get_type)}")
-                        return_tuple_list.push("&self.#{attr.get_name.to_s}")
-                    end
-                }
-
-                # 変数をタプルの配列に追加
-                if celltype.get_var_list.length != 0 then
-                    return_tuple_type_list.push("&Mutex<#{get_rust_celltype_name(celltype)}Var")
-                    return_tuple_type_list[-1].concat(">")
-                    return_tuple_list.push("&self.variable")
-                end
-
-                if return_tuple_type_list.length != 1 then
-                    file.print "("
-                end
-
-                # 返り値のタプル型を生成
-                return_tuple_type_list.each_with_index do |return_tuple_type, index|
-                    if index == return_tuple_type_list.length - 1 then
-                        file.print "#{return_tuple_type}"
-                        break
-                    end
-                    file.print "#{return_tuple_type}, "
-                end
-
-                if return_tuple_type_list.length != 1 then
-                    file.print ")"
-                end
-                file.print " {\n"
-
-                file.print "\t\t"
-                
-                if return_tuple_list.length != 1 then
-                    file.print "("
-                end
-
-                # 返り値のタプルを生成
-                return_tuple_list.each_with_index do |return_tuple, index|
-                    if index == return_tuple_list.length - 1 then
-                        file.print "#{return_tuple}"
-                        break
-                    end
-                    file.print "#{return_tuple}, "
-                end
-
-                if return_tuple_list.length != 1 then
-                    file.print ")"
-                end
-                
-                file.print"\n\t}\n}\n"
-                # get_cell_ref 関数を生成するのは1回だけでいいため，break する
-                break
-
-            end # if port.get_port_type == :ENTRY then
-        } # celltype.get_port_list.each
-    end
-
-    # implファイルのuse文を生成する
-    def gen_use_for_impl_file file, celltype
-        signature_list = []
-        celltype.get_port_list.each{ |port|
-            # 空のシグニチャの場合は、use文を生成しない
-            if port.get_signature.get_function_head_array.length != 0 then
-                signature_list.push("#{snake_case(port.get_signature.get_global_name.to_s)}")
-            end
-        }
-        signature_list.uniq!
-        # implファイルに対して、排他制御に関するuse文は生成する必要がない
-        # if @celltype.get_var_list.length != 0 then
-        #     gen_use_mutex file
-        # end
-        
-        # 必ず tecs_global を use する
-        #TODO: 必要なときにだけ use するようにする
-        file.print "use crate::tecs_global::*;\n"
-
-        file.print "use crate::tecs_celltype::#{snake_case(celltype.get_global_name.to_s)}::*;\n"
-
-        if signature_list.length == 1 then
-            file.print "use crate::tecs_signature::#{signature_list[0]}::*;\n"
-        elsif signature_list.length > 1 then
-            file.print "use crate::tecs_signature::{"
-            signature_list.each{ |signature|
-                if signature == signature_list.last then
-                    file.print "#{signature}::*};\n"
-                else
-                    file.print "#{signature}::*, "
-                end
-            }
-        end
-
-        # file.print "use crate::{"
-        # signature_list.each{ |signature|
-        #     if signature == signature_list.last then
-        #         file.print "#{signature}::*"
-        #     else
-        #         file.print "#{signature}::*, "
-        #     end
-        # }
-        # file.print "};\n\n"
-    end
-
-    # セルタイプの呼び出し先が一意であるかどうかを判断する
-    def check_gen_dyn_for_celltype celltype
-
-        celltype.get_port_list.each{ |port|
-            if port.get_port_type == :CALL then
-                if port.get_real_callee_cell == nil then
-                    celltype.get_port_list.each{ |entryport|
-                        if entryport.get_port_type == :ENTRY then
-                            return true
-                        end
-                    }
-                else
-                    return false
-                end
-            end
-        }
-
-    end
-
-    # ポートの接続先が一意であるかどうかを判断し，一意でない場合は，そのシグニチャの名前を返す -> 動的ディスパッチを適用するため
-    def check_gen_dyn_for_port port
-        if port.get_port_type == :CALL then
-            # if port.get_real_callee_port == nil then  # TODO：joinではなくportで接続先を確認しているため、より厳密なチェックが必要になる可能性がある 
-            #     # 呼び先が一意でない かつ 受け口を持っている場合に動的ディスパッチ
-            #     port.get_celltype.get_port_list.each{ |entryport|
-            #         if entryport.get_port_type == :ENTRY then
-            #             return "dyn " + get_rust_signature_name(port.get_signature)
-            #         end
-            #     }
-            # end
-            if !port.is_cell_unique? then
-                return "dyn " + get_rust_signature_name(port.get_signature)
-            end
-        end
-        # 受け口だった場合nilを返すが、この関数は実装を分離すべき
-        return nil
-    end
-
-    def gen_impl_sync_send_trait file, celltype
-        file.print "unsafe impl Sync for #{get_rust_celltype_name(celltype)} {}\n"
-        file.print "unsafe impl Send for #{get_rust_celltype_name(celltype)} {}\n"
     end
 
     # tecsflow.json をパースして、アクセスされたセルの情報を取得する
@@ -2102,53 +2151,9 @@ class RustGenCelltypePlugin < CelltypePlugin
         return json_parse_result
     end
 
-    # 引数のセルが複数のタスクからアクセスされているかどうかを判断する
-    def check_exclusive_control_for_cell cell
-        # JSONファイルがパースされていない場合は、排他制御がいるものとして true を返す
-        if @@json_parse_result.length == 0 then
-            return true
-        end
 
-        celltype = cell.get_celltype.get_global_name.to_s
-        if @@json_parse_result[cell.get_global_name.to_s]["Celltype"] == celltype then
-            if @@json_parse_result[cell.get_global_name.to_s]["ExclusiveControl"] == "true" then
-                return true
-            end
-            return false
-        end
-        puts "Error: JSON file does not include #{cell.get_global_name.to_s}"
-        return false
-    end
 
-    def check_multiple_accessed_for_cell cell
-        # JSONファイルがパースされていない場合は、保守的に true を返す
-        if @@json_parse_result.length == 0 then
-            return true
-        end
 
-        celltype = cell.get_celltype.get_global_name.to_s
-        if @@json_parse_result[cell.get_global_name.to_s]["Celltype"] == celltype then
-            if @@json_parse_result[cell.get_global_name.to_s]["TaskList"].length > 1 then
-                return true
-            end
-            return false
-        end
-        puts "Error: JSON file does not include #{cell.get_global_name.to_s}"
-        return false
-    end
-
-    # 引数のセルタイプの ex_ctrl_ref に動的ディスパッチが必要かどうかを判断し、いる場合は dyn を、いらない場合は、ダミーかどうかを返す
-    def check_gen_dyn_for_ex_ctrl_ref celltype
-        dyn_check_results = celltype.get_cell_list.map { |cell| check_exclusive_control_for_cell(cell) }
-        
-        if dyn_check_results.all?(true) then
-            return "no_dummy"
-        elsif dyn_check_results.all?(false) then
-            return "dummy"
-        else
-            return "dyn"
-        end
-    end
 
     # cargo.toml の target を取得する
     def extract_target_triple path
@@ -2166,79 +2171,11 @@ class RustGenCelltypePlugin < CelltypePlugin
         
         # ターゲットトリプルを抽出
         if target_line
-            match = target_line.match(/target = "(.*?)"/)
+            match = target_line.match(/target = "(.*?)"/) 
             return match ? match[1] : nil
         else
             return nil
         end
-    end
-
-    # セルタイプ構造体の ex_ctrl_ref フィールドの定義を生成
-    # TODO: awkernel版のデータ構造と同じにすることで、将来的にこの関数を削除できる
-    def gen_rust_cell_structure_ex_ctrl_ref file, celltype
-        # ItronrsPlugin で実装
-        # TODO: spinクレート版を実装する場合はこの関数を使う
-    end
-
-    # Sync変数構造体の定義を生成
-    def gen_rust_sync_variable_structure file, celltype
-        # ItronrsPlugin で実装
-        # TODO: spinクレート版を実装する場合はこの関数を使う
-    end
-
-    # Syncトレイトの実装を生成
-    def gen_rust_impl_sync_trait_for_sync_variable_structure file, celltype
-        # ItronrsPlugin で実装
-        # TODO: spinクレート版を実装する場合はこの関数を使う
-    end
-
-    # ロックガード構造体の定義を生成
-    def gen_rust_lock_guard_structure file, celltype, callport_list, use_jenerics_alphabet
-        # ItronrsPlugin で実装
-        # TODO: spinクレート版を実装する場合はこの関数を使う
-        if check_only_entryport_celltype(celltype) then
-            return
-        end
-
-        gen_rust_lock_guard_structure_header file, celltype, callport_list, use_jenerics_alphabet
-
-        gen_rust_cell_structure_jenerics file, callport_list, use_jenerics_alphabet
-
-        file.print "{\n"
-
-        gen_rust_lock_guard_structure_callport file, callport_list, use_jenerics_alphabet
-
-        gen_rust_lock_guard_structure_attribute file, celltype
-
-        gen_rust_lock_guard_structure_variable file, celltype
-
-        gen_rust_cell_structure_ex_ctrl_ref file, celltype
-
-        file.print "}\n\n"
-    end
-
-    # ロックガード構造体のヘッダーを生成
-    def gen_rust_lock_guard_structure_header file, celltype, callport_list, use_jenerics_alphabet
-        # ItronrsPlugin で実装
-        # TODO: spinクレート版を実装する場合はこの関数を使う
-    end
-
-    # ロックガード構造体の呼び口への参照の定義を生成
-    def gen_rust_lock_guard_structure_callport file, callport_list, use_jenerics_alphabet
-        # ItronrsPlugin で実装
-        # TODO: spinクレート版を実装する場合はこの関数を使う
-    end
-
-    # ロックガード構造体の属性への参照の定義を生成
-    def gen_rust_lock_guard_structure_attribute file, celltype
-        # ItronrsPlugin で実装
-        # TODO: spinクレート版を実装する場合はこの関数を使う
-    end
-
-    # ロックガード構造体の変数への参照の定義を生成
-    def gen_rust_lock_guard_structure_variable file, celltype
-        # ItronrsPlugin で実装
-        # TODO: spinクレート版を実装する場合はこの関数を使う
     end
 
     # ex_ctrl_ref フィールドの初期化を生成
@@ -2721,47 +2658,8 @@ class RustGenCelltypePlugin < CelltypePlugin
         
     end
 
-    # ポインタ配列を生成
-    def gen_pointer_array file
-        @pointer_array.each{ |pointer|
-            name = pointer[0]
-            type = pointer[1]
-            size = pointer[2]
-            initializer = pointer[3]
 
-            file.print "static #{name}: [#{type}; #{size}] = "
 
-            # 未初期化の場合 0 で埋める
-            if initializer.nil? then
-                if type == "f32" || type == "f64" then
-                    file.print "[0.0; #{size}];\n"
-                else
-                    file.print "[0; #{size}];\n"
-                end
-            elsif initializer.is_a?(Array) then
-                # 初期化子の数が配列のサイズと異なる場合、0で埋める
-                if initializer.length != size then
-                    if type == "f32" || type == "f64" then
-                        file.print "[0.0; #{size}];\n"
-                    else
-                        file.print "[0; #{size}];\n"
-                    end
-                else
-                    file.print "["
-                    initializer.each{ |item|
-                        if item == initializer.last then
-                            file.print "#{item.to_s}"
-                        else
-                            file.print "#{item.to_s}, "
-                        end
-                    }
-                    file.print "];\n"
-                end
-            end
-
-            file.print "\n"
-        }
-    end
 
     #=== tCelltype_factory.h に挿入するコードを生成する
     # file 以外の他のファイルにファクトリコードを生成してもよい
@@ -2871,11 +2769,11 @@ class RustGenCelltypePlugin < CelltypePlugin
 
         print "#{@celltype.get_global_name.to_s}: get_callport_list\n"
         # そのセルタイプの呼び口のリストを取得する
-        callport_list = get_callport_list
+        callport_list = @celltype.get_callport_list
 
         print "#{@celltype.get_global_name.to_s}: get_jenerics_alphabet_list\n"
         # ジェネリクスに使うアルファベットのリストを生成
-        use_jenerics_alphabet = get_jenerics_alphabet_list callport_list
+        use_jenerics_alphabet = @celltype.get_jenerics_alphabet_list callport_list
 
 
         file = CFile.open( "#{$gen}/tecs_celltype/#{snake_case(@celltype.get_global_name.to_s)}.rs", "w")
@@ -2887,55 +2785,55 @@ class RustGenCelltypePlugin < CelltypePlugin
         # gen_singleton_attribute_optimizations file, @celltype
 
         # 属性最適化（定数化）のトレイトやヘルパーを生成
-        gen_rust_attribute_config file, @celltype
+        @celltype.gen_rust_attribute_config file
 
         print "#{@celltype.get_global_name.to_s}: gen_rust_cell_structure_header\n"
         # セルの構造体の定義の先頭部を生成
-        gen_rust_cell_structure_header file, @celltype, callport_list, use_jenerics_alphabet
+        @celltype.gen_rust_cell_structure_header file, callport_list, use_jenerics_alphabet
 
         print "#{@celltype.get_global_name.to_s}: gen_rust_cell_structure_jenerics\n"
         # セル構造体のジェネリクスの where 句を生成
-        gen_rust_cell_structure_jenerics file, callport_list, use_jenerics_alphabet
+        @celltype.gen_rust_cell_structure_jenerics file, callport_list, use_jenerics_alphabet
         
         file.print "{\n"
 
         print "#{@celltype.get_global_name.to_s}: gen_rust_cell_structure_callport\n"
         # セル構造体の呼び口フィールドの定義を生成
-        gen_rust_cell_structure_callport file, callport_list, use_jenerics_alphabet
+        @celltype.gen_rust_cell_structure_callport file, callport_list, use_jenerics_alphabet
 
         print "#{@celltype.get_global_name.to_s}: gen_rust_cell_structure_attribute\n"
         # セル構造体の属性フィールドの定義を生成
-        gen_rust_cell_structure_attribute file, @celltype
+        @celltype.gen_rust_cell_structure_attribute file
 
         print "#{@celltype.get_global_name.to_s}: gen_rust_cell_structure_variable\n"
         # セル構造体の変数フィールドの定義を生成
-        gen_rust_cell_structure_variable file, @celltype
+        @celltype.gen_rust_cell_structure_variable file
 
         print "#{@celltype.get_global_name.to_s}: gen_rust_cell_structure_ex_ctrl_ref\n"
         # セル構造体の ex_ctrl_ref フィールドの定義を生成
-        gen_rust_cell_structure_ex_ctrl_ref file, @celltype
+        @celltype.gen_rust_cell_structure_ex_ctrl_ref file
 
         file.print "}\n\n"
         
         print "#{@celltype.get_global_name.to_s}: gen_rust_variable_structure\n"
         # 変数構造体の定義を生成
-        gen_rust_variable_structure file, @celltype
+        @celltype.gen_rust_variable_structure file
 
         print "#{@celltype.get_global_name.to_s}: gen_rust_sync_variable_structure\n"
         # Sync変数構造体の定義を生成
-        gen_rust_sync_variable_structure file, @celltype
+        @celltype.gen_rust_sync_variable_structure file
 
         print "#{@celltype.get_global_name.to_s}: gen_rust_impl_sync_trait_for_sync_variable_structure\n"
         # Syncトレイトの実装を生成
-        gen_rust_impl_sync_trait_for_sync_variable_structure file, @celltype
+        @celltype.gen_rust_impl_sync_trait_for_sync_variable_structure file
 
         print "#{@celltype.get_global_name.to_s}: gen_rust_entry_structure\n"
         # 受け口構造体の定義と初期化を生成
-        gen_rust_entry_structure file, @celltype, callport_list
+        @celltype.gen_rust_entry_structure file, callport_list
 
         print "#{@celltype.get_global_name.to_s}: gen_rust_entryport_structure_initialize\n"
         # ロックガード構造体の定義を生成
-        gen_rust_lock_guard_structure file, @celltype, callport_list, use_jenerics_alphabet
+        @celltype.gen_rust_lock_guard_structure file, callport_list, use_jenerics_alphabet
 
         print "#{@celltype.get_global_name.to_s}: gen_main_lib_rs\n"
         # main.rs もしくは lib.rs に mod を追加する
@@ -2945,25 +2843,25 @@ class RustGenCelltypePlugin < CelltypePlugin
 
             print "#{@celltype.get_global_name.to_s}: gen_rust_cell_structure_header_initialize\n"
             # セルの構造体の初期化の先頭部を生成
-            gen_rust_cell_structure_header_initialize file, cell
+            cell.gen_rust_cell_structure_header_initialize file
 
             print "#{@celltype.get_global_name.to_s}: gen_rust_cell_structure_jenerics_initialize\n"
             # セル構造体の初期化ためのジェネリクス代入部を生成
-            gen_rust_cell_structure_jenerics_initialize file, cell, callport_list, use_jenerics_alphabet
+            cell.gen_rust_cell_structure_jenerics_initialize file, callport_list, use_jenerics_alphabet
 
             file.print "{\n"
 
             print "#{@celltype.get_global_name.to_s}: gen_rust_cell_structure_callport_initialize\n"
             # セルの構造体の呼び口フィールドの初期化を生成
-            gen_rust_cell_structure_callport_initialize file, cell, callport_list
+            cell.gen_rust_cell_structure_callport_initialize file, callport_list
 
             print "#{@celltype.get_global_name.to_s}: gen_rust_cell_structure_attribute_initialize\n"
             # セルの構造体の属性フィールドの初期化を生成
-            gen_rust_cell_structure_attribute_initialize file, @celltype, cell
+            cell.gen_rust_cell_structure_attribute_initialize file, self
 
             print "#{@celltype.get_global_name.to_s}: gen_rust_cell_structure_variable_initialize\n"
             # セルの構造体の変数フィールドの初期化を生成
-            gen_rust_cell_structure_variable_initialize file, @celltype, cell
+            cell.gen_rust_cell_structure_variable_initialize file
 
             print "#{@celltype.get_global_name.to_s}: gen_rust_cell_structure_ex_ctrl_ref_initialize\n"
             # ex_ctrl_ref フィールドの初期化を生成
@@ -2973,7 +2871,7 @@ class RustGenCelltypePlugin < CelltypePlugin
 
             print "#{@celltype.get_global_name.to_s}: gen_rust_variable_structure_initialize\n"
             # 変数構造体の初期化を生成
-            gen_rust_variable_structure_initialize file, cell
+            cell.gen_rust_variable_structure_initialize file, self
 
             print "#{@celltype.get_global_name.to_s}: gen_rust_ex_ctrl_ref_initialize\n"
             # ex_ctrl_ref の初期化を生成
@@ -2981,23 +2879,23 @@ class RustGenCelltypePlugin < CelltypePlugin
 
             print "#{@celltype.get_global_name.to_s}: gen_rust_entryport_structure_initialize\n"
             # 受け口構造体の初期化を生成
-            gen_rust_entryport_structure_initialize file, @celltype, cell
+            cell.gen_rust_entryport_structure_initialize file
 
         } # celltype.get_cell_list.each
 
         print "#{@celltype.get_global_name.to_s}: gen_pointer_array\n"
         # ポインタ配列を生成
-        gen_pointer_array(file)
+        @celltype.gen_pointer_array(file, @pointer_array)
 
         print "#{@celltype.get_global_name.to_s}: gen_rust_impl_drop_for_lock_guard_structure\n"
         # ロックガードに Drop トレイトを実装する
         gen_rust_impl_drop_for_lock_guard_structure file, @celltype, callport_list, use_jenerics_alphabet
 
-        if check_only_entryport_celltype @celltype then
+        if @celltype.check_only_entryport_celltype then
         else
             print "#{@celltype.get_global_name.to_s}: gen_rust_get_cell_ref\n"
             # get_cell_ref 関数を生成する
-            gen_rust_get_cell_ref file, @celltype, callport_list, use_jenerics_alphabet
+            @celltype.gen_rust_get_cell_ref file, callport_list, use_jenerics_alphabet
         end
 
         # dyn が必要かどうかを判断する
@@ -3027,11 +2925,11 @@ class RustGenCelltypePlugin < CelltypePlugin
 
                 print "#{@celltype.get_global_name.to_s}: gen_use_for_impl_file\n"
                 # implファイル用のuse文を生成
-                gen_use_for_impl_file impl_file, @celltype
+                @celltype.gen_use_for_impl_file impl_file
                 
                 print "#{@celltype.get_global_name.to_s}: gen_rust_entryport_function\n"
                 # セルタイプに受け口がある場合，impl ファイルを生成する
-                gen_rust_entryport_function impl_file, @celltype, callport_list
+                @celltype.gen_rust_entryport_function impl_file, callport_list
 
                 impl_file.close
 

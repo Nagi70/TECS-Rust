@@ -40,6 +40,99 @@
 require 'set'
 require_tecsgen_lib "RustGenCelltypePlugin.rb"
 
+class Cell
+    # セルの構造体の初期化の先頭部を生成
+    # rodata セクション指定を削除
+    def gen_rust_cell_structure_header_initialize file
+        # セルタイプに async 呼び口がある場合は、pub を付与する
+        # lib.rsから関数を呼び出すため
+        if RustAWKCelltypePlugin.check_async_callport_in_celltype(self.get_celltype) then
+            file.print "pub "
+        end
+        
+        # 属性があれば CONFIG を出す
+        has_attr = self.get_celltype.get_attribute_list.any? { |attr| !attr.is_omit? }
+
+        if has_attr then
+            config_name = "Config#{camel_case(self.get_name.to_s)}"
+            if is_attribute_optimization?(self.get_celltype) then
+                file.print "static #{self.get_global_name.to_s.upcase}: #{get_rust_celltype_name(self.get_celltype)}<#{config_name}>"
+            else
+                # RAM 属性保持時（非 ZST）は、セル本体から CONFIG が消えているため、非ジェネリクスとして扱う
+                file.print "static #{self.get_global_name.to_s.upcase}: #{get_rust_celltype_name(self.get_celltype)}"
+            end
+        else
+            file.print "static #{self.get_global_name.to_s.upcase}: #{get_rust_celltype_name(self.get_celltype)}"
+        end
+    end
+
+    # rodata セクション指定を削除
+    def gen_rust_entryport_structure_initialize_specifier file
+    end
+
+    # 変数構造体と 以下のルールに沿った初期化を生成
+    # 排他制御有りのセルのみ -> TECSMutexedVariable 構造体の初期化を生成
+    # 排他制御無しのセルのみ -> TECSRawVariable 構造体の初期化を生成
+    # 両方混在するセルタイプ -> TECSVariable enum の初期化を生成
+    def gen_rust_variable_structure_initialize file, plugin
+        celltype = self.get_celltype
+        if celltype.get_var_list.length != 0 then
+            mutex_mode = RustAWKCelltypePlugin.check_gen_mutex_or_not_for_celltype(celltype)
+
+            case mutex_mode
+            when "mix"
+                file.print "static #{self.get_global_name.to_s.upcase}VAR: TECSVariable<#{get_rust_celltype_name(celltype)}Var> = TECSVariable::"
+                if self.check_exclusive_control == true then
+                    file.print "Mutexed(awkernel_lib::sync::mutex::Mutex::new(\n"
+                else
+                    file.print "Raw(TECSSyncVar { unsafe_var: core::cell::UnsafeCell::new(\n"
+                end
+            when "mutex"
+                file.print "static #{self.get_global_name.to_s.upcase}VAR: awkernel_lib::sync::mutex::Mutex<#{get_rust_celltype_name(celltype)}Var> = awkernel_lib::sync::mutex::Mutex::new(\n"
+            when "none"
+                file.print "static #{self.get_global_name.to_s.upcase}VAR: TECSSyncVar<#{get_rust_celltype_name(celltype)}Var> = TECSSyncVar { unsafe_var: core::cell::UnsafeCell::new(\n"
+            end
+
+            file.print "\t#{get_rust_celltype_name(celltype)}Var {\n"
+            gen_comments_safe_reason file
+            # 変数構造体のフィールドの初期化を生成
+            self.gen_rust_variable_structure_field_initialize(file, plugin)
+
+            case mutex_mode
+            when "mix"
+                if self.check_exclusive_control == true then
+                    file.print "\t}\n"
+                    file.print "));\n"
+                else
+                    file.print "\t}),\n"
+                    file.print "});\n\n"
+                end
+            when "mutex"
+                file.print "\t}\n"
+                file.print ");\n\n"
+            when "none"
+                file.print "\t})\n"
+                file.print "};\n\n"
+            end
+        end
+    end
+
+    def gen_comments_safe_reason file
+        case self.check_exclusive_control
+        when true
+            file.print "/// This UnsafeCell is accessed by multiple tasks, but is safe because it is operated exclusively by the mutex object.\n"
+        else
+            case self.check_multiple_accessed
+            when true
+                # root に近いコンポーネントで排他制御を行っている場合
+                file.print "/// This UnsafeCell is accessed by multiple tasks, but is secure because it is accessed exclusively, with exclusive control applied to the component closest to root.\n"
+            else
+                file.print "/// This UnsafeCell is safe because it is only accessed by one task due to the call flow and component structure of TECS.\n"
+            end
+        end
+    end
+end
+
 #== celltype プラグインの共通の親クラス
 class RustAWKCelltypePlugin < RustGenCelltypePlugin
     CLASS_NAME_SUFFIX = ""
@@ -983,7 +1076,7 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
     def gen_use_mutex file
 
         # TODO: 将来的に排他制御の選択肢を増やす可能性がある
-        case check_gen_mutex_or_not_for_celltype @celltype
+        case RustAWKCelltypePlugin.check_gen_mutex_or_not_for_celltype @celltype
         when "mutex"
             file.print "use awkernel_lib::sync::mutex::{MCSNode, Mutex, LockGuard};\n"
         when "mix"
@@ -1000,11 +1093,11 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
 
     # ミューテックスを適用するセルそうでないセルが混在するセルタイプかどうかを判断する
     # TOPPERSでは、ミューテックスとセマフォどちらかを適用する
-    def check_gen_mutex_or_not_for_celltype celltype
+    def self.check_gen_mutex_or_not_for_celltype celltype
         check_mutex = []
 
         celltype.get_cell_list.each{ |cell|
-            val = check_exclusive_control_for_cell(cell) ? "mutex" : "none"
+            val = cell.check_exclusive_control ? "mutex" : "none"
             check_mutex.push(val).uniq!
         }
 
@@ -1020,30 +1113,8 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
         end
     end
 
-    # セル構造体の呼び口フィールドの定義を生成
-    # TODO: ユーザが定義するReactorbodyセルタイプの呼び口をpublicにする必要がある
-    def gen_rust_cell_structure_callport file, callport_list, use_jenerics_alphabet
 
-        plugin_option = @plugin_arg_str.split(",").map(&:strip)
-
-        callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
-            # async 指定子がある場合は、pub を付与する
-            # リアクターAPIのコールバック関数で、各ルーチンの呼び口を呼び出す生成をするため、pub が必要になる
-            if callport.is_async? then
-                file.print "\tpub #{snake_case(callport.get_name.to_s)}: &'static "
-            else
-                file.print "\t#{snake_case(callport.get_name.to_s)}: &'static "
-            end
-
-            if check_gen_dyn_for_port(callport) == nil then
-                file.print "#{alphabet},\n"
-            else
-                file.print "(#{check_gen_dyn_for_port(callport)} + Sync + Send),\n"
-            end
-        end
-    end
-
-    def check_async_callport_in_celltype celltype
+    def self.check_async_callport_in_celltype celltype
         celltype.get_port_list.each{ |port|
             if port.get_port_type == :CALL && port.is_async? then
                 return true
@@ -1052,525 +1123,11 @@ class RustAWKCelltypePlugin < RustGenCelltypePlugin
         return false
     end
 
-    # セルの構造体の初期化の先頭部を生成
-    # rodata セクション指定を削除
-    def gen_rust_cell_structure_header_initialize file, cell
-        # セルタイプに async 呼び口がある場合は、pub を付与する
-        # lib.rsから関数を呼び出すため
-        if check_async_callport_in_celltype(cell.get_celltype) then
-            file.print "pub "
-        end
-        
-        # 属性があれば CONFIG を出す
-        has_attr = cell.get_celltype.get_attribute_list.any? { |attr| !attr.is_omit? }
-
-        if has_attr then
-            config_name = "Config#{camel_case(cell.get_name.to_s)}"
-            if is_attribute_optimization?(cell.get_celltype) then
-                file.print "static #{cell.get_global_name.to_s.upcase}: #{get_rust_celltype_name(cell.get_celltype)}<#{config_name}>"
-            else
-                # RAM 属性保持時（非 ZST）は、セル本体から CONFIG が消えているため、非ジェネリクスとして扱う
-                file.print "static #{cell.get_global_name.to_s.upcase}: #{get_rust_celltype_name(cell.get_celltype)}"
-            end
-            # 呼び口がない場合はここで閉じる
-            # if is_attribute_optimization?(cell.get_celltype) && get_number_of_jenerics(get_jenerics_alphabet_list(get_callport_list)) == 0 then
-            #     file.print ">"
-            # end
-        else
-            file.print "static #{cell.get_global_name.to_s.upcase}: #{get_rust_celltype_name(cell.get_celltype)}"
-        end
-    end
-
-    # rodata セクション指定を削除
-    def gen_rust_entryport_structure_initialize_specifier file
-    end
-
-    # セル構造体の変数フィールドの定義を生成
-    def gen_rust_cell_structure_variable file, celltype
-        if celltype.get_var_list.length != 0 then
-            case check_gen_mutex_or_not_for_celltype(celltype)
-            when "mix"
-                file.print "\tvariable: &'static TECSVariable<#{get_rust_celltype_name(celltype)}Var>,\n"
-            when "mutex"
-                file.print "\tvariable: &'static awkernel_lib::sync::mutex::Mutex<#{get_rust_celltype_name(celltype)}Var>,\n"
-            when "none"
-                file.print "\tvariable: &'static TECSSyncVar<#{get_rust_celltype_name(celltype)}Var>,\n"
-            end
-        end
-    end
-
-    # ロックガード構造体のヘッダーを生成
-    def gen_rust_lock_guard_structure_header file, celltype, callport_list, use_jenerics_alphabet
-        file.print "pub struct LockGuardFor#{get_rust_celltype_name(celltype)}"
-
-        params = []
-        # シングルトン最適化が行われ、ロックガードに属性以外の要素が存在しない場合、ライフタイムは不要
-        if is_lock_guard_lifetime_required?(celltype, callport_list, use_jenerics_alphabet) then
-            params << "'a"
-        end
-
-        # 属性があれば CONFIG を出す
-        if celltype.get_attribute_list.any? { |attr| !attr.is_omit? } then
-            params << "CONFIG: #{get_rust_celltype_name(celltype)}Config"
-        end
-        
-        # use_jenerics_alphabet と callport_list の要素数が等しいことを前提としている
-        # callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
-        #     if check_gen_dyn_for_port(callport) == nil then
-        #         params << alphabet
-        #     end
-        # end
-
-        if params.length > 0 then
-            file.print "<"
-            file.print params.join(", ")
-            file.print ">"
-        end
-
-    end
-
-    # ロックガード構造体の呼び口への参照の定義を生成
-    def gen_rust_lock_guard_structure_callport file, callport_list, use_jenerics_alphabet
-        callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
-            if check_gen_dyn_for_port(callport) == nil then
-                file.print "\tpub #{snake_case(callport.get_name.to_s)}: &'a #{alphabet},\n"
-            else
-                file.print "\tpub #{snake_case(callport.get_name.to_s)}: &'a (#{check_gen_dyn_for_port(callport)} + Sync + Send),\n"
-            end
-        end
-    end
-
-    # ロックガード構造体の属性への参照の定義を生成
-    def gen_rust_lock_guard_structure_attribute file, celltype
-        celltype.get_attribute_list.each{ |attr|
-            if attr.is_omit? then
-                next
-            else
-                file.print "\tpub #{attr.get_name.to_s}: "
-                if is_attribute_optimization?(celltype) then
-                    celltype_name_camel = get_rust_celltype_name(celltype)
-                    attr_name_camel = camel_case(attr.get_name.to_s)
-                    file.print "#{celltype_name_camel}#{attr_name_camel}<CONFIG>,\n"
-                else
-                    file.print "&'a #{c_type_to_rust_type(attr.get_type)},\n"
-                end
-            end
-        }
-        # CONFIG が存在し、ZST 最適化でない場合は PhantomData が必要
-        has_attr = celltype.get_attribute_list.any? { |attr| !attr.is_omit? }
-        if has_attr && !is_attribute_optimization?(celltype) then
-            file.print "\t_phantom: core::marker::PhantomData<CONFIG>,\n"
-        end
-    end
-
-    # ロックガード構造体の変数への参照の定義を生成
-    def gen_rust_lock_guard_structure_variable file, celltype
-        if celltype.get_var_list.length != 0 then
-            case check_gen_mutex_or_not_for_celltype(celltype)
-            when "mix"
-                file.print "\tpub var: TECSVarGuard<'a, #{get_rust_celltype_name(celltype)}Var>,\n"
-            when "mutex"
-                file.print "\tpub var: awkernel_lib::sync::mutex::LockGuard<'a, #{get_rust_celltype_name(celltype)}Var>,\n"
-            when "none"
-                file.print "\tpub var: &'a mut #{get_rust_celltype_name(celltype)}Var,\n"
-            end
-        end
-    end
 
     def gen_use_in_tecs_global_rs file
         # file.print("use awkernel_lib::time::Time;\n")
     end
 
-    # ロックガード構造体の定義を生成
-    def gen_rust_lock_guard_structure file, celltype, callport_list, use_jenerics_alphabet
-
-        if check_only_entryport_celltype(celltype) then
-            return
-        end
-
-        gen_rust_lock_guard_structure_header file, celltype, callport_list, use_jenerics_alphabet
-
-        gen_rust_cell_structure_jenerics file, callport_list, use_jenerics_alphabet
-
-        file.print "{\n"
-
-        gen_rust_lock_guard_structure_callport file, callport_list, use_jenerics_alphabet
-
-        gen_rust_lock_guard_structure_attribute file, celltype
-
-        gen_rust_lock_guard_structure_variable file, celltype
-
-        gen_rust_cell_structure_ex_ctrl_ref file, celltype
-
-        file.print "}\n\n"
-
-    end
-
-    def gen_rust_get_cell_ref file, celltype, callport_list, use_jenerics_alphabet
-        # セルタイプに受け口がない場合は，生成しない
-        # 受け口がないならば，get_cell_ref 関数が呼ばれることは現状無いため
-        celltype.get_port_list.each{ |port|
-            if port.get_port_type == :ENTRY then
-                jenerics_flag = true
-                file.print "impl"
-                
-                # 属性があれば CONFIG を出す
-                # ただし、属性最適化（定数化）を行わない場合は構造体が非ジェネリクスなので、
-                # impl ヘッダの CONFIG は後で関数のジェネリクスに移譲する
-                has_attr = celltype.get_attribute_list.any? { |attr| !attr.is_omit? }
-                is_attr_opt = is_attribute_optimization?(celltype)
-                if has_attr && is_attr_opt then
-                    file.print "<CONFIG: #{get_rust_celltype_name(celltype)}Config"
-                    jenerics_flag = false
-                end
-
-                # impl のジェネリクスを生成
-                # callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
-                #     # 呼び口が動的ディスパッチの場合は、ジェネリクスを生成しない
-                #     if check_gen_dyn_for_port(callport) == nil then
-                #         if jenerics_flag then
-                #             jenerics_flag = false
-                #             file.print "<#{alphabet}: #{get_rust_signature_name(callport.get_signature)}"
-                #         else
-                #             file.print ", #{alphabet}: #{get_rust_signature_name(callport.get_signature)}"
-                #         end
-                #     end
-                # end
-
-                file.print ">" if jenerics_flag == false
-
-                # impl する型を生成
-                file.print " #{get_rust_celltype_name(celltype)}"
-                impl_first = true
-                # 属性最適化（定数化）を行う場合のみ、セル本体が CONFIG ジェネリクスを持つ
-                if is_attribute_optimization?(celltype) then
-                    impl_first = false
-                    file.print "<CONFIG"
-                end
-
-                # if check_only_entryport_celltype(celltype) then
-                # else
-                #     callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
-                #         if check_gen_dyn_for_port(callport) == nil then
-                #             if impl_first then
-                #                 impl_first = false
-                #                 file.print "<#{alphabet}"
-                #             else
-                #                 file.print ", #{alphabet}"
-                #             end
-                #         end
-                #     end
-                # end
-                file.print ">" if impl_first == false
-                file.print " {\n"
-                # インライン化
-                file.print "\t#[inline]\n"
-
-                # get_cell_ref 関数の定義を生成
-                file.print "\tpub fn get_cell_ref"
-
-                # 関数のジェネリクス引数を整理
-                fn_params = []
-                if celltype.get_var_list.length != 0 then
-                    fn_params << "'node"
-                end
-                # if has_attr && !is_attr_opt then
-                #     fn_params << "CONFIG: #{get_rust_celltype_name(celltype)}Config"
-                # end
-
-                if fn_params.length > 0 then
-                    file.print "<#{fn_params.join(", ")}>"
-                end
-
-                # セルタイプに変数がある場合は、引数にnodeをとる
-                if celltype.get_var_list.length != 0 then
-                    file.print "(&'static self, node: &'node mut awkernel_lib::sync::mutex::MCSNode<#{get_rust_celltype_name(celltype)}Var>) -> "
-                else
-                    file.print "(&'static self) -> "
-                end
-
-                file.print "LockGuardFor#{get_rust_celltype_name(celltype)}"
-
-                # TECS/Rust において、dyn な呼び口は、ジェネリクス参照ではなくトレイトオブジェクトへの参照として表現される
-                # そのため、use_jenerics_alphabet にトレイトオブジェクトが入っている場合は、その生成をスキップする
-                # セルタイプ構造体にライフタイムアノテーションが必要かどうか判定する(必要 -> 呼び口を持っている)
-                # TODO: ライフタイムアノテーションの判定は厳格にする必要がある
-                # check_lifetime_annotation_for_celltype_structure から変更
-                # 属性の有無を確認
-                has_attr = celltype.get_attribute_list.any? { |attr| !attr.is_omit? }
-
-                # 以前は is_attribute_optimization? (フル定数化) の場合のみ CONFIG を出していたが、
-                # size_first (非 ZST) の場合でも LockGuard は CONFIG を要求するため、
-                # has_attr があれば常に CONFIG を出力するように変更する。
-                if has_attr then
-                    lock_guard_first = true
-                    if celltype.get_var_list.length != 0 then
-                        file.print "<'node"
-                        lock_guard_first = false
-                    end
-                    # CONFIG ジェネリクス
-                    if lock_guard_first then
-                        if is_zst_optimization?(celltype) then
-                            file.print "<CONFIG"
-                        else
-                            file.print "<ConfigDefault#{get_rust_celltype_name(celltype)}"
-                        end
-                        lock_guard_first = false
-                    else
-                        if is_zst_optimization?(celltype) then
-                            file.print ", CONFIG"
-                        else
-                            file.print ", ConfigDefault#{get_rust_celltype_name(celltype)}"
-                        end
-                    end
-
-                    # use_jenerics_alphabet と callport_list の要素数が等しいことを前提としている
-                    # callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
-                    #     if check_gen_dyn_for_port(callport) == nil then
-                    #         file.print ", #{alphabet}"
-                    #     end
-                    # end
-                    file.print ">"
-                elsif check_only_entryport_celltype(celltype) then
-                else
-                    lock_guard_first = true
-                    if celltype.get_var_list.length != 0 then
-                        file.print "<'node"
-                        lock_guard_first = false
-                    end
-                    # use_jenerics_alphabet と callport_list の要素数が等しいことを前提としている
-                    # callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
-                    #     if check_gen_dyn_for_port(callport) == nil then
-                    #         if lock_guard_first then
-                    #             lock_guard_first = false
-                    #             file.print "<#{alphabet}"
-                    #         else
-                    #             file.print ", #{alphabet}"
-                    #         end
-                    #     end
-                    # end
-                    file.print ">" if lock_guard_first == false
-                end
-
-                file.print " {\n"
-
-                lock_guard_filed_name = []
-                lock_guard_field_value = []
-
-                callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
-                    lock_guard_filed_name.push("#{snake_case(callport.get_name.to_s)}")
-                    lock_guard_field_value.push("self.#{snake_case(callport.get_name.to_s)}")
-                end
-
-                celltype.get_attribute_list.each do |attr|
-                    if attr.is_omit? then
-                        next
-                    end
-                    lock_guard_filed_name.push(attr.get_name)
-                    if is_zst_optimization?(celltype) then
-                        celltype_name_camel = get_rust_celltype_name(celltype)
-                        attr_name_camel = camel_case(attr.get_name.to_s)
-                        lock_guard_field_value.push("#{celltype_name_camel}#{attr_name_camel}(core::marker::PhantomData)")
-                    else
-                        lock_guard_field_value.push("&self.#{attr.get_name}")
-                    end
-                end
-
-                # PhantomData の初期化
-                has_attr = celltype.get_attribute_list.any? { |attr| !attr.is_omit? }
-                if has_attr && !is_attribute_optimization?(celltype) then
-                    lock_guard_filed_name.push("_phantom")
-                    lock_guard_field_value.push("core::marker::PhantomData")
-                end
-
-                if celltype.get_var_list.length != 0 then
-                    lock_guard_filed_name.push("var")
-                    lock_guard_field_value.push("self.variable.lock(node)")
-                end
-
-                file.print "\t\tLockGuardFor#{get_rust_celltype_name(celltype)} {\n"
-
-                lock_guard_filed_name.each_with_index do |field_name, index|
-                    file.print "\t\t\t#{field_name}: #{lock_guard_field_value[index]},\n"
-                end
-                
-                file.print "\t\t}"
-                
-                
-                file.print"\n\t}\n}\n"
-                # get_cell_ref 関数を生成するのは1回だけでいいため，break する
-                break
-
-            end # if port.get_port_type == :ENTRY then
-        } # celltype.get_port_list.each
-    end
-
-    # 変数構造体と 以下のルールに沿った初期化を生成
-    # 排他制御有りのセルのみ -> TECSMutexedVariable 構造体の初期化を生成
-    # 排他制御無しのセルのみ -> TECSRawVariable 構造体の初期化を生成
-    # 両方混在するセルタイプ -> TECSVariable enum の初期化を生成
-    def gen_rust_variable_structure_initialize file, cell
-        if @celltype.get_var_list.length != 0 then
-            mutex_mode = check_gen_mutex_or_not_for_celltype(@celltype)
-
-            case mutex_mode
-            when "mix"
-                file.print "static #{cell.get_global_name.to_s.upcase}VAR: TECSVariable<#{get_rust_celltype_name(cell.get_celltype)}Var> = TECSVariable::"
-                if check_exclusive_control_for_cell(cell) == true then
-                    file.print "Mutexed(awkernel_lib::sync::mutex::Mutex::new(\n"
-                else
-                    file.print "Raw(TECSSyncVar { unsafe_var: core::cell::UnsafeCell::new(\n"
-                end
-            when "mutex"
-                file.print "static #{cell.get_global_name.to_s.upcase}VAR: awkernel_lib::sync::mutex::Mutex<#{get_rust_celltype_name(cell.get_celltype)}Var> = awkernel_lib::sync::mutex::Mutex::new(\n"
-            when "none"
-                file.print "static #{cell.get_global_name.to_s.upcase}VAR: TECSSyncVar<#{get_rust_celltype_name(cell.get_celltype)}Var> = TECSSyncVar { unsafe_var: core::cell::UnsafeCell::new(\n"
-            end
-
-            file.print "\t#{get_rust_celltype_name(cell.get_celltype)}Var {\n"
-            gen_comments_safe_reason file, cell
-            # 変数構造体のフィールドの初期化を生成
-            gen_rust_variable_structure_field_initialize(file, cell)
-
-            case mutex_mode
-            when "mix"
-                if check_exclusive_control_for_cell(cell) == true then
-                    file.print "\t}\n"
-                    file.print "));\n"
-                else
-                    file.print "\t}),\n"
-                    file.print "});\n\n"
-                end
-            when "mutex"
-                file.print "\t}\n"
-                file.print ");\n\n"
-            when "none"
-                file.print "\t})\n"
-                file.print "};\n\n"
-            end
-        end
-    end
-
-    def gen_comments_safe_reason file, cell
-        case check_exclusive_control_for_cell cell
-        when true
-            file.print "/// This UnsafeCell is accessed by multiple tasks, but is safe because it is operated exclusively by the mutex object.\n"
-        else
-            case check_multiple_accessed_for_cell cell
-            when true
-                # root に近いコンポーネントで排他制御を行っている場合
-                file.print "/// This UnsafeCell is accessed by multiple tasks, but is secure because it is accessed exclusively, with exclusive control applied to the component closest to root.\n"
-            else
-                file.print "/// This UnsafeCell is safe because it is only accessed by one task due to the call flow and component structure of TECS.\n"
-            end
-        end
-    end
-
-    def gen_use_for_impl_file file, celltype
-        super(file, celltype)
-        file.print "use awkernel_lib::sync::mutex::MCSNode;\n"
-    end
-
-    # セルタイプ構造体にライフタイムアノテーションが必要かどうかを判定する関数
-    def check_lifetime_annotation_for_celltype_structure celltype, callport_list
-
-        # 呼び口は受け口構造体に繋がっており、受け口構造体は必ずライフタイムアノテーションが必要であるため、trueを返す
-        if callport_list.length >= 1 then
-            return true
-        end
-
-        # ライフタイムアノテーションが必要な属性があるかどうか
-        # 属性最適化（定数化）が行われる場合は、celltype構造体に属性が定義されないため、チェックを省略する
-        if !is_attribute_optimization?(celltype) then
-            celltype.get_attribute_list.each{ |attr|
-                if attr.is_omit? then
-                    next
-                else
-                    attr_type_name = attr.get_type.get_type_str
-                    if check_lifetime_annotation_for_type(attr_type_name) then
-                        return true
-                    end
-                end
-            }
-        end
-
-        # 変数があるかどうか
-        # awkernelでは、変数への参照を必ず持つため、trueを返す
-        return true if celltype.get_var_list.length != 0
-
-        return false
-    end
-
-    # セルタイプに受け口がある場合，受け口関数を生成する
-    def gen_rust_entryport_function file, celltype, callport_list
-        # セルタイプに受け口がある場合，impl を生成する
-        celltype.get_port_list.each{ |port|
-            if port.get_port_type == :ENTRY then
-                sig = port.get_signature
-
-                # 空のシグニチャの場合は、impl を生成しない
-                if sig.get_function_head_array.length == 0 then
-                    next
-                end
-
-                if is_attribute_optimization?(celltype) then
-                    file.print "impl<CONFIG: #{get_rust_celltype_name(celltype)}Config> #{camel_case(snake_case(port.get_signature.get_global_name.to_s))} for #{camel_case(snake_case(port.get_name.to_s))}For#{get_rust_celltype_name(celltype)}<CONFIG> {\n\n"
-                else
-                    file.print "impl #{camel_case(snake_case(port.get_signature.get_global_name.to_s))} for #{camel_case(snake_case(port.get_name.to_s))}For#{get_rust_celltype_name(celltype)}{\n\n"
-                end
-
-                sig_param_str_list, _, lifetime_flag = get_sig_param_str sig
-
-                # 空の関数を生成
-                sig.get_function_head_array.each{ |func_head|
-                    # 関数のインライン化
-                    if port.is_inline? then
-                        file.print "\t#[inline]\n"
-                    end
-                    file.print "\tfn #{get_rust_function_name(func_head)}"
-                    # おそらく不要
-                    # if lifetime_flag then
-                    #     file.print "<'a>"
-                    # end
-                    file.print"(&self"
-                    # param_num と sig_param_str_list の要素数が等しいことを前提としている
-                    param_num = func_head.get_paramlist.get_items.size
-                    param_num.times do
-                        current_param = sig_param_str_list.shift
-                        if current_param == "ignore" then
-                            next
-                        end
-                        file.print "#{current_param}"
-                    end
-                    file.print ") "
-
-                    # 返り値の型がunknown,つまりvoidのときは，-> を生成しない
-                    if c_type_to_rust_type(func_head.get_return_type) != "unknown" then
-                        file.print "-> #{c_type_to_rust_type(func_head.get_return_type)}"
-                    end
-
-                    file.print "{\n"
-
-                    if check_only_entryport_celltype(celltype) then
-                    else
-                        if celltype.get_var_list.length != 0 then
-                            # ロックガードで覆う場合の生成
-                            file.print "\t\tlet mut node = MCSNode::new();\n"
-                            file.print "\t\tlet mut lg = self.cell.get_cell_ref(&mut node);\n"
-                        else
-                            file.print "\t\tlet mut lg = self.cell.get_cell_ref();\n"
-                        end
-                    end
-                    file.print "\n"
-                    file.print"\t}\n"
-                }
-
-                file.print "}\n\n"
-
-            else
-            end
-        }
-    end
 
     # Cargo.toml の設定を変更する
     def change_cargo_toml path
@@ -1905,6 +1462,457 @@ impl<'a, T: core::marker::Send> core::ops::DerefMut for TECSVarGuard<'a, T> {
         end
         # Split by comma and strip quotes/spaces from each element
         content.split(',').map { |t| t.strip.gsub(/\A["']|["']\z/, "") }.reject(&:empty?)
+    end
+
+end
+
+# AWK 向け Celltype メソッドオーバーライド
+# RustAWKCelltypePlugin が使用される場合に、Celltype メソッドを上書きする
+class Celltype
+    include RustGenHelper
+
+    # セル構造体の呼び口フィールドの定義を生成（AWK版）
+    # async 指定子がある場合は、pub を付与する
+    def gen_rust_cell_structure_callport file, callport_list, use_jenerics_alphabet
+        callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
+            # async 指定子がある場合は、pub を付与する
+            # リアクターAPIのコールバック関数で、各ルーチンの呼び口を呼び出す生成をするため、pub が必要になる
+            if callport.is_async? then
+                file.print "\tpub #{snake_case(callport.get_name.to_s)}: &'static "
+            else
+                file.print "\t#{snake_case(callport.get_name.to_s)}: &'static "
+            end
+
+            if check_gen_dyn_for_port(callport) == nil then
+                file.print "#{alphabet},\n"
+            else
+                file.print "(#{check_gen_dyn_for_port(callport)} + Sync + Send),\n"
+            end
+        end
+    end
+
+    # セル構造体の変数フィールドの定義を生成（AWK版）
+    def gen_rust_cell_structure_variable file
+        if self.get_var_list.length != 0 then
+            case RustAWKCelltypePlugin.check_gen_mutex_or_not_for_celltype(self)
+            when "mix"
+                file.print "\tvariable: &'static TECSVariable<#{get_rust_celltype_name(self)}Var>,\n"
+            when "mutex"
+                file.print "\tvariable: &'static awkernel_lib::sync::mutex::Mutex<#{get_rust_celltype_name(self)}Var>,\n"
+            when "none"
+                file.print "\tvariable: &'static TECSSyncVar<#{get_rust_celltype_name(self)}Var>,\n"
+            end
+        end
+    end
+
+    # ロックガード構造体のヘッダーを生成（AWK版）
+    def gen_rust_lock_guard_structure_header file, callport_list, use_jenerics_alphabet
+        file.print "pub struct LockGuardFor#{get_rust_celltype_name(self)}"
+
+        params = []
+        # シングルトン最適化が行われ、ロックガードに属性以外の要素が存在しない場合、ライフタイムは不要
+        if is_lock_guard_lifetime_required?(callport_list, use_jenerics_alphabet) then
+            params << "'a"
+        end
+
+        # 属性があれば CONFIG を出す
+        if self.get_attribute_list.any? { |attr| !attr.is_omit? } then
+            params << "CONFIG: #{get_rust_celltype_name(self)}Config"
+        end
+        
+        # use_jenerics_alphabet と callport_list の要素数が等しいことを前提としている
+        # callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
+        #     if check_gen_dyn_for_port(callport) == nil then
+        #         params << alphabet
+        #     end
+        # end
+
+        if params.length > 0 then
+            file.print "<"
+            file.print params.join(", ")
+            file.print ">"
+        end
+
+    end
+
+    # ロックガード構造体の呼び口への参照の定義を生成（AWK版）
+    def gen_rust_lock_guard_structure_callport file, callport_list, use_jenerics_alphabet
+        callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
+            if check_gen_dyn_for_port(callport) == nil then
+                file.print "\tpub #{snake_case(callport.get_name.to_s)}: &'a #{alphabet},\n"
+            else
+                file.print "\tpub #{snake_case(callport.get_name.to_s)}: &'a (#{check_gen_dyn_for_port(callport)} + Sync + Send),\n"
+            end
+        end
+    end
+
+    # ロックガード構造体の属性への参照の定義を生成（AWK版）
+    def gen_rust_lock_guard_structure_attribute file
+        self.get_attribute_list.each{ |attr|
+            if attr.is_omit? then
+                next
+            else
+                file.print "\tpub #{attr.get_name.to_s}: "
+                if is_attribute_optimization?(self) then
+                    celltype_name_camel = get_rust_celltype_name(self)
+                    attr_name_camel = camel_case(attr.get_name.to_s)
+                    file.print "#{celltype_name_camel}#{attr_name_camel}<CONFIG>,\n"
+                else
+                    file.print "&'a #{c_type_to_rust_type(attr.get_type)},\n"
+                end
+            end
+        }
+        # CONFIG が存在し、ZST 最適化でない場合は PhantomData が必要
+        has_attr = self.get_attribute_list.any? { |attr| !attr.is_omit? }
+        if has_attr && !is_attribute_optimization?(self) then
+            file.print "\t_phantom: core::marker::PhantomData<CONFIG>,\n"
+        end
+    end
+
+    # ロックガード構造体の変数への参照の定義を生成（AWK版）
+    def gen_rust_lock_guard_structure_variable file
+        if self.get_var_list.length != 0 then
+            case RustAWKCelltypePlugin.check_gen_mutex_or_not_for_celltype(self)
+            when "mix"
+                file.print "\tpub var: TECSVarGuard<'a, #{get_rust_celltype_name(self)}Var>,\n"
+            when "mutex"
+                file.print "\tpub var: awkernel_lib::sync::mutex::LockGuard<'a, #{get_rust_celltype_name(self)}Var>,\n"
+            when "none"
+                file.print "\tpub var: &'a mut #{get_rust_celltype_name(self)}Var,\n"
+            end
+        end
+    end
+
+    # ロックガード構造体の定義を生成（AWK版）
+    def gen_rust_lock_guard_structure file, callport_list, use_jenerics_alphabet
+
+        if check_only_entryport_celltype then
+            return
+        end
+
+        gen_rust_lock_guard_structure_header file, callport_list, use_jenerics_alphabet
+
+        gen_rust_cell_structure_jenerics file, callport_list, use_jenerics_alphabet
+
+        file.print "{\n"
+
+        gen_rust_lock_guard_structure_callport file, callport_list, use_jenerics_alphabet
+
+        gen_rust_lock_guard_structure_attribute file
+
+        gen_rust_lock_guard_structure_variable file
+
+        gen_rust_cell_structure_ex_ctrl_ref file
+
+        file.print "}\n\n"
+
+    end
+
+    # get_cell_ref 関数を生成する（AWK版）
+    def gen_rust_get_cell_ref file, callport_list, use_jenerics_alphabet
+        # セルタイプに受け口がない場合は，生成しない
+        # 受け口がないならば，get_cell_ref 関数が呼ばれることは現状無いため
+        self.get_port_list.each{ |port|
+            if port.get_port_type == :ENTRY then
+                jenerics_flag = true
+                file.print "impl"
+                
+                # 属性があれば CONFIG を出す
+                # ただし、属性最適化（定数化）を行わない場合は構造体が非ジェネリクスなので、
+                # impl ヘッダの CONFIG は後で関数のジェネリクスに移譲する
+                has_attr = self.get_attribute_list.any? { |attr| !attr.is_omit? }
+                is_attr_opt = is_attribute_optimization?(self)
+                if has_attr && is_attr_opt then
+                    file.print "<CONFIG: #{get_rust_celltype_name(self)}Config"
+                    jenerics_flag = false
+                end
+
+                # impl のジェネリクスを生成
+                # callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
+                #     # 呼び口が動的ディスパッチの場合は、ジェネリクスを生成しない
+                #     if check_gen_dyn_for_port(callport) == nil then
+                #         if jenerics_flag then
+                #             jenerics_flag = false
+                #             file.print "<#{alphabet}: #{callport.get_signature.get_rust_signature_name}"
+                #         else
+                #             file.print ", #{alphabet}: #{callport.get_signature.get_rust_signature_name}"
+                #         end
+                #     end
+                # end
+
+                file.print ">" if jenerics_flag == false
+
+                # impl する型を生成
+                file.print " #{get_rust_celltype_name(self)}"
+                impl_first = true
+                # 属性最適化（定数化）を行う場合のみ、セル本体が CONFIG ジェネリクスを持つ
+                if is_attribute_optimization?(self) then
+                    impl_first = false
+                    file.print "<CONFIG"
+                end
+
+                # if check_only_entryport_celltype then
+                # else
+                #     callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
+                #         if check_gen_dyn_for_port(callport) == nil then
+                #             if impl_first then
+                #                 impl_first = false
+                #                 file.print "<#{alphabet}"
+                #             else
+                #                 file.print ", #{alphabet}"
+                #             end
+                #         end
+                #     end
+                # end
+                file.print ">" if impl_first == false
+                file.print " {\n"
+                # インライン化
+                file.print "\t#[inline]\n"
+
+                # get_cell_ref 関数の定義を生成
+                file.print "\tpub fn get_cell_ref"
+
+                # 関数のジェネリクス引数を整理
+                fn_params = []
+                if self.get_var_list.length != 0 then
+                    fn_params << "'node"
+                end
+                # if has_attr && !is_attr_opt then
+                #     fn_params << "CONFIG: #{get_rust_celltype_name(self)}Config"
+                # end
+
+                if fn_params.length > 0 then
+                    file.print "<#{fn_params.join(", ")}>"
+                end
+
+                # セルタイプに変数がある場合は、引数にnodeをとる
+                if self.get_var_list.length != 0 then
+                    file.print "(&'static self, node: &'node mut awkernel_lib::sync::mutex::MCSNode<#{get_rust_celltype_name(self)}Var>) -> "
+                else
+                    file.print "(&'static self) -> "
+                end
+
+                file.print "LockGuardFor#{get_rust_celltype_name(self)}"
+
+                # TECS/Rust において、dyn な呼び口は、ジェネリクス参照ではなくトレイトオブジェクトへの参照として表現される
+                # そのため、use_jenerics_alphabet にトレイトオブジェクトが入っている場合は、その生成をスキップする
+                # セルタイプ構造体にライフタイムアノテーションが必要かどうか判定する(必要 -> 呼び口を持っている)
+                # TODO: ライフタイムアノテーションの判定は厳格にする必要がある
+                # check_lifetime_annotation_for_celltype_structure から変更
+                # 属性の有無を確認
+                has_attr = self.get_attribute_list.any? { |attr| !attr.is_omit? }
+
+                # 以前は is_attribute_optimization? (フル定数化) の場合のみ CONFIG を出していたが、
+                # size_first (非 ZST) の場合でも LockGuard は CONFIG を要求するため、
+                # has_attr があれば常に CONFIG を出力するように変更する。
+                if has_attr then
+                    lock_guard_first = true
+                    if self.get_var_list.length != 0 then
+                        file.print "<'node"
+                        lock_guard_first = false
+                    end
+                    # CONFIG ジェネリクス
+                    if lock_guard_first then
+                        if is_zst_optimization?(self) then
+                            file.print "<CONFIG"
+                        else
+                            file.print "<ConfigDefault#{get_rust_celltype_name(self)}"
+                        end
+                        lock_guard_first = false
+                    else
+                        if is_zst_optimization?(self) then
+                            file.print ", CONFIG"
+                        else
+                            file.print ", ConfigDefault#{get_rust_celltype_name(self)}"
+                        end
+                    end
+
+                    # use_jenerics_alphabet と callport_list の要素数が等しいことを前提としている
+                    # callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
+                    #     if check_gen_dyn_for_port(callport) == nil then
+                    #         file.print ", #{alphabet}"
+                    #     end
+                    # end
+                    file.print ">"
+                elsif check_only_entryport_celltype then
+                else
+                    lock_guard_first = true
+                    if self.get_var_list.length != 0 then
+                        file.print "<'node"
+                        lock_guard_first = false
+                    end
+                    # use_jenerics_alphabet と callport_list の要素数が等しいことを前提としている
+                    # callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
+                    #     if check_gen_dyn_for_port(callport) == nil then
+                    #         if lock_guard_first then
+                    #             lock_guard_first = false
+                    #             file.print "<#{alphabet}"
+                    #         else
+                    #             file.print ", #{alphabet}"
+                    #         end
+                    #     end
+                    # end
+                    file.print ">" if lock_guard_first == false
+                end
+
+                file.print " {\n"
+
+                lock_guard_filed_name = []
+                lock_guard_field_value = []
+
+                callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
+                    lock_guard_filed_name.push("#{snake_case(callport.get_name.to_s)}")
+                    lock_guard_field_value.push("self.#{snake_case(callport.get_name.to_s)}")
+                end
+
+                self.get_attribute_list.each do |attr|
+                    if attr.is_omit? then
+                        next
+                    end
+                    lock_guard_filed_name.push(attr.get_name)
+                    if is_zst_optimization?(self) then
+                        celltype_name_camel = get_rust_celltype_name(self)
+                        attr_name_camel = camel_case(attr.get_name.to_s)
+                        lock_guard_field_value.push("#{celltype_name_camel}#{attr_name_camel}(core::marker::PhantomData)")
+                    else
+                        lock_guard_field_value.push("&self.#{attr.get_name}")
+                    end
+                end
+
+                # PhantomData の初期化
+                has_attr = self.get_attribute_list.any? { |attr| !attr.is_omit? }
+                if has_attr && !is_attribute_optimization?(self) then
+                    lock_guard_filed_name.push("_phantom")
+                    lock_guard_field_value.push("core::marker::PhantomData")
+                end
+
+                if self.get_var_list.length != 0 then
+                    lock_guard_filed_name.push("var")
+                    lock_guard_field_value.push("self.variable.lock(node)")
+                end
+
+                file.print "\t\tLockGuardFor#{get_rust_celltype_name(self)} {\n"
+
+                lock_guard_filed_name.each_with_index do |field_name, index|
+                    file.print "\t\t\t#{field_name}: #{lock_guard_field_value[index]},\n"
+                end
+                
+                file.print "\t\t}"
+                
+                
+                file.print"\n\t}\n}\n"
+                # get_cell_ref 関数を生成するのは1回だけでいいため，break する
+                break
+
+            end # if port.get_port_type == :ENTRY then
+        } # self.get_port_list.each
+    end
+
+    # implファイルのuse文を生成する（AWK版）
+    def gen_use_for_impl_file file
+        gen_use_for_impl_file_base file
+        file.print "use awkernel_lib::sync::mutex::MCSNode;\n"
+    end
+
+    # セルタイプ構造体にライフタイムアノテーションが必要かどうかを判定する関数（AWK版）
+    def check_lifetime_annotation_for_celltype_structure callport_list
+
+        # 呼び口は受け口構造体に繋がっており、受け口構造体は必ずライフタイムアノテーションが必要であるため、trueを返す
+        if callport_list.length >= 1 then
+            return true
+        end
+
+        # ライフタイムアノテーションが必要な属性があるかどうか
+        # 属性最適化（定数化）が行われる場合は、celltype構造体に属性が定義されないため、チェックを省略する
+        if !is_attribute_optimization?(self) then
+            self.get_attribute_list.each{ |attr|
+                if attr.is_omit? then
+                    next
+                else
+                    attr_type_name = attr.get_type.get_type_str
+                    if check_lifetime_annotation_for_type(attr_type_name) then
+                        return true
+                    end
+                end
+            }
+        end
+
+        # 変数があるかどうか
+        # awkernelでは、変数への参照を必ず持つため、trueを返す
+        return true if self.get_var_list.length != 0
+
+        return false
+    end
+
+    # セルタイプに受け口がある場合，受け口関数を生成する（AWK版）
+    def gen_rust_entryport_function file, callport_list
+        # セルタイプに受け口がある場合，impl を生成する
+        self.get_port_list.each{ |port|
+            if port.get_port_type == :ENTRY then
+                sig = port.get_signature
+
+                # 空のシグニチャの場合は、impl を生成しない
+                if sig.get_function_head_array.length == 0 then
+                    next
+                end
+
+                if is_attribute_optimization?(self) then
+                    file.print "impl<CONFIG: #{get_rust_celltype_name(self)}Config> #{camel_case(snake_case(port.get_signature.get_global_name.to_s))} for #{camel_case(snake_case(port.get_name.to_s))}For#{get_rust_celltype_name(self)}<CONFIG> {\n\n"
+                else
+                    file.print "impl #{camel_case(snake_case(port.get_signature.get_global_name.to_s))} for #{camel_case(snake_case(port.get_name.to_s))}For#{get_rust_celltype_name(self)}{\n\n"
+                end
+
+                sig_param_str_list, _, lifetime_flag = sig.get_sig_param_str
+
+                # 空の関数を生成
+                sig.get_function_head_array.each{ |func_head|
+                    # 関数のインライン化
+                    if port.is_inline? then
+                        file.print "\t#[inline]\n"
+                    end
+                    file.print "\tfn #{get_rust_function_name(func_head)}"
+                    # おそらく不要
+                    # if lifetime_flag then
+                    #     file.print "<'a>"
+                    # end
+                    file.print"(&self"
+                    # param_num と sig_param_str_list の要素数が等しいことを前提としている
+                    param_num = func_head.get_paramlist.get_items.size
+                    param_num.times do
+                        current_param = sig_param_str_list.shift
+                        if current_param == "ignore" then
+                            next
+                        end
+                        file.print "#{current_param}"
+                    end
+                    file.print ") "
+
+                    # 返り値の型がunknown,つまりvoidのときは，-> を生成しない
+                    if c_type_to_rust_type(func_head.get_return_type) != "unknown" then
+                        file.print "-> #{c_type_to_rust_type(func_head.get_return_type)}"
+                    end
+
+                    file.print "{\n"
+
+                    if check_only_entryport_celltype then
+                    else
+                        if self.get_var_list.length != 0 then
+                            # ロックガードで覆う場合の生成
+                            file.print "\t\tlet mut node = MCSNode::new();\n"
+                            file.print "\t\tlet mut lg = self.cell.get_cell_ref(&mut node);\n"
+                        else
+                            file.print "\t\tlet mut lg = self.cell.get_cell_ref();\n"
+                        end
+                    end
+                    file.print "\n"
+                    file.print"\t}\n"
+                }
+
+                file.print "}\n\n"
+
+            else
+            end
+        }
     end
 
 end
