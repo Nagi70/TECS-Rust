@@ -1057,7 +1057,6 @@ class Celltype
         }
     end
 
-    # セルタイプに受け口がある場合，受け口関数を生成する
     def gen_rust_entryport_function file, callport_list
         # セルタイプに受け口がある場合，impl を生成する
         self.get_port_list.each{ |port|
@@ -1069,6 +1068,14 @@ class Celltype
                     next
                 end
 
+                # ENTRY_PORT マーカーを出力
+                port_name = snake_case(port.get_name.to_s)
+                file.print "\n// #[<ENTRY_PORT>]# #{camel_case(port_name)}\n"
+                file.print "//   entry port: #{camel_case(port_name)}\n"
+                file.print "//   signature:  #{camel_case(snake_case(port.get_signature.get_global_name.to_s))}\n"
+                file.print "// #[</ENTRY_PORT>]#\n"
+                file.print "\n"
+
                 if is_attribute_optimization?(self) then
                     file.print "impl<CONFIG: #{get_rust_celltype_name(self)}Config> #{camel_case(snake_case(port.get_signature.get_global_name.to_s))} for #{camel_case(snake_case(port.get_name.to_s))}For#{get_rust_celltype_name(self)}<CONFIG> {\n\n"
                 else
@@ -1079,11 +1086,15 @@ class Celltype
 
                 # 空の関数を生成
                 sig.get_function_head_array.each{ |func_head|
+                    # ENTRY_FUNC マーカーを出力
+                    func_name = get_rust_function_name(func_head)
+                    file.print "\t// #[<ENTRY_FUNC>]# #{camel_case(port_name)}_#{func_name}\n"
+                    file.print "\t// #[</ENTRY_FUNC>]#\n"
                     # 関数のインライン化
                     if port.is_inline? then
                         file.print "\t#[inline]\n"
                     end
-                    file.print "\tfn #{get_rust_function_name(func_head)}"
+                    file.print "\tfn #{func_name}"
                     file.print"(&self"
                     # param_num と sig_param_str_list の要素数が等しいことを前提としている
                     param_num = func_head.get_paramlist.get_items.size
@@ -1149,6 +1160,11 @@ class Celltype
             else
             end
         }
+
+        # POSTAMBLE マーカーを出力
+        file.print "// #[<POSTAMBLE>]#\n"
+        file.print "//   Put non-entry functions below.\n"
+        file.print "// #[</POSTAMBLE>]#\n"
     end
 
     # セルタイプに受け口以外に生成する要素（呼び口、属性、変数）があるかどうかを判断する
@@ -1303,6 +1319,20 @@ class Celltype
             end
         }
         signature_list.uniq!
+
+        # PREAMBLE マーカーを出力
+        file.print "// #[<PREAMBLE>]#\n"
+        file.print "//   Don't edit the comments between #[<...>]# and #[</...>]#\n"
+        file.print "//   These comments are used by tecsmerge when merging.\n"
+        file.print "//\n"
+        # 呼び口情報をコメントとして出力
+        self.get_port_list.each{ |port|
+            if port.get_port_type == :CALL then
+                file.print "//   call port: #{port.get_name} signature: #{port.get_signature.get_global_name}\n"
+            end
+        }
+        file.print "// #[</PREAMBLE>]#\n"
+        file.print "\n"
 
         # 必ず tecs_global を use する
         #TODO: 必要なときにだけ use するようにする
@@ -2933,8 +2963,8 @@ class RustGenCelltypePlugin < CelltypePlugin
 
                 impl_file.close
 
-                # 既に Cargo プロジェクトにファイルがある場合、ユーザがコードを実装済みとして、コピーしない
-                # つまり、impl ファイルは最適化の際に更新しない
+                # 初回の Cargo プロジェクト作成時のみコピー
+                # 既にファイルが存在する場合のマージは tecsmerge --rust で Makefile から行う
                 if File.exist?("#{@@cargo_path}/src/tecs_impl/#{snake_case(@celltype.get_global_name.to_s)}_impl.rs") == false then
                     puts "#{@celltype.get_global_name.to_s}: copy #{snake_case(@celltype.get_global_name.to_s)}_impl.rs to cargo\n"
                     copy_gen_files_to_cargo "#{snake_case(@celltype.get_global_name.to_s)}_impl.rs", "impl"

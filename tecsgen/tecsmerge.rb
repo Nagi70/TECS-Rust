@@ -125,6 +125,7 @@ $n_err   = 0
 $b_show  = false
 $b_exist = false            # コピー先にファイルがある場合のみマージ
 $old_mode = false           # old_mode (関数本体として /<ENTRY_FUNC> の代わりに '{' を使う
+$rust_mode = false          # rust_mode (Rust impl ファイルのマージ)
 
 #2.0
 def write_array( file, array )
@@ -535,6 +536,399 @@ class CDLEntryPort
   attr_accessor :entry_comment, :entry_body, :entry_func_comment, :entry_func_body, :entry_func_array
 end
 
+
+#=== Rust 用のエントリポート情報
+class RustCDLEntryPort
+  #@entry_comment::      [string]   # ENTRY_PORT コメント行
+  #@entry_body::         [string]   # ENTRY_PORT の中身
+  #@impl_header::        [string]   # impl ... { のヘッダ行
+  #@entry_func_comment:: {func_name=>[string]}  # ENTRY_FUNC コメント行
+  #@entry_func_body::    {func_name=>[string]}  # fn 本体（波括弧含む）
+  #@entry_func_array::   [symbol]   # fn の出現順序
+  #@impl_footer::        [string]   # impl の閉じ '}' 行
+
+  def initialize
+    @entry_comment = []
+    @entry_body = []
+    @impl_header = []
+    @entry_func_comment = {}
+    @entry_func_body = {}
+    @entry_func_array = []
+    @impl_footer = []
+  end
+
+  def write file
+    write_array( file, @entry_comment )
+    write_array( file, @entry_body )
+    write_array( file, @impl_header )
+    @entry_func_array.each{ |fnm|
+      write_array( file, @entry_func_comment[fnm] )
+      write_array( file, @entry_func_body[fnm] )
+    }
+    write_array( file, @impl_footer )
+  end
+
+  attr_accessor :entry_comment, :entry_body, :impl_header,
+                :entry_func_comment, :entry_func_body, :entry_func_array,
+                :impl_footer
+end
+
+
+#=== Rust impl ファイルの内容を保持・操作するクラス
+class RustCDLContents
+  #@head::             [string]
+  #@preamble_comment:: [string]
+  #@preamble_body::    [string]
+  #@entry_port::       {ep_name=>RustCDLEntryPort}
+  #@entry_port_array:: [symbol]
+  #@postamble_comment::[string]
+  #@postamble_body::   [string]
+
+  # Rust 用マーカー正規表現
+  RE_PREAMBLE_OPEN    = /^\s*\/\/ #\[<PREAMBLE>\]#/
+  RE_PREAMBLE_CLOSE   = /^\s*\/\/ #\[<\/PREAMBLE>\]#/
+  RE_ENTRY_PORT_OPEN  = /^\s*\/\/ #\[<ENTRY_PORT>\]#\s*(\w*)/
+  RE_ENTRY_PORT_CLOSE = /^\s*\/\/ #\[<\/ENTRY_PORT>\]#/
+  RE_ENTRY_FUNC_OPEN  = /^\s*\/\/ #\[<ENTRY_FUNC>\]#\s*(\w*)/
+  RE_ENTRY_FUNC_CLOSE = /^\s*\/\/ #\[<\/ENTRY_FUNC>\]#/
+  RE_POSTAMBLE_OPEN   = /^\s*\/\/ #\[<POSTAMBLE>\]#/
+  RE_POSTAMBLE_CLOSE  = /^\s*\/\/ #\[<\/POSTAMBLE>\]#/
+
+  def initialize all_contents
+    @head = []
+    @preamble_comment = []
+    @preamble_body = []
+    @entry_port = {}
+    @entry_port_array = []
+    @postamble_comment = []
+    @postamble_body = []
+
+    parse all_contents
+  end
+
+  def parse all_contents
+    stat = :HEAD
+    part = []
+    port_name = nil
+    func_name = nil
+    line_no = 0
+    brace_depth = 0       # fn 本体の波括弧ネストカウント
+    impl_header = []      # impl ... { のヘッダ行を一時保持
+    collecting_impl_header = false  # impl ヘッダの収集中か
+    impl_brace_depth = 0  # impl ブロックの波括弧ネスト
+
+    (all_contents + [nil]).each { |line|
+      line_no += 1
+
+      # EOF
+      if line == nil then
+        case stat
+        when :HEAD
+          @head = part
+        when :PREAMBLE_BODY
+          @preamble_body = part
+        when :ENTRY_FUNC_BODY
+          if port_name && func_name && @entry_port[port_name]
+            @entry_port[port_name].entry_func_body[func_name] = part
+          end
+        when :POSTAMBLE_BODY
+          @postamble_body = part
+        when :IMPL_BETWEEN_FUNCS
+          # impl ブロック内で fn 間にいる場合、impl footer で終了
+          if port_name && @entry_port[port_name]
+            @entry_port[port_name].impl_footer = part
+          end
+        end
+        break
+      end
+
+      # fn 本体の波括弧カウントによる終端検出
+      if stat == :ENTRY_FUNC_BODY then
+        line.each_char { |ch|
+          if ch == '{'
+            brace_depth += 1
+          elsif ch == '}'
+            brace_depth -= 1
+          end
+        }
+        part << line
+        if brace_depth == 0 then
+          # fn 本体終了
+          if port_name && func_name && @entry_port[port_name]
+            @entry_port[port_name].entry_func_body[func_name] = part
+          end
+          part = []
+          stat = :IMPL_BETWEEN_FUNCS
+        end
+        next
+      end
+
+      # impl ヘッダの収集中（impl 行から { まで）
+      if collecting_impl_header then
+        impl_header << line
+        if line =~ /\{/ then
+          collecting_impl_header = false
+          if port_name && @entry_port[port_name]
+            @entry_port[port_name].impl_header = impl_header
+          end
+          impl_header = []
+          impl_brace_depth = 1
+          stat = :IMPL_BETWEEN_FUNCS
+        end
+        next
+      end
+
+      # マーカーの検出
+      case stat
+      when :HEAD
+        if RE_PREAMBLE_OPEN =~ line then
+          @head = part
+          part = [line]
+          stat = :PREAMBLE_COMMENT
+        else
+          part << line
+        end
+
+      when :PREAMBLE_COMMENT
+        part << line
+        if RE_PREAMBLE_CLOSE =~ line then
+          @preamble_comment = part
+          part = []
+          stat = :PREAMBLE_BODY
+        end
+
+      when :PREAMBLE_BODY
+        if RE_ENTRY_PORT_OPEN =~ line then
+          @preamble_body = part
+          port_name = $1.to_sym
+          @entry_port[port_name] = RustCDLEntryPort.new
+          @entry_port_array << port_name
+          part = [line]
+          stat = :ENTRY_COMMENT
+        elsif RE_POSTAMBLE_OPEN =~ line then
+          @preamble_body = part
+          part = [line]
+          stat = :POSTAMBLE_COMMENT
+        else
+          part << line
+        end
+
+      when :ENTRY_COMMENT
+        part << line
+        if RE_ENTRY_PORT_CLOSE =~ line then
+          @entry_port[port_name].entry_comment = part
+          part = []
+          stat = :ENTRY_BODY
+        end
+
+      when :ENTRY_BODY
+        # ENTRY_PORT 終了後、impl ヘッダまたは ENTRY_FUNC を探す
+        if RE_ENTRY_FUNC_OPEN =~ line then
+          @entry_port[port_name].entry_body = part
+          func_name = $1.to_sym
+          @entry_port[port_name].entry_func_comment[func_name] = [line]
+          @entry_port[port_name].entry_func_array << func_name
+          part = []
+          stat = :ENTRY_FUNC_COMMENT
+        else
+          part << line
+          # impl ヘッダー行の検出（impl ... { が同一行にある場合もある）
+          if line =~ /^\s*impl\b/ then
+            @entry_port[port_name].entry_body = part[0...-1] # impl行より前
+            impl_header = [line]
+            if line =~ /\{/ then
+              @entry_port[port_name].impl_header = impl_header
+              impl_brace_depth = 1
+              stat = :IMPL_BETWEEN_FUNCS
+              part = []
+            else
+              collecting_impl_header = true
+              part = []
+            end
+          end
+        end
+
+      when :ENTRY_FUNC_COMMENT
+        if RE_ENTRY_FUNC_CLOSE =~ line then
+          @entry_port[port_name].entry_func_comment[func_name] << line
+          part = []
+          stat = :ENTRY_FUNC_HEADER
+        else
+          @entry_port[port_name].entry_func_comment[func_name] << line
+        end
+
+      when :ENTRY_FUNC_HEADER
+        # fn ヘッダから { を探す（fn ... { の行）
+        part << line
+        if line =~ /\{/ then
+          brace_depth = 0
+          line.each_char { |ch|
+            if ch == '{'
+              brace_depth += 1
+            elsif ch == '}'
+              brace_depth -= 1
+            end
+          }
+          if brace_depth == 0 then
+            # fn ヘッダと同一行で {} 完結（空の fn）
+            @entry_port[port_name].entry_func_body[func_name] = part
+            part = []
+            stat = :IMPL_BETWEEN_FUNCS
+          else
+            stat = :ENTRY_FUNC_BODY
+          end
+        end
+
+      when :IMPL_BETWEEN_FUNCS
+        # fn 間: 次の ENTRY_FUNC, ENTRY_PORT, POSTAMBLE, impl の閉じ '}' を探す
+        if RE_ENTRY_FUNC_OPEN =~ line then
+          func_name = $1.to_sym
+          @entry_port[port_name].entry_func_comment[func_name] = [line]
+          @entry_port[port_name].entry_func_array << func_name
+          part = []
+          stat = :ENTRY_FUNC_COMMENT
+        elsif RE_ENTRY_PORT_OPEN =~ line then
+          # impl ブロックの閉じ '}' が part に含まれるはず
+          @entry_port[port_name].impl_footer = part
+          port_name = $1.to_sym
+          @entry_port[port_name] = RustCDLEntryPort.new
+          @entry_port_array << port_name
+          part = [line]
+          stat = :ENTRY_COMMENT
+        elsif RE_POSTAMBLE_OPEN =~ line then
+          @entry_port[port_name].impl_footer = part
+          part = [line]
+          stat = :POSTAMBLE_COMMENT
+        else
+          part << line
+        end
+
+      when :POSTAMBLE_COMMENT
+        part << line
+        if RE_POSTAMBLE_CLOSE =~ line then
+          @postamble_comment = part
+          part = []
+          stat = :POSTAMBLE_BODY
+        end
+
+      when :POSTAMBLE_BODY
+        part << line
+
+      end # case stat
+    }
+  end
+
+  def check template
+    # template にないポート/関数をチェック
+    @entry_port.each{ |port_name, entry_port|
+      temp_entry_port = template.entry_port[port_name]
+      if temp_entry_port == nil then
+        STDERR.puts "info: #{port_name} is deleted port"
+        next
+      end
+      entry_port.entry_func_body.each{ |func_name, func_body|
+        if temp_entry_port.entry_func_body[func_name] == nil then
+          STDERR.puts "info: #{func_name} is deleted function"
+        end
+      }
+    }
+  end
+
+  def rename
+    renamed_entry_port = {}
+    PortRenamer.get_list.each{ |pon, pr|
+      ep = @entry_port[pon]
+      if ep == nil then
+        STDERR.puts "warning: #{pon}: renaming port not found"
+        next
+      end
+
+      pnn = pr.new_port_name
+      if pnn then
+        renamed_entry_port[pnn] = @entry_port[pon]
+        @entry_port.delete pon
+      end
+
+      renamed_func_comment = {}
+      renamed_func_body = {}
+      pr.func_renamer_list.each{ |old, new_name|
+        ofn = "#{pon}_#{old}".to_sym
+        nfn = "#{pon}_#{new_name}".to_sym
+        if ep.entry_func_comment[ofn] == nil then
+          STDERR.puts "warning: #{old}: renaming function not found"
+          next
+        end
+        ep.entry_func_array.map! { |fn|
+          fn == ofn ? nfn : fn
+        }
+        renamed_func_comment[nfn] = ep.entry_func_comment[ofn]
+        renamed_func_body[nfn]    = ep.entry_func_body[ofn]
+        ep.entry_func_comment.delete ofn
+        ep.entry_func_body.delete    ofn
+      }
+      ep.entry_func_comment.merge! renamed_func_comment
+      ep.entry_func_body.merge!    renamed_func_body
+
+      renamed_func_comment = {}
+      renamed_func_body = {}
+      if pnn then
+        ep.entry_func_array.map! { |ofn|
+          nfn = ofn.to_s.sub( /#{pon.to_s}/, pnn.to_s ).to_sym
+          if nfn != ofn then
+            renamed_func_comment[nfn] = ep.entry_func_comment[ofn]
+            renamed_func_body[nfn]    = ep.entry_func_body[ofn]
+            ep.entry_func_comment.delete ofn
+            ep.entry_func_body.delete    ofn
+            nfn
+          else
+            ofn
+          end
+        }
+        ep.entry_func_comment.merge! renamed_func_comment
+        ep.entry_func_body.merge!    renamed_func_body
+      end
+    }
+    @entry_port.merge! renamed_entry_port
+  end
+
+  def merge src
+    @head = src.head
+    @preamble_body = src.preamble_body
+    @postamble_body = src.postamble_body
+
+    @entry_port_array.each{ |port_name|
+      entry_port = @entry_port[port_name]
+      src_entry_port = src.entry_port[port_name]
+      if src_entry_port == nil then
+        print "port merged:   #{port_name}\n"
+        next
+      end
+      # impl ヘッダはテンプレート（self）を維持
+
+      entry_port.entry_func_array.each{ |func_name|
+        if src_entry_port.entry_func_body[func_name] == nil then
+          print "func merged:   #{func_name}\n"
+          next
+        end
+        print "func remained: #{func_name}\n"
+        entry_port.entry_func_body[func_name] = src_entry_port.entry_func_body[func_name]
+      }
+    }
+  end
+
+  def write file
+    write_array( file, @head )
+    write_array( file, @preamble_comment )
+    write_array( file, @preamble_body )
+    @entry_port_array.each{ |port_name| @entry_port[port_name].write file }
+    write_array( file, @postamble_comment )
+    write_array( file, @postamble_body )
+  end
+
+  attr_accessor :head, :preamble_comment, :preamble_body, :entry_port,
+                :entry_port_array, :postamble_body
+end
+
 def merge( src_file, dst_dir )
   unless src_file =~ /(.*)_templ(.[ch])$/ then
     STDERR.puts( "error: #{src_file}: not end with _templ.c/h" )
@@ -625,6 +1019,91 @@ def merge( src_file, dst_dir )
   end
 end
 
+#=== Rust impl ファイルのマージ
+def rust_merge( src_file, dst_dir )
+  unless src_file =~ /(.*)_impl\.rs$/ then
+    STDERR.puts( "error: #{src_file}: not end with _impl.rs" )
+    exit 1
+  end
+
+  dst_file = "#{dst_dir}/#{File.basename src_file}"
+  if FileTest.file?( dst_file ) then
+    print( "merging (rust) #{src_file} to #{dst_file}\n" )
+    # dst_file の読込み
+    begin
+      dst = open( dst_file )
+      set_encoding dst
+      old_contents = dst.readlines
+    rescue
+      STDERR.puts "error: cannot open #{dst_file}"
+      $n_err += 1
+      exit 1
+    ensure
+      dst.close
+    end
+    old = RustCDLContents.new( old_contents )
+
+    # template の読込み
+    begin
+      src = open( src_file )
+      set_encoding src
+      new_contents = src.readlines
+    rescue
+      STDERR.puts "error: cannot open #{src_file}"
+      $n_err += 1
+      exit 1
+    ensure
+      src.close
+    end
+    templ = RustCDLContents.new( new_contents )
+
+    old.rename
+    error_check dst_file, 1
+
+    old.check templ
+    error_check dst_file, 2
+
+    templ.merge old
+    error_check dst_file, 3
+
+    bkup_file = rename_dst( dst_file )
+
+    begin
+      dst = open( dst_file, "w" )
+      set_encoding dst
+      templ.write dst
+    ensure
+      dst.close
+    end
+
+  elsif $b_exist == false then
+    # src_file を dst_file へコピー
+    begin
+      src = File.open( src_file )
+      set_encoding src
+      contents = src.readlines
+    rescue
+      print "#{src_file}: fail to read\n"
+    ensure
+      src.close
+    end
+
+    begin
+      dst = File.open( dst_file, "w" )
+      set_encoding dst
+      contents.each{ |line|
+        dst.print line
+      }
+    rescue
+      print "#{dst_file}: fail to write\n"
+    ensure
+      dst.close
+    end
+  else
+    print "info: #{dst_file} skipped\n"
+  end
+end
+
 def error_check dst_file, level
   if $n_err > 0 then
     STDERR.puts "=== #{dst_file} not generated because of error ==="
@@ -682,6 +1161,7 @@ ARGV.options {|parser|
   parser.banner =<<EOT
 Usage: tecsmerge [options] files_templ.c   src_dir
        tecsmerge [options] gen_dir         src_dir
+       tecsmerge [options] --rust gen_dir  src_dir
 EOT
   parser.on('-e', '--exist-only',  "merge if exist in destination directory") { |fs|
     $b_exist = true
@@ -700,6 +1180,9 @@ EOT
   parser.on('-o', '--old-mode',  "old mode (function head not substituted)") { |fs|
     $old_mode = true
   }
+  parser.on('-r', '--rust',  "merge Rust impl files") {
+    $rust_mode = true
+  }
   parser.version = #{$version}
   parser.release = nil
   parser.parse!
@@ -714,10 +1197,12 @@ if $b_show then
   PortRenamer.show
 end
 
-if $old_mode then
-  CDLContents.merge_DELIMITERS :OLD_FUNC_BODY
-else
-  CDLContents.merge_DELIMITERS :NEW_FUNC_BODY
+if ! $rust_mode then
+  if $old_mode then
+    CDLContents.merge_DELIMITERS :OLD_FUNC_BODY
+  else
+    CDLContents.merge_DELIMITERS :NEW_FUNC_BODY
+  end
 end
 
 if $n_err > 0 then
@@ -748,13 +1233,25 @@ src.each { |s|
     exit 1
   end
 
-  if stat.directory? then
-    Dir.foreach(s) {|file|
-      if file =~ /_templ.[ch]$/ then
-        merge( "#{s}/#{file}", dst )
-      end
-    }
-  elsif stat.file? then
-    merge( s, dst )
+  if $rust_mode then
+    if stat.directory? then
+      Dir.foreach(s) {|file|
+        if file =~ /_impl\.rs$/ then
+          rust_merge( "#{s}/#{file}", dst )
+        end
+      }
+    elsif stat.file? then
+      rust_merge( s, dst )
+    end
+  else
+    if stat.directory? then
+      Dir.foreach(s) {|file|
+        if file =~ /_templ.[ch]$/ then
+          merge( "#{s}/#{file}", dst )
+        end
+      }
+    elsif stat.file? then
+      merge( s, dst )
+    end
   end
 }

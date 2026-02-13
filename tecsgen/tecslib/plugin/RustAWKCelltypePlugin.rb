@@ -1856,6 +1856,14 @@ class Celltype
                     next
                 end
 
+                # ENTRY_PORT マーカーを出力
+                port_name = snake_case(port.get_name.to_s)
+                file.print "\n// #[<ENTRY_PORT>]# #{camel_case(port_name)}\n"
+                file.print "//   entry port: #{camel_case(port_name)}\n"
+                file.print "//   signature:  #{camel_case(snake_case(port.get_signature.get_global_name.to_s))}\n"
+                file.print "// #[</ENTRY_PORT>]#\n"
+                file.print "\n"
+
                 if is_attribute_optimization?(self) then
                     file.print "impl<CONFIG: #{get_rust_celltype_name(self)}Config> #{camel_case(snake_case(port.get_signature.get_global_name.to_s))} for #{camel_case(snake_case(port.get_name.to_s))}For#{get_rust_celltype_name(self)}<CONFIG> {\n\n"
                 else
@@ -1866,11 +1874,15 @@ class Celltype
 
                 # 空の関数を生成
                 sig.get_function_head_array.each{ |func_head|
+                    # ENTRY_FUNC マーカーを出力
+                    func_name = get_rust_function_name(func_head)
+                    file.print "\t// #[<ENTRY_FUNC>]# #{camel_case(port_name)}_#{func_name}\n"
+                    file.print "\t// #[</ENTRY_FUNC>]#\n"
                     # 関数のインライン化
                     if port.is_inline? then
                         file.print "\t#[inline]\n"
                     end
-                    file.print "\tfn #{get_rust_function_name(func_head)}"
+                    file.print "\tfn #{func_name}"
                     # おそらく不要
                     # if lifetime_flag then
                     #     file.print "<'a>"
@@ -1913,6 +1925,11 @@ class Celltype
             else
             end
         }
+
+        # POSTAMBLE マーカーを出力
+        file.print "// #[<POSTAMBLE>]#\n"
+        file.print "//   Put non-entry functions below.\n"
+        file.print "// #[</POSTAMBLE>]#\n"
     end
 
 end
