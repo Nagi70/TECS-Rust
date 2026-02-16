@@ -405,9 +405,17 @@ class Cell
         return false
     end
 
+    # セルの構造体の初期化の先頭部につける指定子などを生成
+    # 例: "#[unsafe(link_section = \".rodata\")]"
+    def gen_rust_cell_structure_header_initialize_specifier file
+        file.print "#[unsafe(link_section = \".rodata\")]"
+    end
+
     # セルの構造体の初期化の先頭部を生成
     def gen_rust_cell_structure_header_initialize file
-        file.print "#[unsafe(link_section = \".rodata\")]"
+
+        gen_rust_cell_structure_header_initialize_specifier file
+
         # 属性があれば CONFIG を出す
         has_attr = self.get_celltype.get_attribute_list.any? { |attr| !attr.is_omit? }
 
@@ -587,7 +595,7 @@ class Cell
 
     # rodataセクションに配置するための属性を付与する
     def gen_rust_entryport_structure_initialize_specifier file
-        file.print "#[unsafe(link_section = \".rodata\")]"
+        file.print "#[unsafe(link_section = \".rodata\")]\n"
     end
 
     # 受け口構造体の初期化を生成
@@ -621,50 +629,28 @@ class Cell
         }
     end
 
+    # ex_ctrl_ref フィールドの初期化を生成
+    def gen_rust_cell_structure_ex_ctrl_ref_initialize file
+        # ItronrsPlugin で実装
+        # TODO: spinクレート版を実装する場合はこの関数を使う
+    end
+
+    # ex_ctrl_ref の初期化を生成
+    def gen_rust_ex_ctrl_ref_initialize file, cell
+        # ItronrsPlugin で実装
+        # TODO: spinクレート版を実装する場合はこの関数を使う
+    end
+
+    # ロックガードに Drop トレイトを実装する
+    def gen_rust_impl_drop_for_lock_guard_structure file, callport_list, use_jenerics_alphabet
+        # ItronrsPlugin で実装
+        # TODO: spinクレート版を実装する場合はこの関数を使う
+    end
+
 end
 
 class Celltype
     include RustGenHelper
-
-    # alias original_initialize initialize
-    # def initialize( name )
-    #     original_initialize( name ) # 元の(コア側の)処理を実行
-    #     @pointer_array = []         # 自分の追加処理
-    # end
-
-    # セルタイプ構造体にライフタイムアノテーションが必要かどうかを判定する関数
-    def check_lifetime_annotation_for_celltype_structure callport_list
-
-        # 呼び口は受け口構造体に繋がっており、受け口構造体は必ずライフタイムアノテーションが必要であるため、trueを返す
-        if callport_list.length >= 1 then
-            return true
-        end
-
-        # ライフタイムアノテーションが必要な属性があるかどうか
-        # 属性最適化が行われる場合は、celltype構造体に属性が定義されないため、チェックを省略する
-        if !is_attribute_optimization?(self) then
-            self.get_attribute_list.each{ |attr|
-                if attr.is_omit? then
-                    next
-                else
-                    attr_type_name = attr.get_type.get_type_str
-                    if check_lifetime_annotation_for_type(attr_type_name) then
-                        return true
-                    end
-                end
-            }
-        end
-
-        # ライフタイムアノテーションが必要な変数があるかどうか
-        self.get_var_list.each{ |var|
-            var_type_name = var.get_type.get_type_str
-            if check_lifetime_annotation_for_type(var_type_name) then
-                return true
-            end
-        }
-
-        return false
-    end
 
     def gen_rust_attribute_config file
         # 属性があれば（最適化有無に関わらず）CONFIG トレイトは生成する
@@ -845,13 +831,21 @@ class Celltype
         return number
     end
 
+    # セル構造体の呼び口フィールドの specifier を生成
+    def check_rust_cell_structure_callport_specifier callport
+        
+    end
+
     # セル構造体の呼び口フィールドの定義を生成
     def gen_rust_cell_structure_callport file, callport_list, use_jenerics_alphabet
         callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
+
+            specifier = check_rust_cell_structure_callport_specifier callport
+
             if check_gen_dyn_for_port(callport) == nil then
-                file.print "\t#{snake_case(callport.get_name.to_s)}: &'static #{alphabet},\n"
+                file.print "\t#{specifier}#{snake_case(callport.get_name.to_s)}: &'static #{alphabet},\n"
             else
-                file.print "\t#{snake_case(callport.get_name.to_s)}: &'static (#{check_gen_dyn_for_port(callport)} + Sync + Send),\n"
+                file.print "\t#{specifier}#{snake_case(callport.get_name.to_s)}: &'static (#{check_gen_dyn_for_port(callport)} + Sync + Send),\n"
             end
         end
     end
@@ -1185,128 +1179,99 @@ class Celltype
         return true
     end
 
+    def gen_rust_get_cell_ref_impl file, callport_list, use_jenerics_alphabet
+
+        file.print "impl"
+
+        # 属性があれば CONFIG を出す
+        # ただし、属性最適化（定数化）を行わない場合は構造体が非ジェネリクスなので、
+        # impl ヘッダの CONFIG は後で関数のジェネリクスに移譲する
+        has_attr = self.get_attribute_list.any? { |attr| !attr.is_omit? }
+        is_attr_opt = is_attribute_optimization?(self)
+        if has_attr && is_attr_opt then
+            file.print "<CONFIG: #{get_rust_celltype_name(self)}Config>"
+        end
+
+        # impl する型を生成
+        file.print " #{get_rust_celltype_name(self)}"
+
+        # 属性最適化（定数化）を行う場合のみ、セル本体が CONFIG ジェネリクスを持つ
+        if is_attribute_optimization?(self) then
+            file.print "<CONFIG>"
+        end
+
+        file.print " {\n"
+
+    end
+
+    # get_cell_ref 関数のヘッダや引数はOSに依存するため、各OSのプラグインでオーバーライドする
+    def gen_rust_get_cell_ref_header file, callport_list, use_jenerics_alphabet
+        
+    end
+
+    def gen_rust_lock_guard_initialize_callport file, callport_list, use_jenerics_alphabet
+        callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
+            file.print "\t\t\t#{snake_case(callport.get_name.to_s)}: self.#{snake_case(callport.get_name.to_s)},\n"
+        end
+    end
+
+    def gen_rust_lock_guard_initialize_attribute file
+        self.get_attribute_list.each do |attr|
+            if attr.is_omit? then
+                next
+            end
+            if is_zst_optimization?(self) then
+                file.print "\t\t\t#{attr.get_name}: #{get_rust_celltype_name(self)}#{camel_case(attr.get_name.to_s)}(core::marker::PhantomData),\n"
+            else
+                file.print "\t\t\t#{attr.get_name}: &self.#{attr.get_name},\n"
+            end
+        end
+    end
+
+    # ロックガードの変数フィールドの生成はOSに依存するので、各プラグインでオーバーライドする
+    def gen_rust_lock_guard_initialize_variable file
+        
+    end
+
+    # ロックガードの初期化前の処理はOSに依存するので、各プラグインでオーバーライドする
+    def gen_rust_process_before_lock_guard_initialize file
+        
+    end
+
+    def gen_rust_get_cell_ref_body file, callport_list, use_jenerics_alphabet
+
+        gen_rust_process_before_lock_guard_initialize file
+
+        file.print "\t\tLockGuardFor#{get_rust_celltype_name(self)} {\n"
+
+        gen_rust_lock_guard_initialize_callport file, callport_list, use_jenerics_alphabet
+        gen_rust_lock_guard_initialize_attribute file
+        gen_rust_lock_guard_initialize_variable file
+
+        file.print "\t\t}"
+
+    end
+
     # get_cell_ref 関数を生成する
     def gen_rust_get_cell_ref file, callport_list, use_jenerics_alphabet
+
         # セルタイプに受け口がない場合は，生成しない
         # 受け口がないならば，get_cell_ref 関数が呼ばれることは現状無いため
         self.get_port_list.each{ |port|
             if port.get_port_type == :ENTRY then
-                jenerics_flag = true
-                file.print "impl"
                 
-                # 属性があれば CONFIG を出す
-                # ただし、属性最適化（定数化）を行わない場合は構造体が非ジェネリクスなので、
-                # impl ヘッダの CONFIG は後で関数のジェネリクスに移譲する
-                has_attr = self.get_attribute_list.any? { |attr| !attr.is_omit? }
-                is_attr_opt = is_attribute_optimization?(self)
-                if has_attr && is_attr_opt then
-                    file.print "<CONFIG: #{get_rust_celltype_name(self)}Config"
-                    jenerics_flag = false
-                end
+                gen_rust_get_cell_ref_impl file, callport_list, use_jenerics_alphabet
+
+                gen_rust_get_cell_ref_header file, callport_list, use_jenerics_alphabet
+
+                gen_rust_get_cell_ref_body file, callport_list, use_jenerics_alphabet
                 
-                file.print ">" if jenerics_flag == false
+                file.print "\n\t}\n}\n"
 
-                # impl する型を生成
-                file.print " #{get_rust_celltype_name(self)}"
-                jenerics_first = true
-                if is_attribute_optimization?(self) then
-                    file.print "<CONFIG"
-                    jenerics_first = false
-                end
-
-                file.print ">" if jenerics_first == false
-
-                file.print " {\n"
-
-                file.print "\t#[inline]\n"
-
-                # get_cell_ref 関数の定義を生成
-                file.print "\tpub fn get_cell_ref"
-
-                # 関数のジェネリクス引数を整理
-                fn_params = []
-                if fn_params.length > 0 then
-                    file.print "<#{fn_params.join(", ")}>"
-                end
-
-                file.print "(&'static self) -> "
-
-                # 返り値のタプル型の要素をまとめるための配列
-                return_tuple_type_list = []
-                return_tuple_list = []
-
-                # 呼び口をタプルの配列に追加
-                callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
-                    return_tuple_type_list.push("&'static #{alphabet}")
-                    return_tuple_list.push("self.#{snake_case(callport.get_name.to_s)}")
-                end
-
-                # 属性をタプルの配列に追加
-                self.get_attribute_list.each{ |attr|
-                    if attr.is_omit? then
-                        next
-                    end
-                    if is_zst_optimization?(self) then
-                        celltype_name_camel = get_rust_celltype_name(self)
-                        attr_name_camel = camel_case(attr.get_name.to_s)
-                        return_tuple_type_list.push("#{celltype_name_camel}#{attr_name_camel}<CONFIG>")
-                        return_tuple_list.push("#{celltype_name_camel}#{attr_name_camel}(core::marker::PhantomData)")
-                    else
-                        return_tuple_type_list.push("&'static #{c_type_to_rust_type(attr.get_type)}")
-                        return_tuple_list.push("&self.#{attr.get_name.to_s}")
-                    end
-                }
-
-                # 変数をタプルの配列に追加
-                if self.get_var_list.length != 0 then
-                    return_tuple_type_list.push("&Mutex<#{get_rust_celltype_name(self)}Var")
-                    return_tuple_type_list[-1].concat(">")
-                    return_tuple_list.push("&self.variable")
-                end
-
-                if return_tuple_type_list.length != 1 then
-                    file.print "("
-                end
-
-                # 返り値のタプル型を生成
-                return_tuple_type_list.each_with_index do |return_tuple_type, index|
-                    if index == return_tuple_type_list.length - 1 then
-                        file.print "#{return_tuple_type}"
-                        break
-                    end
-                    file.print "#{return_tuple_type}, "
-                end
-
-                if return_tuple_type_list.length != 1 then
-                    file.print ")"
-                end
-                file.print " {\n"
-
-                file.print "\t\t"
-                
-                if return_tuple_list.length != 1 then
-                    file.print "("
-                end
-
-                # 返り値のタプルを生成
-                return_tuple_list.each_with_index do |return_tuple, index|
-                    if index == return_tuple_list.length - 1 then
-                        file.print "#{return_tuple}"
-                        break
-                    end
-                    file.print "#{return_tuple}, "
-                end
-
-                if return_tuple_list.length != 1 then
-                    file.print ")"
-                end
-                
-                file.print"\n\t}\n}\n"
-                # get_cell_ref 関数を生成するのは1回だけでいいため，break する
-                break
-
-            end # if port.get_port_type == :ENTRY then
-        } # celltype.get_port_list.each
+                return
+            end
+        }
+        
     end
 
     # implファイルのuse文を生成する（ベース実装）
@@ -1395,19 +1360,7 @@ class Celltype
         file.print "unsafe impl Send for #{get_rust_celltype_name(self)} {}\n"
     end
 
-    # 引数のセルタイプの ex_ctrl_ref に動的ディスパッチが必要かどうかを判断し、いる場合は dyn を、いらない場合は、ダミーかどうかを返す
-    def check_gen_dyn_for_ex_ctrl_ref
-        dyn_check_results = self.get_cell_list.map { |cell| cell.check_exclusive_control }
-        
-        if dyn_check_results.all?(true) then
-            return "no_dummy"
-        elsif dyn_check_results.all?(false) then
-            return "dummy"
-        else
-            return "dyn"
-        end
-    end
-
+    
     # セルタイプ構造体の ex_ctrl_ref フィールドの定義を生成
     # TODO: awkernel版のデータ構造と同じにすることで、将来的にこの関数を削除できる
     def gen_rust_cell_structure_ex_ctrl_ref file
@@ -1592,7 +1545,12 @@ class Signature
                     if type_str.start_with?("&mut ") then
                         param_list_str.push(", #{param_decl.get_name}: #{type_str}")
                     else
-                        param_list_str.push(", #{param_decl.get_name}: &mut #{type_str}")
+                        if type_str.start_with?("&") then
+                            puts "Don't use & for [out] parameter: #{param_decl.get_name} in #{self.get_global_name}" 
+                            exit(1)
+                        else
+                            param_list_str.push(", #{param_decl.get_name}: &mut #{type_str}")
+                        end
                     end
                 when :SEND
                     # TODO: send 引数への対応
@@ -1615,6 +1573,7 @@ class RustGenCelltypePlugin < CelltypePlugin
     include RustGenHelper
     extend RustGenHelper
     
+    attr_reader :plugin_arg_str
     # helper accessor for RustGenHelper
     def self.add_used_in_rust_custom_struct_list(key, value)
         @@used_in_rust_custom_struct_list[key] = value
@@ -2208,23 +2167,11 @@ class RustGenCelltypePlugin < CelltypePlugin
         end
     end
 
-    # ex_ctrl_ref フィールドの初期化を生成
-    def gen_rust_cell_structure_ex_ctrl_ref_initialize file, celltype, cell
-        # ItronrsPlugin で実装
-        # TODO: spinクレート版を実装する場合はこの関数を使う
-    end
+    
 
-    # ex_ctrl_ref の初期化を生成
-    def gen_rust_ex_ctrl_ref_initialize file, cell
-        # ItronrsPlugin で実装
-        # TODO: spinクレート版を実装する場合はこの関数を使う
-    end
+    
 
-    # ロックガードに Drop トレイトを実装する
-    def gen_rust_impl_drop_for_lock_guard_structure file, celltype, callport_list, use_jenerics_alphabet
-        # ItronrsPlugin で実装
-        # TODO: spinクレート版を実装する場合はこの関数を使う
-    end
+    
 
     # no_std のコンパイルの際に要求されるパニックハンドラを生成する
     def gen_panic_handler_in_main_lib_rs file
@@ -2895,7 +2842,7 @@ class RustGenCelltypePlugin < CelltypePlugin
 
             print "#{@celltype.get_global_name.to_s}: gen_rust_cell_structure_ex_ctrl_ref_initialize\n"
             # ex_ctrl_ref フィールドの初期化を生成
-            gen_rust_cell_structure_ex_ctrl_ref_initialize file, @celltype, cell
+            cell.gen_rust_cell_structure_ex_ctrl_ref_initialize file
 
             file.print "};\n\n"
 
@@ -2905,7 +2852,7 @@ class RustGenCelltypePlugin < CelltypePlugin
 
             print "#{@celltype.get_global_name.to_s}: gen_rust_ex_ctrl_ref_initialize\n"
             # ex_ctrl_ref の初期化を生成
-            gen_rust_ex_ctrl_ref_initialize file, cell
+            cell.gen_rust_ex_ctrl_ref_initialize file
 
             print "#{@celltype.get_global_name.to_s}: gen_rust_entryport_structure_initialize\n"
             # 受け口構造体の初期化を生成
@@ -2919,7 +2866,7 @@ class RustGenCelltypePlugin < CelltypePlugin
 
         print "#{@celltype.get_global_name.to_s}: gen_rust_impl_drop_for_lock_guard_structure\n"
         # ロックガードに Drop トレイトを実装する
-        gen_rust_impl_drop_for_lock_guard_structure file, @celltype, callport_list, use_jenerics_alphabet
+        @celltype.gen_rust_impl_drop_for_lock_guard_structure file, callport_list, use_jenerics_alphabet
 
         if @celltype.check_only_entryport_celltype then
         else

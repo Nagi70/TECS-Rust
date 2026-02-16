@@ -39,12 +39,101 @@
 
 require_tecsgen_lib "RustITRONCelltypePlugin.rb"
 
+class Cell
+    include RustGenHelper
+
+    def gen_task_static_api_for_configuration
+
+        # タスクIDの重複チェック
+        if RustASP3CelltypePlugin.registered_task_id_list.include?(self.get_attr_initializer("id".to_sym)) then
+            return
+        end
+        id = self.get_attr_initializer("id".to_sym)
+        attribute = self.get_attr_initializer("attribute".to_sym)
+        priority = self.get_attr_initializer("priority".to_sym)
+        stack_size = self.get_attr_initializer("stackSize".to_sym)
+
+        RustASP3CelltypePlugin.registered_task_id_list.push(id)
+
+        file = AppFile.open( "#{$gen}/tecsgen.cfg" )
+        
+        # TODO: Rust のタスク関数を呼び出すための extern 宣言をインクルードするための生成であり、将来的には削除できるかも
+        if RustASP3CelltypePlugin.rust_tecs_header_include == false then
+            file.print "#include \"rust_tecs.h\"\n"
+            RustASP3CelltypePlugin.rust_tecs_header_include = true
+        end
+
+        # TODO: tTaskRs であることを前提としている
+        file.print "CRE_TSK(#{id}, { #{attribute}, 0, tecs_rust_start_#{snake_case(self.get_global_name.to_s)}, #{priority}, #{stack_size}, NULL });\n"
+        file.close
+
+        RustASP3CelltypePlugin.rust_task_func_list.push("tecs_rust_start_#{snake_case(self.get_global_name.to_s)}")
+
+        # TODO: タスクオブジェクトのダミーIDはすべて0で生成しているが、変えてもいいかもしれない
+        self.add_dummy_id_to_kernel_cfg_rs "#{id}", 0
+
+    end
+
+    # TODO: ASP3向けの CRE_ISR の生成
+    def gen_isr_static_api_for_configuration
+
+    end
+
+    # TODO: ASP3向けの ATT_INI の生成
+    def gen_ini_static_api_for_configuration
+
+    end
+
+    # itron のコンフィグレーションファイルにミューテックス静的APIを生成する
+    def gen_mutex_static_api_for_configuration
+        file = AppFile.open( "#{$gen}/tecsgen.cfg" )
+
+        # TODO: 優先度上限か、優先度継承かをプラグインオプションで判断できるようにする
+        # file.print "CRE_MTX( TECS_RUST_EX_CTRL_#{@@ex_ctrl_ref_id}, { TA_INHERIT });\n"
+
+        # 優先度上限値の取得
+        ceiling_priority = self.get_ceiling_priority
+        file.print "CRE_MTX( TECS_RUST_EX_CTRL_#{RustASP3CelltypePlugin.ex_ctrl_ref_id}, { TA_CEILING, #{ceiling_priority} });\n"
+        file.close
+
+        self.add_dummy_id_to_kernel_cfg_rs "TECS_RUST_EX_CTRL_#{RustASP3CelltypePlugin.ex_ctrl_ref_id}", RustASP3CelltypePlugin.ex_ctrl_ref_id
+
+        RustASP3CelltypePlugin.increment_ex_ctrl_ref_id
+    end
+
+    # itron のコンフィグレーションファイルにセマフォ静的APIを生成する
+    def gen_semaphore_static_api_for_configuration
+        file = AppFile.open( "#{$gen}/tecsgen.cfg" )
+
+        # 資源数 1 でセマフォを生成
+        file.print "CRE_SEM( TECS_RUST_EX_CTRL_#{RustASP3CelltypePlugin.ex_ctrl_ref_id}, { TA_NULL, 1, 1 });\n"
+        file.close
+
+        self.add_dummy_id_to_kernel_cfg_rs "TECS_RUST_EX_CTRL_#{RustASP3CelltypePlugin.ex_ctrl_ref_id}", RustASP3CelltypePlugin.ex_ctrl_ref_id
+
+        RustASP3CelltypePlugin.increment_ex_ctrl_ref_id
+    end
+
+end
+
 #== celltype プラグインの共通の親クラス
 class RustASP3CelltypePlugin < RustITRONCelltypePlugin
     CLASS_NAME_SUFFIX = ""
     @@registered_task_id_list = []
     @@registered_isr_id_list = []
     @@registered_ini_id_list = []
+
+    def self.registered_task_id_list
+        @@registered_task_id_list
+    end
+
+    def self.registered_isr_id_list
+        @@registered_isr_id_list
+    end
+
+    def self.registered_ini_id_list
+        @@registered_ini_id_list
+    end
 
     #celltype::     Celltype        セルタイプ（インスタンス）
     def initialize( celltype, option )
@@ -73,98 +162,6 @@ class RustASP3CelltypePlugin < RustITRONCelltypePlugin
     def self.gen_post_code( file )
       # 複数のプラグインの post_code が一つのファイルに含まれるため、以下のような見出しをつけること
       # file.print "/* '#{self.class.name}' post code */\n"
-    end
-
-    def gen_task_static_api_for_configuration cell
-
-        # タスクIDの重複チェック
-        if @@registered_task_id_list.include?(cell.get_attr_initializer("id".to_sym)) then
-            return
-        end
-        id = cell.get_attr_initializer("id".to_sym)
-        attribute = cell.get_attr_initializer("attribute".to_sym)
-        priority = cell.get_attr_initializer("priority".to_sym)
-        stack_size = cell.get_attr_initializer("stackSize".to_sym)
-
-        @@registered_task_id_list.push(id)
-
-        file = AppFile.open( "#{$gen}/tecsgen.cfg" )
-        
-        # TODO: Rust のタスク関数を呼び出すための extern 宣言をインクルードするための生成であり、将来的には削除できるかも
-        if @@rust_tecs_header_include == false then
-            file.print "#include \"rust_tecs.h\"\n"
-            @@rust_tecs_header_include = true
-        end
-
-        # TODO: tTaskRs であることを前提としている
-        file.print "CRE_TSK(#{id}, { #{attribute}, 0, tecs_rust_start_#{snake_case(cell.get_global_name.to_s)}, #{priority}, #{stack_size}, NULL });\n"
-        file.close
-
-        gen_rust_tecs_h "tecs_rust_start_#{snake_case(cell.get_global_name.to_s)}"
-
-        # TODO: タスクオブジェクトのダミーIDはすべて0で生成しているが、変えてもいいかもしれない
-        add_dummy_id_to_kernel_cfg_rs "#{id}", 0
-
-    end
-
-    # TODO: ASP3向けの CRE_ISR の生成
-    def gen_isr_static_api_for_configuration cell
-
-    end
-
-    # TODO: ASP3向けの ATT_INI の生成
-    def gen_ini_static_api_for_configuration cell
-
-    end
-
-    # セルタイプ構造体にライフタイムアノテーションが必要かどうかを判定する関数
-    # TODO: FMP3でも排他制御の最適化が適用できたら、この関数を RustITRONCelltypePluginに移す
-    def check_lifetime_annotation_for_celltype_structure celltype, callport_list
-
-        result = super(celltype, callport_list)
-
-        if result == true then
-            return result
-        end
-
-        # ex_ctrl_ref フィールドはライフタイムアノテーションが必要であるため、生成されるかどうかを判定する
-        celltype.get_cell_list.each{ |cell|
-            if check_exclusive_control_for_cell(cell) == true then
-                return true
-            end
-        }
-
-        return false
-    end
-
-    # itron のコンフィグレーションファイルにミューテックス静的APIを生成する
-    def gen_mutex_static_api_for_configuration cell
-        file = AppFile.open( "#{$gen}/tecsgen.cfg" )
-
-        # TODO: 優先度上限か、優先度継承かをプラグインオプションで判断できるようにする
-        # file.print "CRE_MTX( TECS_RUST_EX_CTRL_#{@@ex_ctrl_ref_id}, { TA_INHERIT });\n"
-
-        # 優先度上限値の取得
-        ceiling_priority = get_ceiling_priority cell
-        file.print "CRE_MTX( TECS_RUST_EX_CTRL_#{@@ex_ctrl_ref_id}, { TA_CEILING, #{ceiling_priority} });\n"
-        file.close
-
-        add_dummy_id_to_kernel_cfg_rs "TECS_RUST_EX_CTRL_#{@@ex_ctrl_ref_id}", @@ex_ctrl_ref_id
-
-        @@ex_ctrl_ref_id += 1
-    end
-
-    # itron のコンフィグレーションファイルにセマフォ静的APIを生成する
-    def gen_semaphore_static_api_for_configuration cell
-        file = AppFile.open( "#{$gen}/tecsgen.cfg" )
-
-        # 資源数 1 でセマフォを生成
-        file.print "CRE_SEM( TECS_RUST_EX_CTRL_#{@@ex_ctrl_ref_id}, { TA_NULL, 1, 1 });\n"
-        file.close
-
-        add_dummy_id_to_kernel_cfg_rs "TECS_RUST_EX_CTRL_#{@@ex_ctrl_ref_id}", @@ex_ctrl_ref_id
-
-        @@ex_ctrl_ref_id += 1
     end
 
     # Cargo.toml の設定を変更する

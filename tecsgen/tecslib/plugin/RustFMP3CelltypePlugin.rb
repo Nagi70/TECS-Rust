@@ -39,12 +39,140 @@
 
 require_tecsgen_lib "RustITRONCelltypePlugin.rb"
 
+class Cell
+    include RustGenHelper
+
+    # タスクの静的APIの生成は FMPPlugin が行うため、このプラグインはヘッダファイルなどのインクルード生成を行う
+    def gen_task_static_api_for_configuration
+
+        # タスクIDの重複チェック
+        # 複数回 AppFile に書き込まないようにするため、重複チェックを行う
+        if RustFMP3CelltypePlugin.registered_task_id_list.include?(self.get_attr_initializer("id".to_sym)) then
+            return
+        end
+        id = self.get_attr_initializer("id".to_sym)
+
+        RustFMP3CelltypePlugin.registered_task_id_list.push(id)
+
+        # TODO: Rust のタスク関数を呼び出すための extern 宣言をインクルードするための生成であり、将来的には削除できるかも
+        if RustFMP3CelltypePlugin.rust_tecs_header_include == false then
+            file = AppFile.open( "#{$gen}/tecsgen.cfg" )
+            file.print "#include \"rust_tecs.h\"\n"
+            file.close
+            RustFMP3CelltypePlugin.set_rust_tecs_header_include
+        end
+
+        RustFMP3CelltypePlugin.rust_task_func_list.push("tecs_rust_start_#{snake_case(self.get_global_name.to_s)}")
+
+        # TODO: タスクオブジェクトのダミーIDはすべて0で生成しているが、変えてもいいかもしれない
+        self.add_dummy_id_to_kernel_cfg_rs "#{id}", 0
+
+    end
+
+    # CRE_ISR の生成は FMPPlugin が行うため、このプラグインはヘッダファイルなどのインクルード生成を行う
+    # TODO: リファクタリングの際に、タスクや他のハンドラの関数と一緒にしたい
+    def gen_isr_static_api_for_configuration
+
+        # 割り込みIDの重複チェック
+        # 複数回 AppFile に書き込まないようにするため、重複チェックを行う
+        if RustFMP3CelltypePlugin.registered_isr_id_list.include?(self.get_attr_initializer("id".to_sym)) then
+            return
+        end
+        id = self.get_attr_initializer("id".to_sym)
+
+        RustFMP3CelltypePlugin.registered_isr_id_list.push(id)
+        # TODO: Rust のタスク関数を呼び出すための extern 宣言をインクルードするための生成であり、将来的には削除できるかも
+        if RustFMP3CelltypePlugin.rust_tecs_header_include == false then
+            file = AppFile.open( "#{$gen}/tecsgen.cfg" )
+            file.print "#include \"rust_tecs.h\"\n"
+            file.close
+            RustFMP3CelltypePlugin.set_rust_tecs_header_include
+        end
+
+        RustFMP3CelltypePlugin.rust_task_func_list.push("tecs_rust_start_#{snake_case(self.get_global_name.to_s)}")
+
+        # TODO: タスクオブジェクトのダミーIDはすべて0で生成しているが、変えてもいいかもしれない
+        self.add_dummy_id_to_kernel_cfg_rs "#{id}", 0
+    end
+
+    # ATT_INI の生成は FMPPlugin が行うため、このプラグインはヘッダファイルなどのインクルード生成を行う
+    # TODO: リファクタリングの際に、タスクや他のハンドラの関数と一緒にしたい
+    def gen_ini_static_api_for_configuration
+
+        # ATT_INI の重複チェック
+        # 複数回 AppFile に書き込まないようにするため、重複チェックを行う
+        if RustFMP3CelltypePlugin.registered_ini_id_list.include?("tecs_rust_start_#{snake_case(self.get_global_name.to_s)}") then
+            return
+        end
+
+        RustFMP3CelltypePlugin.registered_ini_id_list.push("tecs_rust_start_#{snake_case(self.get_global_name.to_s)}")
+
+        # TODO: Rust のタスク関数を呼び出すための extern 宣言をインクルードするための生成であり、将来的には削除できるかも
+        if RustFMP3CelltypePlugin.rust_tecs_header_include == false then
+            file = AppFile.open( "#{$gen}/tecsgen.cfg" )
+            file.print "#include \"rust_tecs.h\"\n"
+            file.close
+            RustFMP3CelltypePlugin.set_rust_tecs_header_include
+        end
+
+        RustFMP3CelltypePlugin.rust_task_func_list.push("tecs_rust_start_#{snake_case(self.get_global_name.to_s)}")
+    end
+
+    # itron のコンフィグレーションファイルにミューテックス静的APIを生成する
+    # TODO: ミューテックスの静的APIをどこのクラスに配置するべきかを決める必要がありそう -> 暫定的にCLS_ALL_PRC1に配置する
+    # TODO: 適切なクラスを選択できるようにする必要があるかも
+    def gen_mutex_static_api_for_configuration
+        file = AppFile.open( "#{$gen}/tecsgen.cfg" )
+
+        # 優先度上限値の取得
+        ceiling_priority = self.get_ceiling_priority
+        file.print "\nCLASS(CLS_ALL_PRC1){\n"
+        file.print "\tCRE_MTX( TECS_RUST_EX_CTRL_#{RustFMP3CelltypePlugin.ex_ctrl_ref_id}, { TA_CEILING, #{ceiling_priority} });\n"
+        file.print "}\n"
+        file.close
+
+        self.add_dummy_id_to_kernel_cfg_rs "TECS_RUST_EX_CTRL_#{RustFMP3CelltypePlugin.ex_ctrl_ref_id}", RustFMP3CelltypePlugin.ex_ctrl_ref_id
+
+        RustFMP3CelltypePlugin.increment_ex_ctrl_ref_id
+    end
+
+    # itron のコンフィグレーションファイルにセマフォ静的APIを生成する
+    # TODO: セマフォの静的APIをどこのクラスに配置するべきかを決める必要がありそう -> 暫定的にCLS_ALL_PRC1に配置する
+    # TODO: 適切なクラスを選択できるようにする必要があるかも
+    def gen_semaphore_static_api_for_configuration
+        file = AppFile.open( "#{$gen}/tecsgen.cfg" )
+
+        # 資源数 1 でセマフォを生成
+        file.print "\nCLASS(CLS_ALL_PRC1){\n"
+        file.print "\tCRE_SEM( TECS_RUST_EX_CTRL_#{RustFMP3CelltypePlugin.ex_ctrl_ref_id}, { TA_NULL, 1, 1 });\n"
+        file.print "}\n"
+        file.close
+
+        self.add_dummy_id_to_kernel_cfg_rs "TECS_RUST_EX_CTRL_#{RustFMP3CelltypePlugin.ex_ctrl_ref_id}", RustFMP3CelltypePlugin.ex_ctrl_ref_id
+
+        RustFMP3CelltypePlugin.increment_ex_ctrl_ref_id
+    end
+
+end
+
 #== celltype プラグインの共通の親クラス
 class RustFMP3CelltypePlugin < RustITRONCelltypePlugin
     CLASS_NAME_SUFFIX = ""
     @@registered_task_id_list = []
     @@registered_isr_id_list = []
     @@registered_ini_id_list = []
+
+    def self.registered_task_id_list
+        @@registered_task_id_list
+    end
+
+    def self.registered_isr_id_list
+        @@registered_isr_id_list
+    end
+
+    def self.registered_ini_id_list
+        @@registered_ini_id_list
+    end
 
     #celltype::     Celltype        セルタイプ（インスタンス）
     def initialize( celltype, option )
@@ -73,120 +201,6 @@ class RustFMP3CelltypePlugin < RustITRONCelltypePlugin
     def self.gen_post_code( file )
       # 複数のプラグインの post_code が一つのファイルに含まれるため、以下のような見出しをつけること
       # file.print "/* '#{self.class.name}' post code */\n"
-    end
-
-    # タスクの静的APIの生成は FMPPlugin が行うため、このプラグインはヘッダファイルなどのインクルード生成を行う
-    def gen_task_static_api_for_configuration cell
-
-        # タスクIDの重複チェック
-        # 複数回 AppFile に書き込まないようにするため、重複チェックを行う
-        if @@registered_task_id_list.include?(cell.get_attr_initializer("id".to_sym)) then
-            return
-        end
-        id = cell.get_attr_initializer("id".to_sym)
-
-        @@registered_task_id_list.push(id)
-
-        # TODO: Rust のタスク関数を呼び出すための extern 宣言をインクルードするための生成であり、将来的には削除できるかも
-        if @@rust_tecs_header_include == false then
-            file = AppFile.open( "#{$gen}/tecsgen.cfg" )
-            file.print "#include \"rust_tecs.h\"\n"
-            file.close
-            @@rust_tecs_header_include = true
-        end
-
-        gen_rust_tecs_h "tecs_rust_start_#{snake_case(cell.get_global_name.to_s)}"
-
-        # TODO: タスクオブジェクトのダミーIDはすべて0で生成しているが、変えてもいいかもしれない
-        add_dummy_id_to_kernel_cfg_rs "#{id}", 0
-
-    end
-
-    # CRE_ISR の生成は FMPPlugin が行うため、このプラグインはヘッダファイルなどのインクルード生成を行う
-    # TODO: リファクタリングの際に、タスクや他のハンドラの関数と一緒にしたい
-    def gen_isr_static_api_for_configuration cell
-
-        # 割り込みIDの重複チェック
-        # 複数回 AppFile に書き込まないようにするため、重複チェックを行う
-        if @@registered_isr_id_list.include?(cell.get_attr_initializer("id".to_sym)) then
-            return
-        end
-        id = cell.get_attr_initializer("id".to_sym)
-
-        @@registered_isr_id_list.push(id)
-        # TODO: Rust のタスク関数を呼び出すための extern 宣言をインクルードするための生成であり、将来的には削除できるかも
-        if @@rust_tecs_header_include == false then
-            file = AppFile.open( "#{$gen}/tecsgen.cfg" )
-            file.print "#include \"rust_tecs.h\"\n"
-            file.close
-            @@rust_tecs_header_include = true
-        end
-
-        gen_rust_tecs_h "tecs_rust_start_#{snake_case(cell.get_global_name.to_s)}"
-
-        # TODO: タスクオブジェクトのダミーIDはすべて0で生成しているが、変えてもいいかもしれない
-        add_dummy_id_to_kernel_cfg_rs "#{id}", 0
-    end
-
-    # ATT_INI の生成は FMPPlugin が行うため、このプラグインはヘッダファイルなどのインクルード生成を行う
-    # TODO: リファクタリングの際に、タスクや他のハンドラの関数と一緒にしたい
-    def gen_ini_static_api_for_configuration cell
-
-        # ATT_INI の重複チェック
-        # 複数回 AppFile に書き込まないようにするため、重複チェックを行う
-        if @@registered_ini_id_list.include?("tecs_rust_start_#{snake_case(cell.get_global_name.to_s)}") then
-            return
-        end
-
-        @@registered_ini_id_list.push("tecs_rust_start_#{snake_case(cell.get_global_name.to_s)}")
-
-        # TODO: Rust のタスク関数を呼び出すための extern 宣言をインクルードするための生成であり、将来的には削除できるかも
-        if @@rust_tecs_header_include == false then
-            file = AppFile.open( "#{$gen}/tecsgen.cfg" )
-            file.print "#include \"rust_tecs.h\"\n"
-            file.close
-            @@rust_tecs_header_include = true
-        end
-
-        gen_rust_tecs_h "tecs_rust_start_#{snake_case(cell.get_global_name.to_s)}"
-    end
-
-    # itron のコンフィグレーションファイルにミューテックス静的APIを生成する
-    # TODO: ミューテックスの静的APIをどこのクラスに配置するべきかを決める必要がありそう -> 暫定的にCLS_ALL_PRC1に配置する
-    # TODO: 適切なクラスを選択できるようにする必要があるかも
-    def gen_mutex_static_api_for_configuration cell
-        file = AppFile.open( "#{$gen}/tecsgen.cfg" )
-
-        # TODO: 優先度上限か、優先度継承かをプラグインオプションで判断できるようにする
-        # file.print "CRE_MTX( TECS_RUST_EX_CTRL_#{@@ex_ctrl_ref_id}, { TA_INHERIT });\n"
-
-        # 優先度上限値の取得
-        ceiling_priority = get_ceiling_priority cell
-        file.print "\nCLASS(CLS_ALL_PRC1){\n"
-        file.print "\tCRE_MTX( TECS_RUST_EX_CTRL_#{@@ex_ctrl_ref_id}, { TA_CEILING, #{ceiling_priority} });\n"
-        file.print "}\n"
-        file.close
-
-        add_dummy_id_to_kernel_cfg_rs "TECS_RUST_EX_CTRL_#{@@ex_ctrl_ref_id}", @@ex_ctrl_ref_id
-
-        @@ex_ctrl_ref_id += 1
-    end
-
-    # itron のコンフィグレーションファイルにセマフォ静的APIを生成する
-    # TODO: セマフォの静的APIをどこのクラスに配置するべきかを決める必要がありそう -> 暫定的にCLS_ALL_PRC1に配置する
-    # TODO: 適切なクラスを選択できるようにする必要があるかも
-    def gen_semaphore_static_api_for_configuration cell
-        file = AppFile.open( "#{$gen}/tecsgen.cfg" )
-
-        # 資源数 1 でセマフォを生成
-        file.print "\nCLASS(CLS_ALL_PRC1){\n"
-        file.print "\tCRE_SEM( TECS_RUST_EX_CTRL_#{@@ex_ctrl_ref_id}, { TA_NULL, 1, 1 });\n"
-        file.print "}\n"
-        file.close
-
-        add_dummy_id_to_kernel_cfg_rs "TECS_RUST_EX_CTRL_#{@@ex_ctrl_ref_id}", @@ex_ctrl_ref_id
-
-        @@ex_ctrl_ref_id += 1
     end
 
     # Cargo.toml の設定を変更する

@@ -39,6 +39,543 @@
 
 require_tecsgen_lib "RustGenCelltypePlugin.rb"
 
+class Cell
+    include RustGenHelper
+
+    def gen_rust_cell_structure_header_initialize_specifier file
+        file.print "#[unsafe(link_section = \".rodata\")]\n"
+
+        # 自分自身のセルタイプに適用されている RustGen 系のプラグインを探す
+        # plugin = self.get_celltype.get_plugins.find { |p| p.kind_of?(RustITRONCelltypePlugin) }
+        # plugin_option = plugin ? plugin.plugin_arg_str.split(",").map(&:strip) : []
+
+        # セルタイプに async 呼び口がある場合は、pub を付与する
+        # lib.rsから関数を呼び出すため
+        if self.get_celltype.task || self.get_celltype.init_routine || self.get_celltype.int_service_routine then
+            file.print "pub "
+        end
+    end
+
+    # セルの排他制御をセマフォにするかどうかを判断する
+    def check_gen_which_ex_ctrl
+        # JSONファイルがパースされていない場合は，セマフォにしない
+        if RustITRONCelltypePlugin.json_parse_result.length == 0 then
+            puts "JSONファイルがパースされていません"
+            return "mutex"
+        end
+
+        celltype = self.get_celltype.get_global_name.to_s
+        if RustITRONCelltypePlugin.json_parse_result[self.get_global_name.to_s]["Celltype"] == celltype then
+            # 優先度が同じタスクからのみアクセスされる場合は，セマフォにする
+            if RustITRONCelltypePlugin.json_parse_result[self.get_global_name.to_s]["ExclusiveControl"] == "true" && RustITRONCelltypePlugin.json_parse_result[self.get_global_name.to_s]["PriorityList"].length == 1 then
+                # ターゲットトリプルを取得
+                target_triple = extract_target_triple RustITRONCelltypePlugin.cargo_path
+
+                # chg_pri がある場合は，ミューテックスにする
+                if target_triple != nil && check_call_chg_pri(RustITRONCelltypePlugin.cargo_path, target_triple) == true then
+                    return "mutex"
+                end
+                return "semaphore"
+
+            elsif RustITRONCelltypePlugin.json_parse_result[self.get_global_name.to_s]["ExclusiveControl"] == "true" then
+                return "mutex"
+            end
+        end
+
+        return "none"
+    end
+
+    # ex_ctrl_ref フィールドの初期化を生成
+    def gen_rust_cell_structure_ex_ctrl_ref_initialize file
+        celltype = self.get_celltype
+        return if celltype.get_var_list.length == 0
+
+        result = celltype.check_gen_dyn_for_ex_ctrl_ref
+        return if result == "dummy"
+
+        case self.check_exclusive_control
+        when true
+            file.print "\tex_ctrl_ref: &#{self.get_global_name.to_s.upcase}_EX_CTRL_REF,\n"
+        else
+            file.print "\tex_ctrl_ref: &DUMMY_EX_CTRL_REF,\n"
+        end
+    end
+
+    # セルのミューテックスオブジェクトの優先度上限値を取得する
+    def get_ceiling_priority
+        # JSONファイルがパースされていない場合は、優先度上限を 1 として返す
+        if RustITRONCelltypePlugin.json_parse_result.length == 0 then
+            return 1
+        end
+
+        # puts "@@json_parse_result: #{RustITRONCelltypePlugin.json_parse_result}"
+
+        celltype = self.get_celltype.get_global_name.to_s
+        if RustITRONCelltypePlugin.json_parse_result[self.get_global_name.to_s]["Celltype"] == celltype then
+            if RustITRONCelltypePlugin.json_parse_result[self.get_global_name.to_s]["ExclusiveControl"] == "true" && RustITRONCelltypePlugin.json_parse_result[self.get_global_name.to_s]["PriorityList"].length != 0 then
+                return RustITRONCelltypePlugin.json_parse_result[self.get_global_name.to_s]["PriorityList"].min
+            end
+        end
+        puts "Error: JSON file does not include #{self.get_global_name.to_s}"
+        return 1
+    end
+
+    # Sync変数構造体の初期化を生成
+    def gen_rust_variable_structure_initialize file, plugin
+        if self.get_celltype.get_var_list.length != 0 then
+            file.print "static #{self.get_global_name.to_s.upcase}VAR: Sync#{get_rust_celltype_name(self.get_celltype)}Var = Sync#{get_rust_celltype_name(self.get_celltype)}Var {\n"
+            file.print "\t"
+            gen_comments_safe_reason file
+            file.print "\tunsafe_var: UnsafeCell::new(#{get_rust_celltype_name(self.get_celltype)}Var {\n"
+            # 変数構造体のフィールドの初期化を生成
+            gen_rust_variable_structure_field_initialize file, plugin
+            file.print "\t}),\n"
+            file.print "};\n\n"
+        end
+    end
+
+    def gen_comments_safe_reason file
+        case self.check_exclusive_control
+        when true
+            case check_gen_which_ex_ctrl
+            when "semaphore"
+                file.print "/// This UnsafeCell is accessed by multiple tasks, but is safe because it is operated exclusively by the semaphore object.\n"
+            when "mutex"
+                file.print "/// This UnsafeCell is accessed by multiple tasks, but is safe because it is operated exclusively by the mutex object.\n"
+            end
+        else
+            case self.check_multiple_accessed
+            when true
+                # root に近いコンポーネントで排他制御を行っている場合
+                file.print "/// This UnsafeCell is accessed by multiple tasks, but is secure because it is accessed exclusively, with exclusive control applied to the component closest to root.\n"
+            else
+                file.print "/// This UnsafeCell is safe because it is only accessed by one task due to the call flow and component structure of TECS.\n"
+            end
+        end
+    end
+
+    # ex_ctrl_ref の初期化を生成
+    def gen_rust_ex_ctrl_ref_initialize file
+        return if self.get_celltype.get_var_list.length == 0
+        multiple = self.check_exclusive_control
+        if multiple then
+            file.print "#[unsafe(link_section = \".rodata\")]\n"
+            case check_gen_which_ex_ctrl
+            when "semaphore"
+                file.print "static #{self.get_global_name.to_s.upcase}_EX_CTRL_REF: TECSSemaphoreRef = TECSSemaphoreRef{\n"
+                file.print "\tinner: unsafe{SemaphoreRef::from_raw_nonnull(NonZeroI32::new(TECS_RUST_EX_CTRL_#{RustITRONCelltypePlugin.ex_ctrl_ref_id}).unwrap())},\n"
+                file.print "};\n\n"
+                self.gen_semaphore_static_api_for_configuration
+            when "mutex"
+                file.print "static #{self.get_global_name.to_s.upcase}_EX_CTRL_REF: TECSMutexRef = TECSMutexRef{\n"
+                file.print "\tinner: unsafe{MutexRef::from_raw_nonnull(NonZeroI32::new(TECS_RUST_EX_CTRL_#{RustITRONCelltypePlugin.ex_ctrl_ref_id}).unwrap())},\n"
+                file.print "};\n\n"
+                self.gen_mutex_static_api_for_configuration
+            end
+        end
+    end
+
+    # RustASP3CelltypePlugin や RustFMP3CelltypePlugin などで、それぞれのタスクの静的APIを生成する
+    def gen_task_static_api_for_configuration
+
+    end
+
+    # RustASP3CelltypePlugin や RustFMP3CelltypePlugin などで、それぞれの CRE_ISR を生成する
+    def gen_isr_static_api_for_configuration
+
+    end
+
+    # RustASP3CelltypePlugin や RustFMP3CelltypePlugin などで、それぞれの ATT_INI を生成する
+    def gen_ini_static_api_for_configuration
+
+    end
+
+    # itron のコンフィグレーションファイルにミューテックス静的APIを生成する
+    # RustASP3CelltypePlugin や RustFMP3CelltypePlugin などで、具体的な静的APIの生成を実装する
+    def gen_mutex_static_api_for_configuration
+        
+    end
+
+    # itron のコンフィグレーションファイルにセマフォ静的APIを生成する
+    # RustASP3CelltypePlugin や RustFMP3CelltypePlugin などで、具体的な静的APIの生成を実装する
+    def gen_semaphore_static_api_for_configuration
+
+    end
+
+    # ビルドのためのダミーオブジェクトIDを生成する
+    def add_dummy_id_to_kernel_cfg_rs name, id
+
+        file_path = "#{$gen}/kernel_cfg.rs"
+
+        # 初回のみファイルを生成する
+        if RustITRONCelltypePlugin.kernel_cfg_rs_gen == false then
+            File.write(file_path, "")
+            RustITRONCelltypePlugin.set_kernel_cfg_rs_gen
+        end
+
+        # 既に同じ定義が存在する場合は追記しない
+        if File.exist?(file_path)
+            existing = File.read(file_path)
+            return if existing.include?("pub const #{name}:")
+        end
+
+        kernel_cfg_rs = File.open(file_path, "a")
+
+        if id > 0 then
+            kernel_cfg_rs.print "pub const #{name}: i32 = #{id};\t//Dummy id\n"
+        else
+            kernel_cfg_rs.print "pub const #{name}: i32 = 1;\t//Dummy id\n"
+        end
+        kernel_cfg_rs.close
+    end
+end
+
+class Celltype
+
+    include RustGenHelper
+
+    attr_accessor :task
+    attr_accessor :int_service_routine
+    attr_accessor :init_routine
+
+    # セル構造体の呼び口フィールドの specifier を生成
+    def check_rust_cell_structure_callport_specifier callport
+        # tTaskRs がタスクオブジェクトであることを前提としている
+        # extern 関数で、各ルーチンの呼び口を呼び出す生成をするため、pub が必要になる
+        # plugin = self.get_plugin
+        # plugin_option = plugin ? plugin.plugin_arg_str.split(",").map(&:strip) : []
+
+        if self.task && snake_case(callport.get_name.to_s) == "c_task_body" then
+            return "pub "
+        elsif self.int_service_routine && snake_case(callport.get_name.to_s) == "ci_isr_body" then
+            return "pub "
+        elsif self.init_routine && snake_case(callport.get_name.to_s) == "c_initialize_routine_body" then
+            return "pub "
+        else
+            return ""
+        end
+
+    end
+
+    # セル構造体の変数フィールドの定義を生成
+    def gen_rust_cell_structure_variable file
+        if self.get_var_list.length != 0 then
+            file.print "\tvariable: &'static Sync#{get_rust_celltype_name(self)}Var,\n"
+        end
+    end
+
+    # セル構造体の ex_ctrl_ref フィールドの定義を生成
+    def gen_rust_cell_structure_ex_ctrl_ref file
+        return if self.get_var_list.length == 0
+
+        case check_gen_dyn_for_ex_ctrl_ref
+        when "dyn"
+            file.print "\tex_ctrl_ref: &'static (dyn LockManager + Sync + Send),\n"
+        when "dummy"
+            # file.print "\tex_ctrl_ref: &'static TECSDummyMutexRef,\n"
+        else
+            case check_gen_dyn_or_mutex_or_semaphore
+            when "mutex"
+                file.print "\tex_ctrl_ref: &'static TECSMutexRef,\n"
+            when "semaphore"
+                file.print "\tex_ctrl_ref: &'static TECSSemaphoreRef,\n"
+            when "dyn"
+                # TODO: ミューテックスとセマフォの呼び分け自体にも動的ディスパッチを使うのは議論の余地あり
+                file.print "\tex_ctrl_ref: &'static (dyn LockManager + Sync + Send),\n"
+            end
+        end
+    end
+
+    # Sync変数構造体の定義を生成
+    def gen_rust_sync_variable_structure file
+        if self.get_var_list.length != 0 then
+            file.print "pub struct Sync#{get_rust_celltype_name(self)}Var {\n"
+            file.print "\tunsafe_var: UnsafeCell<#{get_rust_celltype_name(self)}Var>,\n"
+            file.print "}\n\n"
+        end
+    end
+
+    # Syncトレイトの実装を生成
+    def gen_rust_impl_sync_trait_for_sync_variable_structure file
+        return if self.get_var_list.length == 0
+
+        file.print "unsafe impl Sync for Sync#{get_rust_celltype_name(self)}Var {}\n\n"
+    end
+
+    # ロックガード構造体のヘッダーを生成
+    def gen_rust_lock_guard_structure_header file, callport_list, use_jenerics_alphabet
+        file.print "pub struct LockGuardFor#{get_rust_celltype_name(self)}"
+
+        params = []
+        # シングルトン最適化が行われ、ロックガードに属性以外の要素が存在しない場合、ライフタイムは不要
+        if is_lock_guard_lifetime_required?(callport_list, use_jenerics_alphabet) then
+            params << "'a"
+        end
+
+        # 属性があれば CONFIG を出す
+        if self.get_attribute_list.any? { |attr| !attr.is_omit? } then
+            params << "CONFIG: #{get_rust_celltype_name(self)}Config"
+        end
+        
+        if params.length > 0 then
+            file.print "<"
+            file.print params.join(", ")
+            file.print ">"
+        end
+    end
+
+    # ロックガード構造体の呼び口への参照の定義を生成
+    def gen_rust_lock_guard_structure_callport file, callport_list, use_jenerics_alphabet
+        callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
+            if check_gen_dyn_for_port(callport) == nil then
+                file.print "\tpub #{snake_case(callport.get_name.to_s)}: &'a #{alphabet},\n"
+            else
+                file.print "\tpub #{snake_case(callport.get_name.to_s)}: &'a (#{check_gen_dyn_for_port(callport)} + Sync + Send),\n"
+            end
+        end
+    end
+
+    # ロックガード構造体の属性への参照の定義を生成
+    def gen_rust_lock_guard_structure_attribute file
+        self.get_attribute_list.each{ |attr|
+            next if attr.is_omit?
+            
+            file.print "\tpub #{attr.get_name.to_s}: "
+            if is_attribute_optimization?(self) then
+                celltype_name_camel = get_rust_celltype_name(self)
+                attr_name_camel = camel_case(attr.get_name.to_s)
+                file.print "#{celltype_name_camel}#{attr_name_camel}<CONFIG>,\n"
+            else
+                # itron-rsオブジェクトに対する，特別な生成
+                str = c_type_to_rust_type(attr.get_type)
+                case str
+                when "TaskRef"
+                    str = "TaskRef<'static>"
+                when "SemaphoreRef"
+                    str = "SemaphoreRef<'static>"
+                when "EventflagRef"
+                    str = "EventflagRef<'static>"
+                when "DataqueueRef"
+                    str = "DataqueueRef<'static>"
+                when "MutexRef"
+                    str = "MutexRef<'static>"
+                end
+                file.print "&'a #{str},\n"
+            end
+        }
+
+        # CONFIG が存在し、ZST 最適化でない場合は PhantomData が必要
+        has_attr = self.get_attribute_list.any? { |attr| !attr.is_omit? }
+        if has_attr && !is_attribute_optimization?(self) then
+            file.print "\t_phantom: core::marker::PhantomData<CONFIG>,\n"
+        end
+    end
+
+    # ロックガード構造体の変数への参照の定義を生成
+    def gen_rust_lock_guard_structure_variable file
+        if self.get_var_list.length != 0 then
+            file.print "\tpub var: &'a mut #{get_rust_celltype_name(self)}Var,\n"
+        end
+    end
+
+    # ロックガード構造体の定義を生成
+    def gen_rust_lock_guard_structure file, callport_list, use_jenerics_alphabet
+
+        if check_only_entryport_celltype then
+            return
+        end
+
+        gen_rust_lock_guard_structure_header file, callport_list, use_jenerics_alphabet
+
+        gen_rust_cell_structure_jenerics file, callport_list, use_jenerics_alphabet
+
+        file.print "{\n"
+
+        gen_rust_lock_guard_structure_callport file, callport_list, use_jenerics_alphabet
+
+        gen_rust_lock_guard_structure_attribute file
+
+        gen_rust_lock_guard_structure_variable file
+
+        gen_rust_cell_structure_ex_ctrl_ref file
+
+        file.print "}\n\n"
+    end
+
+    # セル構造体の属性フィールドの定義を生成
+    def gen_attribute_field file, attr_name, attr_type_str
+        case attr_type_str
+        when "TaskRef"
+            attr_type_str = "TaskRef<'static>"
+        when "SemaphoreRef"
+            attr_type_str = "SemaphoreRef<'static>"
+        when "EventflagRef"
+            attr_type_str = "EventflagRef<'static>"
+        when "DataqueueRef"
+            attr_type_str = "DataqueueRef<'static>"
+        when "MutexRef"
+            attr_type_str = "MutexRef<'static>"
+        end
+        super(file, attr_name, attr_type_str)
+    end
+
+    # get_cell_ref 関数のヘッダや引数はOSに依存するため、各OSのプラグインでオーバーライドする
+    def gen_rust_get_cell_ref_header file, callport_list, use_jenerics_alphabet
+        # インライン化
+        file.print "\t#[inline]\n"
+
+        # get_cell_ref 関数の定義を生成
+        # TODO: get_cell_ref にライフタイムアノテーションが必要かも？
+        file.print "\tpub fn get_cell_ref(&'static self) -> "
+
+        file.print "LockGuardFor#{get_rust_celltype_name(self)}"
+
+        # 属性の有無を確認
+        has_attr = self.get_attribute_list.any? { |attr| !attr.is_omit? }
+
+        # 以前は is_attribute_optimization? (フル定数化) の場合のみ CONFIG を出していたが、
+        # size_first (非 ZST) の場合でも LockGuard は CONFIG を要求するため、
+        # has_attr があれば常に CONFIG を出力するように変更する。
+        if has_attr then
+            lock_guard_first = true
+            if self.get_var_list.length != 0 then
+                file.print "<'_"
+                lock_guard_first = false
+            end
+            # CONFIG ジェネリクス
+            if lock_guard_first then
+                if is_zst_optimization?(self) then
+                    file.print "<CONFIG"
+                else
+                    file.print "<ConfigDefault#{get_rust_celltype_name(self)}"
+                end
+                lock_guard_first = false
+            else
+                if is_zst_optimization?(self) then
+                    file.print ", CONFIG"
+                else
+                    file.print ", ConfigDefault#{get_rust_celltype_name(self)}"
+                end
+            end
+
+            file.print ">"
+        elsif check_only_entryport_celltype then
+        else
+            lock_guard_first = true
+            if self.get_var_list.length != 0 then
+                file.print "<'_"
+                lock_guard_first = false
+            end
+            file.print ">" if lock_guard_first == false
+        end
+
+        file.print " {\n"
+    end
+
+    # 引数のセルタイプの ex_ctrl_ref に動的ディスパッチが必要かどうかを判断し、いる場合は dyn を、いらない場合は、ダミーかどうかを返す
+    def check_gen_dyn_for_ex_ctrl_ref
+        dyn_check_results = self.get_cell_list.map { |cell| cell.check_exclusive_control }
+        
+        if dyn_check_results.all?(true) then
+            return "no_dummy"
+        elsif dyn_check_results.all?(false) then
+            return "dummy"
+        else
+            return "dyn"
+        end
+    end
+
+    # ロックガードの変数フィールドの生成はOSに依存するので、各プラグインでオーバーライドする
+    def gen_rust_lock_guard_initialize_variable file
+        if self.get_var_list.length != 0 then
+            file.print "\t\t\tvar: unsafe{&mut *self.variable.unsafe_var.get()},\n"
+        end
+        if self.get_var_list.length != 0 then
+            result = check_gen_dyn_for_ex_ctrl_ref
+            if result == "dummy" then
+            else
+                file.print "\t\t\tex_ctrl_ref: self.ex_ctrl_ref,\n"
+            end
+        end
+    end
+
+    # ロックガードの初期化前の処理はOSに依存するので、各プラグインでオーバーライドする
+    def gen_rust_process_before_lock_guard_initialize file
+        if self.get_var_list.length != 0 then
+            result = check_gen_dyn_for_ex_ctrl_ref
+            if result != "dummy" then
+                file.print "\t\tself.ex_ctrl_ref.lock();\n"
+            end
+        end
+    end
+
+    # ミューテックスを適用するセルとセマフォを適用するセルが混在するセルタイプかどうかを判断する
+    # TOPPERSでは、ミューテックスとセマフォどちらかを適用する
+    def check_gen_dyn_or_mutex_or_semaphore
+        check_semaphore = []
+
+        self.get_cell_list.each{ |cell|
+            check_semaphore.push(cell.check_gen_which_ex_ctrl).uniq!
+        }
+
+        # 動的ディスパッチを使うのは以下のケース
+        # ・セマフォを適用するセルとミューテックスを適用するセルが混在する場合
+        # ・セマフォを適用するセルとダミーを利用するセルが混在する場合
+        # ・ミューテックスを適用するセルとダミーを利用するセルが混在する場合
+        if check_semaphore.length >= 2 then
+            return "dyn"
+        end
+
+        if check_semaphore.length == 1 then
+            return check_semaphore.first
+        end
+    end
+
+    # 引数の文字列が、ITRONクレートのカーネルオブジェクトへの参照型になっているかを追加判定する
+    # TODO: リファクタリングの余地あり
+    def check_lifetime_annotation_for_type str
+        result = super(str)
+        
+        itron_rs_refs = [
+            "TaskRef",
+            "SemaphoreRef",
+            "EventflagRef",
+            "DataqueueRef",
+            "MutexRef",
+        ]
+
+        match_found = itron_rs_refs.include?(str)
+
+        return result || match_found
+
+    end
+
+    # ロックガードに Drop トレイトを実装する
+    def gen_rust_impl_drop_for_lock_guard_structure file, callport_list, use_jenerics_alphabet
+        return if self.get_var_list.length == 0
+
+        result = self.check_gen_dyn_for_ex_ctrl_ref
+        return if result == "dummy"
+
+        life_time_declare = false
+        jenerics_flag = true
+
+        file.print "impl"
+
+        file.print " Drop for LockGuardFor#{get_rust_celltype_name(self)}"
+
+        if self.check_only_entryport_celltype == false then
+            file.print "<'_>"
+        end
+
+        file.print " {\n"
+        file.print "\tfn drop(&mut self){\n"
+        file.print "\t\tself.ex_ctrl_ref.unlock();\n"
+        file.print "\t}\n"
+        file.print "}\n\n"
+    end
+end
+
 #== celltype プラグインの共通の親クラス
 class RustITRONCelltypePlugin < RustGenCelltypePlugin
     CLASS_NAME_SUFFIX = ""
@@ -58,6 +595,45 @@ class RustITRONCelltypePlugin < RustGenCelltypePlugin
     @@isr_signature_list = []
     @@ini_celltype_list = []
     @@ini_signature_list = []
+
+    # クラス変数へのアクセサメソッド
+    def self.json_parse_result
+        @@json_parse_result
+    end
+
+    def self.cargo_path
+        @@cargo_path
+    end
+
+    def self.ex_ctrl_ref_id
+        @@ex_ctrl_ref_id
+    end
+
+    def self.increment_ex_ctrl_ref_id
+        @@ex_ctrl_ref_id += 1
+    end
+
+    def self.rust_task_func_list
+        @@rust_task_func_list
+    end
+
+    def self.rust_tecs_header_include
+        @@rust_tecs_header_include
+    end
+
+    def self.set_rust_tecs_header_include
+        @@rust_tecs_header_include = true
+    end
+
+    def self.kernel_cfg_rs_gen
+        @@kernel_cfg_rs_gen
+    end
+
+    def self.set_kernel_cfg_rs_gen
+        @@kernel_cfg_rs_gen = true
+    end
+
+    attr_reader :plugin_arg_str
 
     #celltype::     Celltype        セルタイプ（インスタンス）
     def initialize( celltype, option )
@@ -168,56 +744,7 @@ class RustITRONCelltypePlugin < RustGenCelltypePlugin
 
     end
 
-    # def gen_main_lib_rs celltype
-    #     super(celltype)
-
-        # plugin_option = @plugin_arg_str.split(",").map(&:strip)
-
-        # file_name = check_option_main_or_lib
-
-        # if file_name != nil then
-        #     # TODO: 本当に排他制御が必要なときのみ、排他制御モジュールを生成するようにする
-        #     write_list = ["#![no_std]", "#![feature(const_option)]", "mod kernel_cfg;", "mod tecs_ex_ctrl;", "mod tecs_print;"]
-        #     # File.write("#{$gen}/#{file_name}.rs", "") unless File.exist?("#{$gen}/#{file_name}.rs")
-        #     tempfile = File.read("#{$gen}/#{file_name}.rs")
-
-        #     write_list.each do |write|
-        #         if tempfile.include?(write) then
-        #             next
-        #         else
-        #             tempfile << write + "\n"
-        #         end
-        #     end
-        #     File.write("#{$gen}/#{file_name}.rs", tempfile)
-        # end
-
-        # plugin_option = @plugin_arg_str.split(",").map(&:strip)
-
-        # if plugin_option.include?("TASK") then
-        #     gen_task_func_definition file_name, celltype
-        # elsif plugin_option.include?("INT_REQUEST") then
-        #     # TODO: CFG_INT (ASP3の場合はファクトリ生成かもしれない)
-        # elsif plugin_option.include?("INT_SERVICE_ROUTINE") then
-        #     gen_isr_func_definition file_name, celltype
-        # elsif plugin_option.include?("INT_HANDLER") then
-        #     # TODO: DEF_INH
-        # elsif plugin_option.include?("CPU_EXCEPTION_HANDLER") then
-        #     # TODO: DEF_EXC
-        # elsif plugin_option.include?("INIT_ROUTINE") then
-        #     gen_ini_func_definition file_name, celltype
-        # elsif plugin_option.include?("TERM_ROUTINE") then
-        #     # TODO: ATT_TER
-        # end
-    # end
-
     def gen_task_func_definition file, celltype
-        # file = File.read("#{$gen}/#{file_option}.rs")
-
-        # 一番最初のタスク関数生成の時だけ、以下のパニックハンドラと、二つのuse文を追加する
-        # gen_panic_handler_in_main_lib_rs file
-
-        # file.print "use tecs_celltype::" + snake_case(celltype.get_global_name.to_s) + "::*;\n"
-        # file.print "use tecs_signature::s_task_body::*;\n"
 
         @@task_celltype_list.push("use tecs_celltype::" + snake_case(celltype.get_global_name.to_s) + "::*;")
         @@task_signature_list.push("use tecs_signature::s_task_body::*;")
@@ -231,7 +758,7 @@ class RustITRONCelltypePlugin < RustGenCelltypePlugin
                 "}"
             )
             # 何度も呼び出されるが、重複して静的APIを生成しないように関数内で管理している
-            gen_task_static_api_for_configuration cell
+            cell.gen_task_static_api_for_configuration
         }
 
         # 重複を削除する
@@ -239,45 +766,12 @@ class RustITRONCelltypePlugin < RustGenCelltypePlugin
         @@task_signature_list.uniq!
         @@task_func_list.uniq!
 
-        # タスク関数を生成する
-        # @@task_func_list.each{ |func|
-            # puts "func: #{func}"
-            # file.print func
-        # }
-
-        # if !file.include?("use crate::" + snake_case(celltype.get_global_name.to_s) + "::*;") then
-        #     file << "\nuse crate::" + snake_case(celltype.get_global_name.to_s) + "::*;\n"
-        # end
-
-        # if !file.include?("use s_task_body::*;") then
-        #     file << "use s_task_body::*;\n"
-        # end
-        
-        # celltype.get_cell_list.each{ |cell|
-        #     search_pattern = /
-        #         \#\[\s*no_mangle\s*\]\n
-        #         pub\s+extern\s*"C"\s+fn\s+tecs_rust_start_#{snake_case(cell.get_global_name.to_s)}\(\s*_\s*:\s*usize\s*\)\s*\{\n
-        #         \s*#{cell.get_global_name.to_s.upcase}\.c_task_body\.main\(\);\n
-        #     \}/x
-        #     if !file.match?(search_pattern) then
-        #         file << "\n#[no_mangle]\n"
-        #         file << "pub extern \"C\" fn tecs_rust_start_" + snake_case(cell.get_global_name.to_s) + "(_: usize) {\n"
-        #         file << "\t#{cell.get_global_name.to_s.upcase}.c_task_body.main();\n" # TODO: 呼び口である c_task_body が sTaskBody でつながっていることを前提としている
-        #         file << "}\n"
-
-        #         gen_task_static_api_for_configuration cell
-        #     end
-        # }
-
-        # File.write("#{$gen}/#{file_option}.rs", file)
     end
 
     # lib.rs や main.rs に対して、extern関数を生成する
     # TODO: リファクタリングの際に、タスクや他のハンドラの関数と一緒にしたい
     def gen_isr_func_definition file, celltype
 
-        # file.print "use tecs_celltype::" + snake_case(celltype.get_global_name.to_s) + "::*;\n"
-        # file.print "use tecs_signature::si_handler_body::*;\n"
 
         @@isr_celltype_list.push("use tecs_celltype::" + snake_case(celltype.get_global_name.to_s) + "::*;")
         @@isr_signature_list.push("use tecs_signature::si_handler_body::*;")
@@ -290,7 +784,7 @@ class RustITRONCelltypePlugin < RustGenCelltypePlugin
                 "}"
             )
             # 何度も呼び出されるが、重複して静的APIを生成しないように関数内で管理している
-            gen_isr_static_api_for_configuration cell
+            cell.gen_isr_static_api_for_configuration
         }
 
         # 重複を削除する
@@ -298,47 +792,10 @@ class RustITRONCelltypePlugin < RustGenCelltypePlugin
         @@isr_signature_list.uniq!
         @@isr_func_list.uniq!
 
-        # 割り込み関数を生成する
-        # @@isr_func_list.each{ |func|
-        #     file.print func
-        # }
-
-        # file = File.read("#{$gen}/#{file_option}.rs")
-
-        # # 一番最初のタスク関数生成の時だけ、以下のパニックハンドラと、二つのuse文を追加する
-        # gen_panic_handler_in_main_lib_rs file
-
-        # if !file.include?("use crate::" + snake_case(celltype.get_global_name.to_s) + "::*;") then
-        #     file << "\nuse crate::" + snake_case(celltype.get_global_name.to_s) + "::*;\n"
-        # end
-
-        # if !file.include?("use si_handler_body::*;") then
-        #     file << "use si_handler_body::*;\n"
-        # end
-        
-        # celltype.get_cell_list.each{ |cell|
-        #     search_pattern = /
-        #         \#\[\s*no_mangle\s*\]\n
-        #         pub\s+extern\s*"C"\s+fn\s+tecs_rust_start_#{snake_case(cell.get_global_name.to_s)}\(\s*_\s*:\s*usize\s*\)\s*\{\n
-        #         \s*#{cell.get_global_name.to_s.upcase}\.ci_isr_body\.main\(\);\n
-        #     \}/x
-        #     if !file.match?(search_pattern) then
-        #         file << "\n#[no_mangle]\n"
-        #         file << "pub extern \"C\" fn tecs_rust_start_" + snake_case(cell.get_global_name.to_s) + "(_: usize) {\n"
-        #         file << "\t#{cell.get_global_name.to_s.upcase}.ci_isr_body.main();\n" # TODO: 呼び口である c_task_body が sTaskBody でつながっていることを前提としている
-        #         file << "}\n"
-
-        #         gen_isr_static_api_for_configuration cell
-        #     end
-        # }
-
-        # File.write("#{$gen}/#{file_option}.rs", file)
     end
 
     def gen_ini_func_definition file_option, celltype
 
-        # file.print "use tecs_celltype::" + snake_case(celltype.get_global_name.to_s) + "::*;\n"
-        # file.print "use tecs_signature::si_routine_body::*;\n"
         @@ini_celltype_list.push("use tecs_celltype::" + snake_case(celltype.get_global_name.to_s) + "::*;")
         @@ini_signature_list.push("use tecs_signature::s_routine_body::*;")
 
@@ -350,7 +807,7 @@ class RustITRONCelltypePlugin < RustGenCelltypePlugin
                 "}"
             )
             # 何度も呼び出されるが、重複して静的APIを生成しないように関数内で管理している
-            gen_ini_static_api_for_configuration cell
+            cell.gen_ini_static_api_for_configuration
         }
 
         # 重複を削除する
@@ -358,41 +815,6 @@ class RustITRONCelltypePlugin < RustGenCelltypePlugin
         @@ini_signature_list.uniq!
         @@ini_func_list.uniq!
 
-        # 初期化関数を生成する
-        # @@ini_func_list.each{ |func|
-        #     file.print func
-        # }
-
-        # file = File.read("#{$gen}/#{file_option}.rs")
-
-        # # 一番最初のタスク関数生成の時だけ、以下のパニックハンドラと、二つのuse文を追加する
-        # gen_panic_handler_in_main_lib_rs file
-
-        # if !file.include?("use crate::" + snake_case(celltype.get_global_name.to_s) + "::*;") then
-        #     file << "\nuse crate::" + snake_case(celltype.get_global_name.to_s) + "::*;\n"
-        # end
-
-        # if !file.include?("use s_routine_body::*;") then
-        #     file << "use s_routine_body::*;\n"
-        # end
-        
-        # celltype.get_cell_list.each{ |cell|
-        #     search_pattern = /
-        #         \#\[\s*no_mangle\s*\]\n
-        #         pub\s+extern\s*"C"\s+fn\s+tecs_rust_start_#{snake_case(cell.get_global_name.to_s)}\(\s*_\s*:\s*usize\s*\)\s*\{\n
-        #         \s*#{cell.get_global_name.to_s.upcase}\.c_initialize_routine_body\.main\(\);\n
-        #     \}/x
-        #     if !file.match?(search_pattern) then
-        #         file << "\n#[no_mangle]\n"
-        #         file << "pub extern \"C\" fn tecs_rust_start_" + snake_case(cell.get_global_name.to_s) + "(_: usize) {\n"
-        #         file << "\t#{cell.get_global_name.to_s.upcase}.c_initialize_routine_body.main();\n" # TODO: 呼び口である c_task_body が sTaskBody でつながっていることを前提としている
-        #         file << "}\n"
-
-        #         gen_ini_static_api_for_configuration cell
-        #     end
-        # }
-
-        # File.write("#{$gen}/#{file_option}.rs", file)
     end
 
     def gen_panic_handler_in_main_lib_rs file
@@ -401,17 +823,6 @@ class RustITRONCelltypePlugin < RustGenCelltypePlugin
         file.print "fn panic(_panic: &core::panic::PanicInfo<'_>) -> ! {\n"
         file.print "\tloop {}\n"
         file.print "}\n\n"
-
-#         search_code = <<~CODE
-
-# #[panic_handler]
-# fn panic(_panic: &core::panic::PanicInfo<'_>) -> ! {
-#     loop {}
-# }
-# CODE
-#         if !file.include?(search_code) then
-#             file << search_code
-#         end
     end
 
     # タスクや変数に適用されるカーネルオブジェクト以外のオブジェクトIDを生成する
@@ -423,60 +834,12 @@ class RustITRONCelltypePlugin < RustGenCelltypePlugin
         if obj == "MutexRef" || obj == "DataqueueRef" || obj == "SemaphoreRef" then
             celltype.get_cell_list.each{ |cell|
                 id = cell.get_attr_initializer("id".to_sym)
-                add_dummy_id_to_kernel_cfg_rs id, 1
+                cell.add_dummy_id_to_kernel_cfg_rs id, 1
             }
         end
     end
 
-    # ビルドのためのダミーオブジェクトIDを生成する
-    def add_dummy_id_to_kernel_cfg_rs name, id
-
-        file_path = "#{$gen}/kernel_cfg.rs"
-
-        # 初回のみファイルを生成する
-        if @@kernel_cfg_rs_gen == false then
-            File.write(file_path, "")
-            @@kernel_cfg_rs_gen = true
-        end
-
-        # 既に同じ定義が存在する場合は追記しない
-        if File.exist?(file_path)
-            existing = File.read(file_path)
-            return if existing.include?("pub const #{name}:")
-        end
-
-        kernel_cfg_rs = File.open(file_path, "a")
-
-        if id > 0 then
-            kernel_cfg_rs.print "pub const #{name}: i32 = #{id};\t//Dummy id\n"
-        else
-            kernel_cfg_rs.print "pub const #{name}: i32 = 1;\t//Dummy id\n"
-        end
-        kernel_cfg_rs.close
-    end
-    
-    # 引数の文字列が、ITRONクレートのカーネルオブジェクトへの参照型になっているかを追加判定する
-    # TODO: リファクタリングの余地あり
-    def check_lifetime_annotation_for_type str
-        result = super(str)
-        
-        itron_rs_refs = [
-            "TaskRef",
-            "SemaphoreRef",
-            "EventflagRef",
-            "DataqueueRef",
-            "MutexRef",
-        ]
-
-        match_found = itron_rs_refs.include?(str)
-
-        return result || match_found
-
-    end
-
-    def gen_rust_tecs_h function_name
-
-        @@rust_task_func_list.push("#{function_name}")
+    def gen_rust_tecs_h
 
         rust_tecs_h = CFile.open( "#{$gen}/rust_tecs.h", "w")
 
@@ -495,24 +858,11 @@ class RustITRONCelltypePlugin < RustGenCelltypePlugin
         rust_tecs_h.close
     end
 
-    # RustASP3CelltypePlugin や RustFMP3CelltypePlugin などで、それぞれのタスクの静的APIを生成する
-    def gen_task_static_api_for_configuration cell
-
-    end
-
-    # RustASP3CelltypePlugin や RustFMP3CelltypePlugin などで、それぞれの CRE_ISR を生成する
-    def gen_isr_static_api_for_configuration cell
-
-    end
-
-    # RustASP3CelltypePlugin や RustFMP3CelltypePlugin などで、それぞれの ATT_INI を生成する
-    def gen_ini_static_api_for_configuration cell
-
-    end
+    
 
     def gen_use_mutex file
 
-        case check_gen_dyn_or_mutex_or_semaphore_for_celltype @celltype
+        case @celltype.check_gen_dyn_or_mutex_or_semaphore
         when "mutex"
             file.print "use itron::mutex::MutexRef;\n"
         when "semaphore"
@@ -522,63 +872,10 @@ class RustITRONCelltypePlugin < RustGenCelltypePlugin
             file.print "use itron::semaphore::SemaphoreRef;\n"
         end
 
-        # file.print "use crate::tecs_mutex::*;\n"
         file.print "use crate::tecs_ex_ctrl::*;\n" # TODO: 本当に排他制御が必要なときのみ生成するようにする
         file.print "use core::cell::UnsafeCell;\n"
         file.print "use core::num::NonZeroI32;\n"
         file.print "use crate::kernel_cfg::*;\n"
-    end
-
-    # ミューテックスを適用するセルとセマフォを適用するセルが混在するセルタイプかどうかを判断する
-    # TOPPERSでは、ミューテックスとセマフォどちらかを適用する
-    def check_gen_dyn_or_mutex_or_semaphore_for_celltype celltype
-        check_semaphore = []
-
-        celltype.get_cell_list.each{ |cell|
-            check_semaphore.push(check_gen_which_ex_ctrl cell).uniq!
-        }
-
-        # 動的ディスパッチを使うのは以下のケース
-        # ・セマフォを適用するセルとミューテックスを適用するセルが混在する場合
-        # ・セマフォを適用するセルとダミーを利用するセルが混在する場合
-        # ・ミューテックスを適用するセルとダミーを利用するセルが混在する場合
-        if check_semaphore.length >= 2 then
-            return "dyn"
-        end
-
-        if check_semaphore.length == 1 then
-            return check_semaphore.first
-        end
-    end
-
-    # セルの排他制御をセマフォにするかどうかを判断する
-    # TODO: chg_pri があるか無いかを判定する必要がある
-    def check_gen_which_ex_ctrl cell
-        # JSONファイルがパースされていない場合は，セマフォにしない
-        if @@json_parse_result.length == 0 then
-            puts "JSONファイルがパースされていません"
-            return "mutex"
-        end
-
-        celltype = cell.get_celltype.get_global_name.to_s
-        if @@json_parse_result[cell.get_global_name.to_s]["Celltype"] == celltype then
-            # 優先度が同じタスクからのみアクセスされる場合は，セマフォにする
-            if @@json_parse_result[cell.get_global_name.to_s]["ExclusiveControl"] == "true" && @@json_parse_result[cell.get_global_name.to_s]["PriorityList"].length == 1 then
-                # ターゲットトリプルを取得
-                target_triple = extract_target_triple @@cargo_path
-
-                # chg_pri がある場合は，ミューテックスにする
-                if target_triple != nil && check_call_chg_pri(@@cargo_path, target_triple) == true then
-                    return "mutex"
-                end
-                return "semaphore"
-
-            elsif @@json_parse_result[cell.get_global_name.to_s]["ExclusiveControl"] == "true" then
-                return "mutex"
-            end
-        end
-
-        return "none"
     end
 
     # TODO: 現在は、ライブラリとしてコンパイルすることを前提としている
@@ -622,738 +919,6 @@ class RustITRONCelltypePlugin < RustGenCelltypePlugin
         end
         
         super(file)
-    end
-
-    # セルの構造体の初期化の先頭部を生成
-    def gen_rust_cell_structure_header_initialize file, cell
-        file.print "#[unsafe(link_section = \".rodata\")]\n"
-
-        plugin_option = @plugin_arg_str.split(",").map(&:strip)
-
-        # セルタイプに async 呼び口がある場合は、pub を付与する
-        # lib.rsから関数を呼び出すため
-        if plugin_option.include?("TASK") || plugin_option.include?("INIT_ROUTINE") || plugin_option.include?("INT_SERVICE_ROUTINE") then
-            file.print "pub "
-        end
-
-        file.print "static #{cell.get_global_name.to_s.upcase}: #{get_rust_celltype_name(cell.get_celltype)}"
-    end
-
-    # セル構造体の呼び口フィールドの定義を生成
-    def gen_rust_cell_structure_callport file, callport_list, use_jenerics_alphabet
-
-        plugin_option = @plugin_arg_str.split(",").map(&:strip)
-
-        callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
-            # TODO: tTaskRs がタスクオブジェクトであることを前提としている
-            # extern 関数で、各ルーチンの呼び口を呼び出す生成をするため、pub が必要になる
-            if plugin_option.include?("TASK") && snake_case(callport.get_name.to_s) == "c_task_body" then
-                file.print "\tpub #{snake_case(callport.get_name.to_s)}: &'static "
-            elsif plugin_option.include?("INT_REQUEST") then
-                # TODO: CFG_INT (ASP3の場合はファクトリ生成かもしれない)
-            elsif plugin_option.include?("INT_SERVICE_ROUTINE") && snake_case(callport.get_name.to_s) == "ci_isr_body" then
-                file.print "\tpub #{snake_case(callport.get_name.to_s)}: &'static "
-            elsif plugin_option.include?("INT_HANDLER") then
-                # TODO: DEF_INH
-            elsif plugin_option.include?("CPU_EXCEPTION_HANDLER") then
-                # TODO: DEF_EXC
-            elsif plugin_option.include?("INIT_ROUTINE") && snake_case(callport.get_name.to_s) == "c_initialize_routine_body" then
-                file.print "\tpub #{snake_case(callport.get_name.to_s)}: &'static "
-            elsif plugin_option.include?("TERM_ROUTINE") then
-                # TODO: ATT_TER
-            else
-                file.print "\t#{snake_case(callport.get_name.to_s)}: &'static "
-            end
-
-            if check_gen_dyn_for_port(callport) == nil then
-                file.print "#{alphabet},\n"
-            else
-                file.print "(#{check_gen_dyn_for_port(callport)} + Sync + Send),\n"
-            end
-        end
-    end
-
-    # セル構造体の変数フィールドの定義を生成
-    def gen_rust_cell_structure_variable file, celltype
-        if celltype.get_var_list.length != 0 then
-            file.print "\tvariable: &'static Sync#{get_rust_celltype_name(celltype)}Var,\n"
-        end
-    end
-
-    # セル構造体の ex_ctrl_ref フィールドの定義を生成
-    def gen_rust_cell_structure_ex_ctrl_ref file, celltype
-        return if celltype.get_var_list.length == 0
-
-        case check_gen_dyn_for_ex_ctrl_ref celltype
-        when "dyn"
-            file.print "\tex_ctrl_ref: &'static (dyn LockManager + Sync + Send),\n"
-        when "dummy"
-            # file.print "\tex_ctrl_ref: &'static TECSDummyMutexRef,\n"
-        else
-            case check_gen_dyn_or_mutex_or_semaphore_for_celltype celltype
-            when "mutex"
-                file.print "\tex_ctrl_ref: &'static TECSMutexRef,\n"
-            when "semaphore"
-                file.print "\tex_ctrl_ref: &'static TECSSemaphoreRef,\n"
-            when "dyn"
-                # TODO: ミューテックスとセマフォの呼び分け自体にも動的ディスパッチを使うのは議論の余地あり
-                file.print "\tex_ctrl_ref: &'static (dyn LockManager + Sync + Send),\n"
-            end
-        end
-    end
-
-    # Sync変数構造体の定義を生成
-    def gen_rust_sync_variable_structure file, celltype
-        if celltype.get_var_list.length != 0 then
-            file.print "pub struct Sync#{get_rust_celltype_name(celltype)}Var {\n"
-            file.print "\tunsafe_var: UnsafeCell<#{get_rust_celltype_name(celltype)}Var>,\n"
-            file.print "}\n\n"
-        end
-    end
-
-    # Syncトレイトの実装を生成
-    def gen_rust_impl_sync_trait_for_sync_variable_structure file, celltype
-        return if celltype.get_var_list.length == 0
-
-        file.print "unsafe impl Sync for Sync#{get_rust_celltype_name(celltype)}Var {}\n\n"
-    end
-
-    # ロックガード構造体のヘッダーを生成
-    def gen_rust_lock_guard_structure_header file, celltype, callport_list, use_jenerics_alphabet
-        file.print "pub struct LockGuardFor#{get_rust_celltype_name(celltype)}"
-
-        file.print "<'a"
-        # use_jenerics_alphabet と callport_list の要素数が等しいことを前提としている
-        callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
-            if check_gen_dyn_for_port(callport) == nil then
-                file.print ", #{alphabet}"
-            end
-        end
-        file.print ">"
-
-    end
-
-    # ロックガード構造体の呼び口への参照の定義を生成
-    def gen_rust_lock_guard_structure_callport file, callport_list, use_jenerics_alphabet
-        callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
-            if check_gen_dyn_for_port(callport) == nil then
-                file.print "\tpub #{snake_case(callport.get_name.to_s)}: &'a #{alphabet},\n"
-            else
-                file.print "\tpub #{snake_case(callport.get_name.to_s)}: &'a (#{check_gen_dyn_for_port(callport)} + Sync + Send),\n"
-            end
-        end
-    end
-
-    # ロックガード構造体の属性への参照の定義を生成
-    def gen_rust_lock_guard_structure_attribute file, celltype
-        celltype.get_attribute_list.each{ |attr|
-            next if attr.is_omit?
-            
-            file.print "\tpub #{attr.get_name.to_s}: "
-            if is_singleton_optimization?(celltype) then
-                celltype_name_camel = get_rust_celltype_name(celltype)
-                attr_name_camel = camel_case(attr.get_name.to_s)
-                file.print "Singleton#{celltype_name_camel}#{attr_name_camel},\n"
-            else
-                # itron-rsオブジェクトに対する，特別な生成
-                str = c_type_to_rust_type(attr.get_type)
-                case str
-                when "TaskRef"
-                    str = "TaskRef<'static>"
-                when "SemaphoreRef"
-                    str = "SemaphoreRef<'static>"
-                when "EventflagRef"
-                    str = "EventflagRef<'static>"
-                when "DataqueueRef"
-                    str = "DataqueueRef<'static>"
-                when "MutexRef"
-                    str = "MutexRef<'static>"
-                end
-                file.print "&'a #{str},\n"
-            end
-        }
-    end
-
-    # ロックガード構造体の変数への参照の定義を生成
-    def gen_rust_lock_guard_structure_variable file, celltype
-        if celltype.get_var_list.length != 0 then
-            file.print "\tpub var: &'a mut #{get_rust_celltype_name(celltype)}Var,\n"
-        end
-    end
-
-    # ロックガード構造体の定義を生成
-    def gen_rust_lock_guard_structure file, celltype, callport_list, use_jenerics_alphabet
-
-        if check_only_entryport_celltype(celltype) then
-            return
-        end
-
-        gen_rust_lock_guard_structure_header file, celltype, callport_list, use_jenerics_alphabet
-
-        gen_rust_cell_structure_jenerics file, callport_list, use_jenerics_alphabet
-
-        file.print "{\n"
-
-        gen_rust_lock_guard_structure_callport file, callport_list, use_jenerics_alphabet
-
-        gen_rust_lock_guard_structure_attribute file, celltype
-
-        gen_rust_lock_guard_structure_variable file, celltype
-
-        gen_rust_cell_structure_ex_ctrl_ref file, celltype
-
-        file.print "}\n\n"
-        
-
-        # return if celltype.get_var_list.length == 0
-
-        # case check_gen_dyn_for_ex_ctrl_ref celltype
-        # when "dyn"
-        #     file.print "pub struct LockGuardFor#{get_rust_celltype_name(celltype)}<'a>{\n"
-        #     file.print "\tex_ctrl_ref: &'a (dyn LockManager + Sync + Send),\n"
-        # when "dummy"
-        #     return
-        # else
-        #     file.print "pub struct LockGuardFor#{get_rust_celltype_name(celltype)}<'a>{\n"
-        #     # セマフォを適用できるかを判断する
-        #     case check_gen_dyn_or_mutex_or_semaphore_for_celltype celltype
-        #     when "mutex"
-        #         file.print "\tex_ctrl_ref: &'a TECSMutexRef<'a>,\n"
-        #     when "semaphore"
-        #         file.print "\tex_ctrl_ref: &'a TECSSemaphoreRef<'a>,\n"
-        #     when "dyn"
-        #         file.print "\tex_ctrl_ref: &'a (dyn LockManager + Sync + Send),\n"
-        #     end
-        # end
-
-        # file.print "}\n\n"
-
-    end
-
-    # セル構造体の属性フィールドの定義を生成
-    def gen_attribute_field file, attr_name, attr_type_str
-        case attr_type_str
-        when "TaskRef"
-            attr_type_str = "TaskRef<'static>"
-        when "SemaphoreRef"
-            attr_type_str = "SemaphoreRef<'static>"
-        when "EventflagRef"
-            attr_type_str = "EventflagRef<'static>"
-        when "DataqueueRef"
-            attr_type_str = "DataqueueRef<'static>"
-        when "MutexRef"
-            attr_type_str = "MutexRef<'static>"
-        end
-        super(file, attr_name, attr_type_str)
-    end
-
-    def gen_rust_get_cell_ref file, celltype, callport_list, use_jenerics_alphabet
-        # セルタイプに受け口がない場合は，生成しない
-        # 受け口がないならば，get_cell_ref 関数が呼ばれることは現状無いため
-        celltype.get_port_list.each{ |port|
-            if port.get_port_type == :ENTRY then
-                jenerics_flag = true
-                file.print "impl"
-
-                # impl のジェネリクスを生成
-                callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
-                    if check_gen_dyn_for_port(callport) == nil then
-                        if jenerics_flag then
-                            jenerics_flag = false
-                            file.print "<#{alphabet}: #{get_rust_signature_name(callport.get_signature)}"
-                        else
-                            file.print ", #{alphabet}: #{get_rust_signature_name(callport.get_signature)}"
-                        end
-                    end
-                end
-                file.print ">" if jenerics_flag == false
-
-                # impl する型を生成
-                file.print " #{get_rust_celltype_name(celltype)}"
-                if check_only_entryport_celltype(celltype) then
-                else
-                    impl_first = true
-                    callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
-                        if check_gen_dyn_for_port(callport) == nil then
-                            if impl_first then
-                                impl_first = false
-                                file.print "<#{alphabet}"
-                            else
-                                file.print ", #{alphabet}"
-                            end
-                        end
-                    end
-                    file.print ">" if impl_first == false
-                end
-                file.print " {\n"
-
-                # インライン化
-                file.print "\t#[inline]\n"
-
-                # get_cell_ref 関数の定義を生成
-                # TODO: get_cell_ref にライフタイムアノテーションが必要かも？
-                file.print "\tpub fn get_cell_ref(&'static self) -> "
-
-                # 返り値のタプル型の要素をまとめるための配列
-                return_tuple_type_list = []
-                return_tuple_list = []
-
-                # 呼び口をタプルの配列に追加
-                callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
-                    return_tuple_type_list.push("&'static #{alphabet}")
-                    return_tuple_list.push("self.#{snake_case(callport.get_name.to_s)}")
-                end
-
-                # 属性をタプルの配列に追加
-                celltype.get_attribute_list.each{ |attr|
-                    if attr.is_omit? then
-                        next
-                    end
-                    return_tuple_type_list.push("&'static #{c_type_to_rust_type(attr.get_type)}")
-                    return_tuple_list.push("&self.#{attr.get_name.to_s}")
-                }
-
-                # 変数をタプルの配列に追加
-                if celltype.get_var_list.length != 0 then
-                    return_tuple_type_list.push("&'static mut #{get_rust_celltype_name(celltype)}Var")
-                    # celltype.get_var_list.each{ |var|
-                    #     var_type_name = var.get_type.get_type_str
-                    #     if check_lifetime_annotation_for_type(var_type_name) then
-                    #         return_tuple_type_list[-1].concat("<'a>")
-                    #         break
-                    #     end
-                    # }
-                    # return_tuple_type_list[-1].concat(">")
-                    return_tuple_list.push("unsafe{&mut *self.variable.unsafe_var.get()}")
-                end
-
-                # ロックガードを配列に追加
-                # TODO: 変数が無い、もしくはダミーだけの時にはロックガードを生成しなくてもいいかも。しかし、get_cell_ref の返り値の数はそろえる必要がある
-                if celltype.get_var_list.length != 0 then
-                    result = check_gen_dyn_for_ex_ctrl_ref celltype
-                    if result == "dummy" then
-                        return_tuple_type_list.push("&TECSDummyLockGuard")
-                        return_tuple_list.push("&DUMMY_LOCK_GUARD")
-                    else
-                        return_tuple_type_list.push("LockGuardFor#{get_rust_celltype_name(celltype)}")
-                        return_tuple_list.push("LockGuardFor#{get_rust_celltype_name(celltype)}{\n\t\t\t\tex_ctrl_ref: self.ex_ctrl_ref,\n\t\t\t}")
-                    end
-                end
-
-                # if return_tuple_type_list.length != 1 then
-                #     file.print "("
-                # end
-
-                # # 返り値のタプル型を生成
-                # return_tuple_type_list.each_with_index do |return_tuple_type, index|
-                #     if index == return_tuple_type_list.length - 1 then
-                #         file.print "#{return_tuple_type}"
-                #         break
-                #     end
-                #     file.print "#{return_tuple_type}, "
-                # end
-
-                # if return_tuple_type_list.length != 1 then
-                #     file.print ")"
-                # end
-
-                file.print "LockGuardFor#{get_rust_celltype_name(celltype)}"
-                # TECS/Rust において、dyn な呼び口は、ジェネリクス参照ではなくトレイトオブジェクトへの参照として表現される
-                # そのため、use_jenerics_alphabet にトレイトオブジェクトが入っている場合は、その生成をスキップする
-                # セルタイプ構造体にライフタイムアノテーションが必要かどうか判定する(必要 -> 呼び口を持っている)
-                # TODO: ライフタイムアノテーションの判定は厳格にする必要がある
-                if check_only_entryport_celltype(celltype) == false then
-                    file.print "<'_"
-                    # use_jenerics_alphabet と callport_list の要素数が等しいことを前提としている
-                    callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
-                        if check_gen_dyn_for_port(callport) == nil then
-                            file.print ", #{alphabet}"
-                        end
-                    end
-                    file.print ">"
-                end
-
-                file.print " {\n"
-
-                if celltype.get_var_list.length != 0 then
-                    result = check_gen_dyn_for_ex_ctrl_ref celltype
-                    if result != "dummy" then
-                        file.print "\t\tself.ex_ctrl_ref.lock();\n"
-                    end
-                end
-
-                # file.print "\t\t"
-                
-                # if return_tuple_list.length != 1 then
-                #     file.print "(\n"
-                # end
-
-                # # 返り値のタプルを生成
-                # return_tuple_list.each_with_index do |return_tuple, index|
-                #     if return_tuple_list.length == 1 then
-                #         file.print "#{return_tuple}"
-                #         break
-                #     end
-
-                #     if index == return_tuple_list.length - 1 then
-                #         file.print "\t\t\t#{return_tuple}\n"
-                #         break
-                #     end
-                #     file.print "\t\t\t#{return_tuple},\n"
-                # end
-
-                # if return_tuple_list.length != 1 then
-                #     file.print "\t\t)"
-                # end
-
-
-                lock_guard_filed_name = []
-                lock_guard_field_value = []
-
-                callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
-                    lock_guard_filed_name.push("#{snake_case(callport.get_name.to_s)}")
-                    lock_guard_field_value.push("self.#{snake_case(callport.get_name.to_s)}")
-                end
-
-                celltype.get_attribute_list.each do |attr|
-                    if attr.is_omit? then
-                        next
-                    end
-                    lock_guard_filed_name.push(attr.get_name)
-                    if is_singleton_optimization?(celltype) then
-                        celltype_name_camel = get_rust_celltype_name(celltype)
-                        attr_name_camel = camel_case(attr.get_name.to_s)
-                        lock_guard_field_value.push("Singleton#{celltype_name_camel}#{attr_name_camel}")
-                    else
-                        lock_guard_field_value.push("&self.#{attr.get_name}")
-                    end
-                end
-
-                if celltype.get_var_list.length != 0 then
-                    lock_guard_filed_name.push("var")
-                    lock_guard_field_value.push("unsafe{&mut *self.variable.unsafe_var.get()}")
-                end
-
-                if celltype.get_var_list.length != 0 then
-                    result = check_gen_dyn_for_ex_ctrl_ref celltype
-                    if result == "dummy" then
-                    else
-                        lock_guard_filed_name.push("ex_ctrl_ref")
-                        lock_guard_field_value.push("self.ex_ctrl_ref")
-                    end
-                end
-
-
-                file.print "\t\tLockGuardFor#{get_rust_celltype_name(celltype)} {\n"
-
-                lock_guard_filed_name.each_with_index do |field_name, index|
-                    file.print "\t\t\t#{field_name}: #{lock_guard_field_value[index]},\n"
-                end
-                
-                file.print "\t\t}"
-                
-                
-                file.print"\n\t}\n}\n"
-                # get_cell_ref 関数を生成するのは1回だけでいいため，break する
-                break
-
-            end # if port.get_port_type == :ENTRY then
-        } # celltype.get_port_list.each
-    end
-
-    # ex_ctrl_ref フィールドの初期化を生成
-    def gen_rust_cell_structure_ex_ctrl_ref_initialize file, celltype, cell
-        return if celltype.get_var_list.length == 0
-
-        result = check_gen_dyn_for_ex_ctrl_ref celltype
-        return if result == "dummy"
-
-        case check_exclusive_control_for_cell cell
-        when true
-            file.print "\tex_ctrl_ref: &#{cell.get_global_name.to_s.upcase}_EX_CTRL_REF,\n"
-        else
-            file.print "\tex_ctrl_ref: &DUMMY_EX_CTRL_REF,\n"
-        end
-    end
-
-    # itron のコンフィグレーションファイルにミューテックス静的APIを生成する
-    # RustASP3CelltypePlugin や RustFMP3CelltypePlugin などで、具体的な静的APIの生成を実装する
-    def gen_mutex_static_api_for_configuration cell
-        
-    end
-
-    # itron のコンフィグレーションファイルにセマフォ静的APIを生成する
-    # RustASP3CelltypePlugin や RustFMP3CelltypePlugin などで、具体的な静的APIの生成を実装する
-    def gen_semaphore_static_api_for_configuration cell
-
-    end
-
-    # セルのミューテックスオブジェクトの優先度上限値を取得する
-    def get_ceiling_priority cell
-        # JSONファイルがパースされていない場合は、優先度上限を 1 として返す
-        if @@json_parse_result.length == 0 then
-            return 1
-        end
-
-        # puts "@@json_parse_result: #{@@json_parse_result}"
-
-        celltype = cell.get_celltype.get_global_name.to_s
-        if @@json_parse_result[cell.get_global_name.to_s]["Celltype"] == celltype then
-            if @@json_parse_result[cell.get_global_name.to_s]["ExclusiveControl"] == "true" && @@json_parse_result[cell.get_global_name.to_s]["PriorityList"].length != 0 then
-                return @@json_parse_result[cell.get_global_name.to_s]["PriorityList"].min
-            end
-        end
-        puts "Error: JSON file does not include #{cell.get_global_name.to_s}"
-        return 1
-    end
-
-    # Sync変数構造体の初期化を生成
-    def gen_rust_variable_structure_initialize file, cell
-        if @celltype.get_var_list.length != 0 then
-            file.print "static #{cell.get_global_name.to_s.upcase}VAR: Sync#{get_rust_celltype_name(cell.get_celltype)}Var = Sync#{get_rust_celltype_name(cell.get_celltype)}Var {\n"
-            file.print "\t"
-            gen_comments_safe_reason file, cell
-            file.print "\tunsafe_var: UnsafeCell::new(#{get_rust_celltype_name(cell.get_celltype)}Var {\n"
-            # 変数構造体のフィールドの初期化を生成
-            gen_rust_variable_structure_field_initialize(file, cell)
-            file.print "\t}),\n"
-            file.print "};\n\n"
-        end
-    end
-
-    def gen_comments_safe_reason file, cell
-        case check_exclusive_control_for_cell cell
-        when true
-            case check_gen_which_ex_ctrl cell
-            when "semaphore"
-                file.print "/// This UnsafeCell is accessed by multiple tasks, but is safe because it is operated exclusively by the semaphore object.\n"
-            when "mutex"
-                file.print "/// This UnsafeCell is accessed by multiple tasks, but is safe because it is operated exclusively by the mutex object.\n"
-            end
-        else
-            case check_multiple_accessed_for_cell cell
-            when true
-                # root に近いコンポーネントで排他制御を行っている場合
-                file.print "/// This UnsafeCell is accessed by multiple tasks, but is secure because it is accessed exclusively, with exclusive control applied to the component closest to root.\n"
-            else
-                file.print "/// This UnsafeCell is safe because it is only accessed by one task due to the call flow and component structure of TECS.\n"
-            end
-        end
-    end
-
-    # ex_ctrl_ref の初期化を生成
-    def gen_rust_ex_ctrl_ref_initialize file, cell
-        return if @celltype.get_var_list.length == 0
-        multiple = check_exclusive_control_for_cell cell
-        if multiple then
-            file.print "#[unsafe(link_section = \".rodata\")]\n"
-            case check_gen_which_ex_ctrl cell
-            when "semaphore"
-                file.print "static #{cell.get_global_name.to_s.upcase}_EX_CTRL_REF: TECSSemaphoreRef = TECSSemaphoreRef{\n"
-                file.print "\tinner: unsafe{SemaphoreRef::from_raw_nonnull(NonZeroI32::new(TECS_RUST_EX_CTRL_#{@@ex_ctrl_ref_id}).unwrap())},\n"
-                file.print "};\n\n"
-                gen_semaphore_static_api_for_configuration cell
-            when "mutex"
-                file.print "static #{cell.get_global_name.to_s.upcase}_EX_CTRL_REF: TECSMutexRef = TECSMutexRef{\n"
-                file.print "\tinner: unsafe{MutexRef::from_raw_nonnull(NonZeroI32::new(TECS_RUST_EX_CTRL_#{@@ex_ctrl_ref_id}).unwrap())},\n"
-                file.print "};\n\n"
-                gen_mutex_static_api_for_configuration cell
-            end
-        end
-    end
-
-    # ロックガードに Drop トレイトを実装する
-    def gen_rust_impl_drop_for_lock_guard_structure file, celltype, callport_list, use_jenerics_alphabet
-        return if celltype.get_var_list.length == 0
-
-        result = check_gen_dyn_for_ex_ctrl_ref celltype
-        return if result == "dummy"
-
-        life_time_declare = false
-        jenerics_flag = true
-
-        file.print "impl"
-        # celltype.get_var_list.each{ |var|
-        #     var_type_name = var.get_type.get_type_str
-        #     if check_lifetime_annotation_for_type(var_type_name) then
-        #         file.print "<'a>"
-        #         break
-        #     end
-        # }
-
-        if check_only_entryport_celltype(celltype) then
-        else
-            # check_only_entryport_celltype では，dyn な呼び口を判定していないため，ここで判定する
-            celltype.get_port_list.each{ |port|
-                if check_gen_dyn_for_port(port) == nil || use_jenerics_alphabet.length != 0 then
-                    file.print "<"
-                end
-                break
-            }
-        end
-        # ライフタイムアノテーションの生成部
-        # TODO：ライフタイムについては，もう少し厳格にする必要がある
-        celltype.get_var_list.each{ |var|
-            # ライフタイムアノテーションが必要な型が変数にあるかどうかを判断
-            var_type_name = var.get_type.get_type_str
-            if check_lifetime_annotation_for_type(var_type_name) then
-                file.print "'a"
-                life_time_declare = true
-                break
-            end
-        }
-
-        if use_jenerics_alphabet.length != 0 && life_time_declare == true then
-            file.print ", "
-        end
-
-        # impl のジェネリクスを生成
-        callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
-            if check_gen_dyn_for_port(callport) == nil then
-                if jenerics_flag then
-                    jenerics_flag = false
-                    file.print "#{alphabet}: #{get_rust_signature_name(callport.get_signature)}"
-                else
-                    file.print ", #{alphabet}: #{get_rust_signature_name(callport.get_signature)}"
-                end
-            end
-        end
-        if check_only_entryport_celltype(celltype) then
-        else
-            # check_only_entryport_celltype では，dyn な呼び口を判定していないため，ここで判定する
-            celltype.get_port_list.each{ |port|
-                if check_gen_dyn_for_port(port) == nil || use_jenerics_alphabet.length != 0 then
-                    file.print ">"
-                end
-                break
-            }
-        end
-
-
-        file.print " Drop for LockGuardFor#{get_rust_celltype_name(celltype)}"
-        # celltype.get_var_list.each{ |var|
-        #     var_type_name = var.get_type.get_type_str
-        #     if check_lifetime_annotation_for_type(var_type_name) then
-        #         file.print "<'a>"
-        #         break
-        #     end
-        # }
-        if check_only_entryport_celltype(celltype) == false then
-            file.print "<'_"
-            # use_jenerics_alphabet と callport_list の要素数が等しいことを前提としている
-            callport_list.zip(use_jenerics_alphabet).each do |callport, alphabet|
-                if check_gen_dyn_for_port(callport) == nil then
-                    file.print ", #{alphabet}"
-                end
-            end
-            file.print ">"
-        end
-
-        file.print " {\n"
-        file.print "\tfn drop(&mut self){\n"
-        file.print "\t\tself.ex_ctrl_ref.unlock();\n"
-        file.print "\t}\n"
-        file.print "}\n\n"
-    end
-
-    # セルタイプに受け口がある場合，受け口関数を生成する
-    def gen_rust_entryport_function file, celltype, callport_list
-        # セルタイプに受け口がある場合，impl を生成する
-        celltype.get_port_list.each{ |port|
-            if port.get_port_type == :ENTRY then
-                sig = port.get_signature
-
-                # 空のシグニチャの場合は、初期化を生成しない
-                if sig.get_function_head_array.length == 0 then
-                    next
-                end
-
-                file.print "impl #{camel_case(snake_case(port.get_signature.get_global_name.to_s))} for #{camel_case(snake_case(port.get_name.to_s))}For#{get_rust_celltype_name(celltype)}{\n\n"
-
-                sig_param_str_list, _, lifetime_flag = get_sig_param_str sig
-
-                # 空の関数を生成
-                sig.get_function_head_array.each{ |func_head|
-                    # 関数のインライン化
-                    if port.is_inline? then
-                        file.print "\t#[inline]\n"
-                    end
-                    file.print "\tfn #{get_rust_function_name(func_head)}"
-                    # おそらく不要
-                    # if lifetime_flag then
-                    #     file.print "<'a>"
-                    # end
-                    # file.print"(&'static self"
-                    file.print"(&self"
-                    # param_num と sig_param_str_list の要素数が等しいことを前提としている
-                    param_num = func_head.get_paramlist.get_items.size
-                    param_num.times do
-                        current_param = sig_param_str_list.shift
-                        if current_param == "ignore" then
-                            next
-                        end
-                        file.print "#{current_param}"
-                    end
-                    file.print ") "
-
-                    # 返り値の型がunknown,つまりvoidのときは，-> を生成しない
-                    if c_type_to_rust_type(func_head.get_return_type) != "unknown" then
-                        file.print "-> #{c_type_to_rust_type(func_head.get_return_type)}"
-                    end
-
-                    file.print "{\n"
-
-                    if check_only_entryport_celltype(celltype) then
-                    else
-                        # # get_cell_ref 関数の呼び出しを生成
-                        # file.print "\t\tlet "
-
-                        # # get_cell_ref 関数の返り値を格納するタプルを生成
-                        # tuple_name_list = []
-                        # callport_list.each{ |callport|
-                        #     tuple_name_list.push "#{snake_case(callport.get_name.to_s)}"
-                        # }
-                        # celltype.get_attribute_list.each{ |attr|
-                        #     if attr.is_omit? then
-                        #         next
-                        #     end
-                        #     tuple_name_list.push "#{attr.get_name.to_s}"
-                        # }
-                        # if celltype.get_var_list.length != 0 then
-                        #     tuple_name_list.push "var"
-                        #     tuple_name_list.push "_lg"
-                        # end
-
-                        # if tuple_name_list.length != 1 then
-                        #     file.print "("
-                        # end
-
-                        # tuple_name_list.each_with_index do |tuple_name, index|
-                        #     if index == tuple_name_list.length - 1 then
-                        #         file.print "#{tuple_name}"
-                        #         break
-                        #     end
-                        #     file.print "#{tuple_name}, "
-                        # end
-
-                        # if tuple_name_list.length != 1 then
-                        #     file.print ")"
-                        # end
-
-                        # file.print " = self.cell.get_cell_ref();\n"
-
-                        # ロックガードで覆う場合の生成
-                        file.print "\t\tlet lg = self.cell.get_cell_ref();\n"
-                    end
-                    file.print "\n"
-                    file.print"\t}\n"
-                }
-
-                file.print "}\n\n"
-
-            else
-            end
-        }
     end
 
     # Cargo の新規プロジェクトを作成する
@@ -1760,7 +1325,6 @@ impl LockManager for TECSSemaphoreRef{
 }
             EOS
 
-        # get_diff_between_gen_and_src "tecs_ex_ctrl.rs"
         ex_file = CFile.open( "#{$gen}/tecs_ex_ctrl.rs", "w" )
         ex_file.print contents
         ex_file.close
@@ -1770,10 +1334,7 @@ impl LockManager for TECSSemaphoreRef{
         end
     end
 
-    # syslog の Rust ラップである print.rs を生成する
-    # カーネルによって型などが異なるため、それぞれのプラグインで実装する
-    def gen_tecs_print_rs
-
+    def gen_tecs_ex_ctrl_rs
     end
 
     #=== tCelltype_factory.h に挿入するコードを生成する
@@ -1781,12 +1342,16 @@ impl LockManager for TECSSemaphoreRef{
     # セルタイププラグインが指定されたセルタイプのみ呼び出される
     def gen_factory file
 
-        # temp = File.readlines("#{@@cargo_path}/src/lib.rs")
-        # puts temp
-
-        # @celltype.get_cell_list.each{ |cell|
-        #     gen_mod_in_lib_rs_for_cell cell
-        # }
+        plugin_option = @plugin_arg_str.split(",").map(&:strip)
+        if plugin_option.include?("TASK") then
+            @celltype.task = true
+        end
+        if plugin_option.include?("INT_SERVICE_ROUTINE") then
+            @celltype.int_service_routine = true
+        end
+        if plugin_option.include?("INIT_ROUTINE") then
+            @celltype.init_routine = true
+        end
 
         super(file)
 
@@ -1801,6 +1366,9 @@ impl LockManager for TECSSemaphoreRef{
         # gen_tecs_semaphore_rs
         print "#{@celltype.get_global_name.to_s}: gen_tecs_print_rs\n"
         gen_tecs_print_rs
+
+        print "#{@celltype.get_global_name.to_s}: gen_rust_tecs_h\n"
+        gen_rust_tecs_h
 
         # カーネルオブジェクトコンポーネントの ID を生成する
         print "#{@celltype.get_global_name.to_s}: gen_kernel_object_id_in_kernel_cfg_rs\n"
