@@ -60,7 +60,7 @@ class Cell
         # TODO: Rust のタスク関数を呼び出すための extern 宣言をインクルードするための生成であり、将来的には削除できるかも
         if RustASP3CelltypePlugin.rust_tecs_header_include == false then
             file.print "#include \"rust_tecs.h\"\n"
-            RustASP3CelltypePlugin.rust_tecs_header_include = true
+            RustASP3CelltypePlugin.set_rust_tecs_header_include
         end
 
         # TODO: tTaskRs であることを前提としている
@@ -199,7 +199,7 @@ class RustASP3CelltypePlugin < RustITRONCelltypePlugin
 use itron::abi::uint_t;
 use itron::abi::*;
 
-extern "C"{
+unsafe extern "C"{
     pub fn syslog_wri_log(prio: uint_t, p_syslog: *const Syslog) -> ER;
 }
 

@@ -468,7 +468,6 @@ class CDLContents
       entry_port = @entry_port[ port_name ]
       src_entry_port = src.entry_port[port_name]
       if src_entry_port == nil then
-        print "port merged:   #{port_name}\n"
         next
       end
       entry_port.entry_body = src_entry_port.entry_body
@@ -476,10 +475,8 @@ class CDLContents
         # p "merging #{func_name}"
         func_body = entry_port.entry_func_body[ func_name ]
         if src_entry_port.entry_func_body[func_name] == nil then
-          print "func merged:   #{func_name}\n"
           next
         end
-        print "func remained: #{func_name}\n"
         # entry_port.entry_func_comment[func_name] = src_entry_port.entry_func_comment[func_name]
         entry_port.entry_func_body[func_name]    = src_entry_port.entry_func_body[func_name]
       }
@@ -537,11 +534,13 @@ class CDLEntryPort
 end
 
 
+
 #=== Rust 用のエントリポート情報
 class RustCDLEntryPort
   #@entry_comment::      [string]   # ENTRY_PORT コメント行
   #@entry_body::         [string]   # ENTRY_PORT の中身
   #@impl_header::        [string]   # impl ... { のヘッダ行
+  #@entry_func_gap::     {func_name=>[string]}  # fn 直前の隙間コード
   #@entry_func_comment:: {func_name=>[string]}  # ENTRY_FUNC コメント行
   #@entry_func_body::    {func_name=>[string]}  # fn 本体（波括弧含む）
   #@entry_func_array::   [symbol]   # fn の出現順序
@@ -551,6 +550,7 @@ class RustCDLEntryPort
     @entry_comment = []
     @entry_body = []
     @impl_header = []
+    @entry_func_gap = {}
     @entry_func_comment = {}
     @entry_func_body = {}
     @entry_func_array = []
@@ -562,6 +562,9 @@ class RustCDLEntryPort
     write_array( file, @entry_body )
     write_array( file, @impl_header )
     @entry_func_array.each{ |fnm|
+      if @entry_func_gap[fnm] then
+        write_array( file, @entry_func_gap[fnm] )
+      end
       write_array( file, @entry_func_comment[fnm] )
       write_array( file, @entry_func_body[fnm] )
     }
@@ -569,7 +572,7 @@ class RustCDLEntryPort
   end
 
   attr_accessor :entry_comment, :entry_body, :impl_header,
-                :entry_func_comment, :entry_func_body, :entry_func_array,
+                :entry_func_gap, :entry_func_comment, :entry_func_body, :entry_func_array,
                 :impl_footer
 end
 
@@ -783,6 +786,9 @@ class RustCDLContents
         # fn 間: 次の ENTRY_FUNC, ENTRY_PORT, POSTAMBLE, impl の閉じ '}' を探す
         if RE_ENTRY_FUNC_OPEN =~ line then
           func_name = $1.to_sym
+          if port_name && @entry_port[port_name]
+            @entry_port[port_name].entry_func_gap[func_name] = part
+          end
           @entry_port[port_name].entry_func_comment[func_name] = [line]
           @entry_port[port_name].entry_func_array << func_name
           part = []
@@ -895,6 +901,8 @@ class RustCDLContents
     @head = src.head
     @preamble_body = src.preamble_body
     @postamble_body = src.postamble_body
+    @postamble_comment = src.postamble_comment
+
 
     @entry_port_array.each{ |port_name|
       entry_port = @entry_port[port_name]
@@ -905,12 +913,18 @@ class RustCDLContents
       end
       # impl ヘッダはテンプレート（self）を維持
 
+      # impl footer は src からコピー
+      entry_port.impl_footer = src_entry_port.impl_footer
+
       entry_port.entry_func_array.each{ |func_name|
         if src_entry_port.entry_func_body[func_name] == nil then
           print "func merged:   #{func_name}\n"
           next
         end
         print "func remained: #{func_name}\n"
+        
+        # gap のコピー
+        entry_port.entry_func_gap[func_name]  = src_entry_port.entry_func_gap[func_name]
         entry_port.entry_func_body[func_name] = src_entry_port.entry_func_body[func_name]
       }
     }
@@ -926,7 +940,7 @@ class RustCDLContents
   end
 
   attr_accessor :head, :preamble_comment, :preamble_body, :entry_port,
-                :entry_port_array, :postamble_body
+                :entry_port_array, :postamble_comment, :postamble_body
 end
 
 def merge( src_file, dst_dir )

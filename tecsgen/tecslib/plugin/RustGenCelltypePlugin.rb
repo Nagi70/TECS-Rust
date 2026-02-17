@@ -1070,7 +1070,8 @@ class Celltype
                 file.print "// #[</ENTRY_PORT>]#\n"
                 file.print "\n"
 
-                if is_attribute_optimization?(self) then
+                has_attr = self.get_attribute_list.any? { |attr| !attr.is_omit? }
+                if has_attr then
                     file.print "impl<CONFIG: #{get_rust_celltype_name(self)}Config> #{camel_case(snake_case(port.get_signature.get_global_name.to_s))} for #{camel_case(snake_case(port.get_name.to_s))}For#{get_rust_celltype_name(self)}<CONFIG> {\n\n"
                 else
                     file.print "impl #{camel_case(snake_case(port.get_signature.get_global_name.to_s))} for #{camel_case(snake_case(port.get_name.to_s))}For#{get_rust_celltype_name(self)} {\n\n"
@@ -1111,40 +1112,7 @@ class Celltype
                     if check_only_entryport_celltype then
                     else
                         # get_cell_ref 関数の呼び出しを生成
-                        file.print "\t\tlet "
-
-                        # get_cell_ref 関数の返り値を格納するタプルを生成
-                        tuple_name_list = []
-                        callport_list.each{ |callport|
-                            tuple_name_list.push "#{snake_case(callport.get_name.to_s)}"
-                        }
-                        self.get_attribute_list.each{ |attr|
-                            if attr.is_omit? then
-                                next
-                            end
-                            tuple_name_list.push "#{attr.get_name.to_s}"
-                        }
-                        if self.get_var_list.length != 0 then
-                            tuple_name_list.push "var"
-                        end
-
-                        if tuple_name_list.length != 1 then
-                            file.print "("
-                        end
-
-                        tuple_name_list.each_with_index do |tuple_name, index|
-                            if index == tuple_name_list.length - 1 then
-                                file.print "#{tuple_name}"
-                                break
-                            end
-                            file.print "#{tuple_name}, "
-                        end
-
-                        if tuple_name_list.length != 1 then
-                            file.print ")"
-                        end
-
-                        file.print " = self.cell.get_cell_ref();\n"
+                        file.print "\t\tlet lg = self.cell.get_cell_ref();\n"
                     end
                     file.print "\n"
                     file.print"\t}\n"
@@ -1225,6 +1193,11 @@ class Celltype
             else
                 file.print "\t\t\t#{attr.get_name}: &self.#{attr.get_name},\n"
             end
+        end
+
+        has_attr = self.get_attribute_list.any? { |attr| !attr.is_omit? }
+        if has_attr && !is_attribute_optimization?(self) then
+            file.print "\t\t\t_phantom: core::marker::PhantomData::<ConfigDefault#{get_rust_celltype_name(self)}>,\n"
         end
     end
 

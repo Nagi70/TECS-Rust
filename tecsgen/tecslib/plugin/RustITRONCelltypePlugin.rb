@@ -416,7 +416,7 @@ class Celltype
         when "MutexRef"
             attr_type_str = "MutexRef<'static>"
         end
-        super(file, attr_name, attr_type_str)
+        file.print "\t#{attr_name}: #{attr_type_str},\n"
     end
 
     # get_cell_ref 関数のヘッダや引数はOSに依存するため、各OSのプラグインでオーバーライドする
@@ -557,15 +557,29 @@ class Celltype
         result = self.check_gen_dyn_for_ex_ctrl_ref
         return if result == "dummy"
 
-        life_time_declare = false
-        jenerics_flag = true
+        file.print "impl" 
 
-        file.print "impl"
-
+        if self.get_attribute_list.any? { |attr| !attr.is_omit? } then
+            file.print "<CONFIG: #{get_rust_celltype_name(self)}Config>"
+        end
+        
         file.print " Drop for LockGuardFor#{get_rust_celltype_name(self)}"
 
-        if self.check_only_entryport_celltype == false then
-            file.print "<'_>"
+        params = []
+        # シングルトン最適化が行われ、ロックガードに属性以外の要素が存在しない場合、ライフタイムは不要
+        if is_lock_guard_lifetime_required?(callport_list, use_jenerics_alphabet) then
+            params << "'_"
+        end
+
+        # 属性があれば CONFIG を出す
+        if self.get_attribute_list.any? { |attr| !attr.is_omit? } then
+            params << "CONFIG"
+        end
+        
+        if params.length > 0 then
+            file.print "<"
+            file.print params.join(", ")
+            file.print ">"
         end
 
         file.print " {\n"
@@ -1332,9 +1346,6 @@ impl LockManager for TECSSemaphoreRef{
         if File.exist?("#{@@cargo_path}}/tecs_ex_ctrl.rs") == false then
             copy_gen_files_to_cargo "tecs_ex_ctrl.rs", nil
         end
-    end
-
-    def gen_tecs_ex_ctrl_rs
     end
 
     #=== tCelltype_factory.h に挿入するコードを生成する

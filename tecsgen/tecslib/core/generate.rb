@@ -1101,7 +1101,9 @@ class StructType < Type
     f.print "struct #{@tag} {\n"
 
     @members_decl.get_items.each{ |i|
-      f.printf( "                %-14s %s%s;\n", "#{i.get_type.get_type_str}", "#{i.get_name}", "#{i.get_type.get_type_str_post}" )
+      type = i.get_type
+      type_str = type.kind_of?( RTypeType ) ? "void *" : type.get_type_str
+      f.printf( "                %-14s %s%s;\n", "#{type_str}", "#{i.get_name}", "#{type.get_type_str_post}" )
     }
 
     f.print "};\n"
