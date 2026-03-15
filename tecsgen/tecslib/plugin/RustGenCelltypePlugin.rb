@@ -636,17 +636,10 @@ class Cell
     end
 
     # ex_ctrl_ref の初期化を生成
-    def gen_rust_ex_ctrl_ref_initialize file, cell
+    def gen_rust_ex_ctrl_ref_initialize file
         # ItronrsPlugin で実装
         # TODO: spinクレート版を実装する場合はこの関数を使う
     end
-
-    # ロックガードに Drop トレイトを実装する
-    def gen_rust_impl_drop_for_lock_guard_structure file, callport_list, use_jenerics_alphabet
-        # ItronrsPlugin で実装
-        # TODO: spinクレート版を実装する場合はこの関数を使う
-    end
-
 end
 
 class Celltype
@@ -1442,6 +1435,12 @@ class Celltype
 
             file.print "\n"
         }
+    end
+
+    # ロックガードに Drop トレイトを実装する
+    def gen_rust_impl_drop_for_lock_guard_structure file, callport_list, use_jenerics_alphabet
+        # ItronrsPlugin で実装
+        # TODO: spinクレート版を実装する場合はこの関数を使う
     end
 
 end
