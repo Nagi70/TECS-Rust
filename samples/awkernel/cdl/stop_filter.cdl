@@ -2,7 +2,7 @@ import("struct.cdl");
 import("publish_signature.cdl");
 
 signature sStopFilter {
-    void main([in] struct KinematicState odom_in, [out] struct KinematicState* odom_out); 
+    void main([in] const struct KinematicState* odom_in, [out] struct KinematicState* odom_out); 
 };
 
 [generate(RustAWKPlugin, "DAG_REACTOR_BODY")]

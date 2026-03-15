@@ -2,7 +2,7 @@ import("struct.cdl");
 import("publish_signature.cdl");
 
 signature sVehicleVelocityConverter {
-    void main([in] struct VelocityReport velocity_status, [out] struct TwistWithCovarianceStamped* twist_with_covariance);
+    void main([in] const struct VelocityReport* velocity_status, [out] struct TwistWithCovarianceStamped* twist_with_covariance);
 };
 
 [generate(RustAWKPlugin, "DAG_REACTOR_BODY")]  // プラグインの適用

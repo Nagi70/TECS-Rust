@@ -3,12 +3,12 @@ import("publish_signature.cdl");
 
 //*** IMUデバイスに関するシグニチャ ***///
 signature sImuDevice {
-    void      read( [in] struct Frame msg, [out] struct ImuMsg *imu_msg);
+    void      read( [in] const struct Frame* msg, [out] struct ImuMsg *imu_msg);
 };
 
 //*** コールバック用シグニチャ ***//
 signature sImuDriver {
-    void    main( [in] struct Frame imu, [out] struct ImuMsg *imu_raw );
+    void    main( [in] const struct Frame* imu, [out] struct ImuMsg *imu_raw );
 };
 
 //*** IMUセルタイプ ***//
@@ -56,53 +56,53 @@ celltype tImuDriver {
     };
 };
 
-[generate( RustAWKPlugin, "DAG_REACTOR_BODY")]
-celltype tImuDriverOnly {
-    [inline] entry sImuDriver eReactor;
+//[generate( RustAWKPlugin, "DAG_REACTOR_BODY")]
+//celltype tImuDriverOnly {
+//    [inline] entry sImuDriver eReactor;
+//
+//    [omit] call sImuMsg cImuRaw;
+//    entry sFrame eImu;
+//
+//    attr{
+//        uint32_t  can_id_gyro;   /* CAN GYRO メッセージ ID (0x319) */
+//        uint32_t  can_id_accel;  /* CAN ACCEL メッセージ ID (0x31A) */
+//        PLType("&'static str")  imu_frame_id = PL_EXP("\"imu\"");  /* IMU frame id "imu" */
+//
+//	    [omit] PLType("Cow") reactorName  = PL_EXP("ImuDriver");
+//	    [omit] PLType("SchedulerType") schedType = PL_EXP("SchedulerType::PrioritizedFIFO(7)");
+//	      
+//        [omit] PLType("Cow") subscribeTopicNames = PL_EXP("Imu");
+//        [omit] PLType("Cow") publishTopicNames = PL_EXP("ImuRaw");
+//    };
+//
+//    /* 実行中に変化するデータ */
+//    var {
+//        uint16_t counter = 0;
+//        int16_t  angular_velocity_x_raw = 0;
+//        int16_t  angular_velocity_y_raw = 0;
+//        int16_t  angular_velocity_z_raw = 0;
+//        int16_t  acceleration_x_raw = 0;
+//        int16_t  acceleration_y_raw = 0;
+//        int16_t  acceleration_z_raw = 0;
+//    };
+//};
 
-    [omit] call sImuMsg cImuRaw;
-    entry sFrame eImu;
-
-    attr{
-        uint32_t  can_id_gyro;   /* CAN GYRO メッセージ ID (0x319) */
-        uint32_t  can_id_accel;  /* CAN ACCEL メッセージ ID (0x31A) */
-        PLType("&'static str")  imu_frame_id = PL_EXP("\"imu\"");  /* IMU frame id "imu" */
-
-	    [omit] PLType("Cow") reactorName  = PL_EXP("ImuDriver");
-	    [omit] PLType("SchedulerType") schedType = PL_EXP("SchedulerType::PrioritizedFIFO(7)");
-	      
-        [omit] PLType("Cow") subscribeTopicNames = PL_EXP("Imu");
-        [omit] PLType("Cow") publishTopicNames = PL_EXP("ImuRaw");
-    };
-
-    /* 実行中に変化するデータ */
-    var {
-        uint16_t counter = 0;
-        int16_t  angular_velocity_x_raw = 0;
-        int16_t  angular_velocity_y_raw = 0;
-        int16_t  angular_velocity_z_raw = 0;
-        int16_t  acceleration_x_raw = 0;
-        int16_t  acceleration_y_raw = 0;
-        int16_t  acceleration_z_raw = 0;
-    };
-};
-
-[generate( RustAWKPlugin, "DAG_REACTOR_BODY")]
-celltype tImuDriverWithoutVar {
-    [inline] entry sImuDriver eReactor;
-
-    [omit] call sImuMsg cImuRaw;
-    entry sFrame eImu;
-
-    attr{
-        uint32_t  can_id_gyro;   /* CAN GYRO メッセージ ID (0x319) */
-        uint32_t  can_id_accel;  /* CAN ACCEL メッセージ ID (0x31A) */
-        PLType("&'static str")  imu_frame_id = PL_EXP("\"imu\"");  /* IMU frame id "imu" */
-
-	    [omit] PLType("Cow") reactorName  = PL_EXP("ImuDriver");
-	    [omit] PLType("SchedulerType") schedType = PL_EXP("SchedulerType::PrioritizedFIFO(7)");
-	      
-        [omit] PLType("Cow") subscribeTopicNames = PL_EXP("Imu");
-        [omit] PLType("Cow") publishTopicNames = PL_EXP("ImuRaw");
-    };
-};
+//[generate( RustAWKPlugin, "DAG_REACTOR_BODY")]
+//celltype tImuDriverWithoutVar {
+//    [inline] entry sImuDriver eReactor;
+//
+//    [omit] call sImuMsg cImuRaw;
+//    entry sFrame eImu;
+//
+//    attr{
+//        uint32_t  can_id_gyro;   /* CAN GYRO メッセージ ID (0x319) */
+//        uint32_t  can_id_accel;  /* CAN ACCEL メッセージ ID (0x31A) */
+//        PLType("&'static str")  imu_frame_id = PL_EXP("\"imu\"");  /* IMU frame id "imu" */
+//
+//	    [omit] PLType("Cow") reactorName  = PL_EXP("ImuDriver");
+//	    [omit] PLType("SchedulerType") schedType = PL_EXP("SchedulerType::PrioritizedFIFO(7)");
+//	      
+//        [omit] PLType("Cow") subscribeTopicNames = PL_EXP("Imu");
+//        [omit] PLType("Cow") publishTopicNames = PL_EXP("ImuRaw");
+//    };
+//};

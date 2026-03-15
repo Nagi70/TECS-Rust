@@ -3,13 +3,13 @@ import("publish_signature.cdl");
 
 // Main reactor signature: converts TwistStamped to AccelWithCovarianceStamped
 signature sTwist2Accel {
-    void main([in] struct KinematicState twist, [out] struct AccelWithCovarianceStamped* accel);
+    void main([in] const struct KinematicState* twist, [out] struct AccelWithCovarianceStamped* accel);
 };
 
 
 // Lowpass filter signature (1D) operating on a scalar value
 signature sLowpass1d {
-    void filter([in] double64_t value, [out] double64_t* filtered);
+    void filter([in] const double64_t* value, [out] double64_t* filtered);
 };
 
 // ------------------------------

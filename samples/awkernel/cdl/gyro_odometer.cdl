@@ -4,8 +4,8 @@ import("tf.cdl");
 
 signature sGyroOdometer {
     void main(
-        [in] struct TwistWithCovarianceStamped vehicle_twist,
-        [in] struct ImuMsg imu,
+        [in] const struct TwistWithCovarianceStamped* vehicle_twist,
+        [in] const struct ImuMsg* imu,
         [out] struct TwistWithCovarianceStamped* twist_with_covariance
     );
 };

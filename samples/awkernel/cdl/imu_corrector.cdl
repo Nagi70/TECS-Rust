@@ -5,7 +5,7 @@ import("tf.cdl");
 signature sImuCorrector {
 	// 引数にトピックデータを持つ関数を1つ定義する
 	// サブスクライブするトピックは[in]、パブリッシュするトピックは[out]で定義する
-	void main([in] struct ImuMsg imu_raw, [out] struct ImuMsg* imu_data);
+	void main([in] const struct ImuMsg* imu_raw, [out] struct ImuMsg* imu_data);
 };
 
 // メインルーチンのセルタイプ定義

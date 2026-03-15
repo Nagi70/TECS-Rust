@@ -7,8 +7,8 @@ import("utils_trajectory.cdl");
 // まだダミー段階で、本来は引数に steering_state が必要。また、パブリッシュも必要
 signature sTrajectoryFollower {
     void main(
-    [in] struct KinematicState kinematic_state,
-    [in] struct AccelWithCovarianceStamped accel,
+    [in] const struct KinematicState* kinematic_state,
+    [in] const struct AccelWithCovarianceStamped* accel,
     [out] struct Control* control); 
 };
 

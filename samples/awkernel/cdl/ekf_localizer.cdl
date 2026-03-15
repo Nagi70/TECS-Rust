@@ -3,11 +3,11 @@ import("publish_signature.cdl");
 
 signature sEkfLocalizer {
     // EKFの更新処理。入力(サブスクライブ)と出力(パブリッシュ)を引数で定義
-    void main( [in] struct TwistWithCovarianceStamped twist );
+    void main( [in] const struct TwistWithCovarianceStamped* twist );
 };
 
 signature sTwistWithCovarianceSet {
-    PLType("core::result::Result<(), ()>") push( [in] struct TwistWithCovarianceStamped twist );
+    PLType("core::result::Result<(), ()>") push( [in] const struct TwistWithCovarianceStamped* twist );
 };
 
 signature sTwistWithCovarianceGet {

@@ -9,12 +9,12 @@ import("dimension.cdl");
 
 signature sEkfModule {
     void init( void );
-    void accumulateDelayTime( [in] double64_t dt );
-    int32_t findClosestDelayTimeIndex( [in] double64_t target_value); // measurementUpdateTwist に埋め込む方がいいかも
-    void predictWithDelay([in] double64_t dt );
-    PLType("Result<(), EkfModuleError>") measurementUpdateTwist( [in] struct TwistWithCovarianceStamped twist, [in] PLType("awkernel_lib::time::Time") current_time ); // エラーenumはユーザ定義
-    void getCurrentTwist( [in] PLType("awkernel_lib::time::Time") current_time, [out] struct TwistWithCovarianceStamped* twist );
-    void getCurrentPose( [in] PLType("awkernel_lib::time::Time") current_time, [in] bool_t get_biased_yaw, [out] struct PoseWithCovarianceStamped* pose );
+    void accumulateDelayTime( [in] const double64_t* dt );
+    // int32_t findClosestDelayTimeIndex( [in] const double64_t* target_value); // measurementUpdateTwist に埋め込む方がいいかも
+    void predictWithDelay([in] const double64_t* dt );
+    PLType("Result<(), EkfModuleError>") measurementUpdateTwist( [in] const struct TwistWithCovarianceStamped* twist, [in] PLType("&awkernel_lib::time::Time") current_time ); // エラーenumはユーザ定義
+    void getCurrentTwist( [in] PLType("&awkernel_lib::time::Time") current_time, [out] struct TwistWithCovarianceStamped* twist );
+    void getCurrentPose( [in] PLType("&awkernel_lib::time::Time") current_time, [in] const bool_t* get_biased_yaw, [out] struct PoseWithCovarianceStamped* pose );
     void getCurrentTwistCovariance( [out] PLType("nalgebra::Matrix6<f64>")* cov );
     void getCurrentPoseCovariance( [out] PLType("nalgebra::Matrix6<f64>")* cov );
 };

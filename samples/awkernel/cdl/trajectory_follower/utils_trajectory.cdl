@@ -1,7 +1,7 @@
 signature sUtilsTrajectory {
     int32_t findNearestIndex(
-        [in]  PLType("heapless::Vec<TrajectoryPoint, 10>")  points,
-        [in]  PLType("nalgebra::Vector3<f64>")  query_position);
+        [in]  PLType("&heapless::Vec<TrajectoryPoint, 10>")  points,
+        [in]  PLType("&nalgebra::Vector3<f64>")  query_position);
 };
 
 [generate(RustAWKPlugin, "")]
@@ -11,8 +11,8 @@ celltype tUtilsTrajectory {
 
 signature sUtilsTrajectoryArray {
     int32_t findNearestIndex(
-        [in]  PLType("[TrajectoryPoint; 10]")  points,
-        [in]  PLType("nalgebra::Vector3<f64>")  query_position);
+        [in]  PLType("&[TrajectoryPoint; 10]")  points,
+        [in]  PLType("&nalgebra::Vector3<f64>")  query_position);
 };
 
 [generate(RustAWKPlugin, "")]

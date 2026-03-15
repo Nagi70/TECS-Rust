@@ -1,27 +1,27 @@
 signature sTimeDelayKalmanFilter {
     /* 初期化（拡張列を x0/P0 複製で埋める） */
     void init(
-        [in] PLType("nalgebra::Matrix6x1<f64>") x,
-        [in] PLType("nalgebra::Matrix6<f64>") p);
+        [in] PLType("&nalgebra::Matrix6x1<f64>") x,
+        [in] PLType("&nalgebra::Matrix6<f64>") p);
 
     /* 予測（スライド＋最新ブロックの P 伝播） */
     void predictWithDelay(
-        [in] PLType("nalgebra::Matrix6x1<f64>") x_next,
-        [in] PLType("nalgebra::Matrix6<f64>") a,
-        [in] PLType("nalgebra::Matrix6<f64>") q);
+        [in] PLType("&nalgebra::Matrix6x1<f64>") x_next,
+        [in] PLType("&nalgebra::Matrix6<f64>") a,
+        [in] PLType("&nalgebra::Matrix6<f64>") q);
 
     /* 遅延観測更新（C を delay_step ブロックに配置して update）この中に update を埋め込む */
     PLType("Result<(), KalmanFilterError>") updateWithDelay(
-        [in] PLType("nalgebra::Matrix2x1<f64>") y,
-        [in] PLType("nalgebra::Matrix2x6<f64>") c,
-        [in] PLType("nalgebra::Matrix2<f64>") r,
-        [in] int32_t  delay_step);
+        [in] PLType("&nalgebra::Matrix2x1<f64>") y,
+        [in] PLType("&nalgebra::Matrix2x6<f64>") c,
+        [in] PLType("&nalgebra::Matrix2<f64>") r,
+        [in] const int32_t*  delay_step);
 
     /* 最新スロットの取り出し（x(0), P(0,0) ブロック） */
     PLType("nalgebra::Matrix6x1<f64>") getLatestX( void );
     PLType("nalgebra::Matrix6<f64>") getLatestP( void );
 
-    double64_t getXelement([in] uint32_t i);
+    double64_t getXelement([in] const uint32_t* i);
 };
 
 import("dimension.cdl");
